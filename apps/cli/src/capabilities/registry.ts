@@ -5,7 +5,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import {
-  thetaBridgePackageRoot,
+  thetaToolsPackageRoot,
   thetaUpstreamRoot,
 } from "../repository-paths.js";
 import { fileURLToPath } from "node:url";
@@ -239,15 +239,15 @@ export class CapabilityRegistry {
   }
 
   private auditCompiledFlags(issues: CapabilityAuditIssue[]): void {
-    const bridgePath = path.join(thetaBridgePackageRoot, "bridge.py");
+    const toolsPath = path.join(thetaToolsPackageRoot, "tools.py");
     const pipelinePath = path.join(
       thetaUpstreamRoot,
       "src",
       "models",
       "run_pipeline.py",
     );
-    const bridgeSource = existsSync(bridgePath)
-      ? readFileSync(bridgePath, "utf8")
+    const toolsSource = existsSync(toolsPath)
+      ? readFileSync(toolsPath, "utf8")
       : "";
     const pipelineSource = existsSync(pipelinePath)
       ? readFileSync(pipelinePath, "utf8")
@@ -258,12 +258,12 @@ export class CapabilityRegistry {
         if (parameter.exposure !== "agent_compiled" || !parameter.trainFlag) {
           continue;
         }
-        if (!bridgeSource.includes(`"${parameter.trainFlag}"`)) {
+        if (!toolsSource.includes(`"${parameter.trainFlag}"`)) {
           issues.push({
             severity: "error",
             code: "AGENT_FLAG_NOT_COMPILED",
             modelId: card.modelId,
-            message: `${parameter.parameterId} declares ${parameter.trainFlag}, but bridge.py does not compile that flag.`,
+            message: `${parameter.parameterId} declares ${parameter.trainFlag}, but tools.py does not compile that flag.`,
           });
         }
         if (!pipelineSource.includes(`'${parameter.trainFlag}'`)) {

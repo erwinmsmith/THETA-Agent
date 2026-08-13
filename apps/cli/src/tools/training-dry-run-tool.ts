@@ -11,7 +11,7 @@ import {
   type TrainingPlanRecord,
 } from "../planning/contracts.js";
 import { createDryRunReceipt } from "../planning/engine.js";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 import {
   PLAN_VALIDATOR_VERSION,
@@ -142,7 +142,7 @@ export const thetaTrainingDryRunHandler: ToolHandler<
   ThetaTrainingDryRunOutput
 > = async (input: unknown, context: ToolCallContext) => {
   const value = normalizeTrainingDryRunInput(input);
-  const catalogResponse = await callThetaBridge(
+  const catalogResponse = await callThetaTools(
     "model.catalog",
     {},
     {
@@ -156,7 +156,7 @@ export const thetaTrainingDryRunHandler: ToolHandler<
     typeof catalogResponse.data !== "object"
   ) {
     throw new Error(
-      catalogResponse.error?.message ?? "model.catalog bridge command failed.",
+      catalogResponse.error?.message ?? "model.catalog THETA tools command failed.",
     );
   }
   const models = Array.isArray(
@@ -174,7 +174,7 @@ export const thetaTrainingDryRunHandler: ToolHandler<
       `Validator V2 rejected training.dry_run: ${validation.errors.join("; ")}`,
     );
   }
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "training.dry_run",
     {
       plan: value.plan,
@@ -189,7 +189,7 @@ export const thetaTrainingDryRunHandler: ToolHandler<
     typeof response.data !== "object"
   ) {
     throw new Error(
-      response.error?.message ?? "training.dry_run bridge command failed.",
+      response.error?.message ?? "training.dry_run THETA tools command failed.",
     );
   }
   const data = response.data as Record<string, unknown>;

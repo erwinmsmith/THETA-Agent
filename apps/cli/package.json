@@ -21,7 +21,7 @@
     "demo": "node dist/cli.js demo",
     "hypha:check": "node ../../scripts/upstreams.mjs status hypha",
     "hypha:build": "npm --prefix ../../third_party/Hypha run build:packages",
-    "test:python-runtime": "uv run --project ../.. python -m unittest discover ../../packages/theta_agent_bridge/tests -p \"test_*.py\"",
+    "test:python-runtime": "uv run --project ../.. python -m unittest discover ../../packages/THETA_tools/tests -p \"test_*.py\"",
     "release:verify": "pnpm run test && pnpm run build && node dist/cli.js --help"
   },
   "dependencies": {

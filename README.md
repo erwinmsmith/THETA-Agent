@@ -27,7 +27,7 @@ runtime layers without being coupled to THETA-specific model code.
 
 ```text
 apps/cli/                    Conversational agent and operator CLI
-packages/theta_agent_bridge Governed Python adapter for the THETA domain
+packages/THETA_tools        Governed Python tools for the THETA domain
 config/                      Reviewed upstream dependency pins
 docs/                        Architecture and development policy
 scripts/                     Dependency and repository maintenance tools
@@ -45,29 +45,29 @@ third_party/                 Ignored local THETA and Hypha checkouts
 
 ### 1. Clone THETA Agent
 
-Use `main` for the release-ready product or switch to `dev` for active
-development:
-
 ```bash
 git clone https://github.com/erwinmsmith/THETA-Agent.git
 cd THETA-Agent
-# Optional for contributors:
-git switch dev
 ```
 
 ### 2. Clone THETA and Hypha
 
-The recommended command reads `config/upstreams.lock.json`, clones both
-repositories into the ignored `third_party/` directory, and checks out the
-exact reviewed revisions:
+The repository automatically checks both upstream dependencies before
+`npm run doctor` and `npm start`. If either checkout is missing,
+`deps:ensure` clones the latest commit from its configured `main` branch into
+the ignored `third_party/` directory. Existing checkouts are never pulled or
+overwritten automatically:
 
 ```bash
-npm run deps:sync
+npm run deps:ensure
 npm run deps:status
 ```
 
+Use `npm run deps:sync` when you specifically need the exact reviewed
+revisions recorded in `config/upstreams.lock.json`.
+
 If you prefer to clone the upstream repositories yourself, use these paths and
-then run the synchronization command to apply the reviewed revisions:
+then run the dependency check:
 
 ```bash
 mkdir -p third_party
@@ -75,7 +75,7 @@ git clone --filter=blob:none --branch main \
   https://github.com/CodeSoul-co/THETA.git third_party/THETA
 git clone --filter=blob:none --branch main \
   https://github.com/CodeSoul-co/Hypha.git third_party/Hypha
-npm run deps:sync
+npm run deps:ensure
 ```
 
 `third_party/` is intentionally ignored. Never add THETA or Hypha source files
@@ -94,7 +94,7 @@ npm run cli:install
 npm run build
 ```
 
-The default uv environment supports the bridge, data inspection, tests, and
+The default uv environment supports THETA tools, data inspection, tests, and
 model catalog. Install the full THETA training stack only when training is
 needed:
 
@@ -157,13 +157,6 @@ npm run deps:update
 Review and test the resulting `config/upstreams.lock.json` change before
 committing it. Other developers can then reproduce the exact versions with
 `npm run deps:sync`.
-
-## Branch policy
-
-- `main` contains release-ready, production-quality code.
-- `dev` is the integration branch for active development.
-- Feature and fix branches merge into `dev` first.
-- A tested release candidate is promoted from `dev` to `main`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete development and

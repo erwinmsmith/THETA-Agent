@@ -116,8 +116,8 @@ Built-in local adapter:
 
 - `LocalFunctionToolAdapter(id, handler)`
 
-THETA Bridge integration is reachable only from registered Tool handlers.
-CLI and WorkflowExecutor code must not call the Bridge directly.
+THETA tools integration is reachable only from registered Tool handlers.
+CLI and WorkflowExecutor code must not call THETA tools directly.
 
 ### GovernedToolRunner
 
@@ -231,10 +231,10 @@ The current `domain.theta.training@3.0.0` workflow includes:
 
 ## Current Architecture Guardrails
 
-- CLI must not call `callThetaBridge` directly after the governed adapter exists.
+- CLI must not call `callThetaTools` directly after the governed adapter exists.
 - WorkflowExecutor must not spawn Python.
-- Python Bridge must not decide FSM state, policy, approval, or recommendation authority.
+- Python THETA tools must not decide FSM state, policy, approval, or recommendation authority.
 - Formal contracts should import `JsonSchema` from `@hypha/core`.
-- Python interpreter discovery, module probing, Bridge calls, and local process
-  execution remain inside `tools/bridge.ts`; diagnostic callers receive
+- Python interpreter discovery, module probing, THETA tools calls, and local process
+  execution remain inside `tools/theta-tools.ts`; diagnostic callers receive
   structured results rather than owning process execution.

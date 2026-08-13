@@ -20,7 +20,7 @@ pnpm --dir apps/cli install --frozen-lockfile
 pnpm --dir apps/cli run release:verify
 ```
 
-The release gate type-checks the runtime source, runs the Python bridge tests,
+The release gate type-checks the runtime source, runs the Python THETA tools tests,
 builds the CLI, and loads the command surface.
 
 ## Safety verification

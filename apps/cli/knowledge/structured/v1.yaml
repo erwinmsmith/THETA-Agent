@@ -592,8 +592,8 @@ objects:
     aliases_en: [HDP auto compile]
     source_id: theta-capability-registry
     source_locator: knowledge/capabilities/models/hdp.yaml
-    claim_scope: CLI Agent 到 Python bridge 的当前接线。
-    implementation_name: THETA Agent bridge
+    claim_scope: Current wiring from the CLI Agent to the Python THETA tools.
+    implementation_name: THETA Agent tools
     theta_support_status: supported
     content_markdown: |
       HDP 已重新开放：auto 模式要求 numTopics=null，可选 maxTopics。Resolver 和 Validator V2 负责保持此语义，MiniMax 不直接编译命令。
@@ -610,7 +610,7 @@ objects:
     source_id: theta-capability-registry
     source_locator: knowledge/capabilities/models/bertopic.yaml
     claim_scope: CLI Agent 当前 BERTopic 主题数模式接线。
-    implementation_name: THETA Agent bridge
+    implementation_name: THETA Agent tools
     theta_support_status: supported
     content_markdown: |
       BERTopic auto 编译为 --num_topics 0；target_reduction 才把 numTopics 作为归并目标。两者不可被 Planner 混写为同一语义。

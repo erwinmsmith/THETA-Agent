@@ -9,7 +9,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline/lda.py
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: 固定主题数、BOW 前置条件和 Agent 已编译参数之间不存在语义冲突。

@@ -9,7 +9,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline/hdp.py
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: Validator V2 使用 auto + maxTopics 契约，训练命令不再把固定 numTopics 伪装成 HDP 参数。

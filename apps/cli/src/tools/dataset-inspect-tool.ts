@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { JsonSchema } from '@hypha/core';
 import type { ToolCallContext, ToolHandler, ToolSpec } from '@hypha/tools';
-import { callThetaBridge } from './bridge.js';
+import { callThetaTools } from './theta-tools.js';
 import { resolveDatasetFile } from './dataset-path-policy.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
@@ -224,7 +224,7 @@ const normalizeDatasetInput = (input: unknown): ThetaDatasetFileInput => {
 
 const ensureDatasetInspectOutput = (data: unknown): ThetaDatasetInspectOutput => {
   if (!data || typeof data !== 'object') {
-    throw new Error('dataset.inspect bridge returned a non-object payload.');
+    throw new Error('dataset.inspect THETA tools returned a non-object payload.');
   }
   return data as ThetaDatasetInspectOutput;
 };
@@ -235,7 +235,7 @@ export const thetaDatasetInspectHandler: ToolHandler<unknown, ThetaDatasetInspec
 ) => {
   const normalized = normalizeDatasetInput(input);
   const resolved = await resolveDatasetFile(normalized.filePath);
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     'dataset.inspect',
     {
       filePath: resolved.filePath,
@@ -248,7 +248,7 @@ export const thetaDatasetInspectHandler: ToolHandler<unknown, ThetaDatasetInspec
   );
 
   if (response.status !== 'ok') {
-    throw new Error(response.error?.message ?? 'dataset.inspect bridge command failed.');
+    throw new Error(response.error?.message ?? 'dataset.inspect THETA tools command failed.');
   }
 
   const output = ensureDatasetInspectOutput(response.data);

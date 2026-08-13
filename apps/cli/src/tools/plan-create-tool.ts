@@ -8,7 +8,7 @@ import type { TrainingPlanRecord } from '../planning/contracts.js';
 import { validateTrainingPlanV2 } from '../planning/validator-v2.js';
 import type { CapabilityCatalogModel } from '../capabilities/contracts.js';
 import { datasetFactsSchema, researchIntentSchema } from '../dataset-understanding/contracts.js';
-import { callThetaBridge } from './bridge.js';
+import { callThetaTools } from './theta-tools.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export interface ThetaPlanCreateInput extends Omit<CreateTrainingPlanRecordV2Input, 'createdAt'> {
@@ -89,12 +89,12 @@ export const thetaPlanCreateHandler: ToolHandler<unknown, ThetaPlanCreateOutput>
   const value = input as ThetaPlanCreateInput;
   const facts = datasetFactsSchema.parse(value.facts);
   const intent = researchIntentSchema.parse(value.intent);
-  const response = await callThetaBridge('model.catalog', {}, {
+  const response = await callThetaTools('model.catalog', {}, {
     runId: context.runId,
     stepId: `${context.stepId}.validator-v2.catalog`,
   });
   if (response.status !== 'ok' || !response.data || typeof response.data !== 'object') {
-    throw new Error(response.error?.message ?? 'model.catalog bridge command failed.');
+    throw new Error(response.error?.message ?? 'model.catalog THETA tools command failed.');
   }
   const models = Array.isArray((response.data as Record<string, unknown>).models)
     ? (response.data as Record<string, unknown>).models as CapabilityCatalogModel[]

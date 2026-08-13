@@ -6,21 +6,21 @@ model recommendation, deterministic planning, human approvals, governed tool
 execution, progress monitoring, result interpretation, and operator commands.
 
 THETA is currently the first supported research domain. Domain-specific model
-execution is delegated to `packages/theta_agent_bridge` and the ignored local
+execution is delegated to `packages/THETA_tools` and the ignored local
 checkout at `third_party/THETA`. Agent governance and runtime contracts are
 provided by the ignored local checkout at `third_party/Hypha`.
 
 ## Requirements
 
 - Node.js 22.5 or newer
-- A built, pinned Hypha checkout
+- A built Hypha checkout
 - The uv-managed Python environment at the repository-root `.venv`
-- A pinned THETA checkout for model operations
+- A THETA checkout for model operations
 
 From the repository root, materialize upstream dependencies first:
 
 ```bash
-npm run deps:sync
+npm run deps:ensure
 npm --prefix third_party/Hypha ci --ignore-scripts
 npm --prefix third_party/Hypha run build:packages
 uv sync
@@ -67,7 +67,7 @@ External inference is optional. When configured, transfer of sanitized local
 context requires the applicable approval gate. Credentials are loaded from
 the repository-root `.env` file by default and are never printed by `doctor`.
 
-`THETA_AGENT_BRIDGE_PYTHON` is an escape hatch for an explicitly selected uv
+`THETA_AGENT_TOOLS_PYTHON` is an escape hatch for an explicitly selected uv
 environment; the project does not use Conda environments.
 
 ## Package map
@@ -76,7 +76,7 @@ environment; the project does not use Conda environments.
 - `src/conversation` owns turns, commands, and workflow coordination.
 - `src/planner` and `src/planning` own evidence-bound proposals and canonical
   executable plans.
-- `src/tools` owns governed tool registrations and the THETA bridge adapter.
+- `src/tools` owns governed tool registrations and the `THETA_tools` adapter.
 - `src/rag` and `knowledge` own local evidence retrieval and capability truth.
 - `src/storage` owns conversation, run, and research state.
 - `src/presentation` owns localized terminal responses.
@@ -90,7 +90,7 @@ Run a fast static check:
 pnpm --dir apps/cli run typecheck
 ```
 
-Run the runtime and bridge tests, then build the CLI:
+Run the runtime and THETA tools tests, then build the CLI:
 
 ```bash
 pnpm --dir apps/cli run test

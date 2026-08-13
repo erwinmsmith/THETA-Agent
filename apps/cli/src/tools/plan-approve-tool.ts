@@ -1,6 +1,6 @@
 import type { JsonSchema } from '@hypha/core';
 import type { ToolCallContext, ToolHandler, ToolSpec } from '@hypha/tools';
-import { callThetaBridge } from './bridge.js';
+import { callThetaTools } from './theta-tools.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export interface ThetaPlanApproveInput {
@@ -87,7 +87,7 @@ const normalizePlanApproveInput = (input: unknown): ThetaPlanApproveInput => {
 
 const ensurePlanApproveOutput = (data: unknown): ThetaPlanApproveOutput => {
   if (!data || typeof data !== 'object') {
-    throw new Error('plan.approve bridge returned a non-object payload.');
+    throw new Error('plan.approve THETA tools returned a non-object payload.');
   }
   return data as ThetaPlanApproveOutput;
 };
@@ -96,13 +96,13 @@ export const thetaPlanApproveHandler: ToolHandler<unknown, ThetaPlanApproveOutpu
   input: unknown,
   context: ToolCallContext
 ) => {
-  const response = await callThetaBridge('plan.approve', normalizePlanApproveInput(input), {
+  const response = await callThetaTools('plan.approve', normalizePlanApproveInput(input), {
     runId: context.runId,
     stepId: context.stepId,
   });
 
   if (response.status !== 'ok') {
-    throw new Error(response.error?.message ?? 'plan.approve bridge command failed.');
+    throw new Error(response.error?.message ?? 'plan.approve THETA tools command failed.');
   }
 
   return ensurePlanApproveOutput(response.data);

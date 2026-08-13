@@ -1,6 +1,6 @@
 import type { JsonSchema } from '@hypha/core';
 import type { ToolCallContext, ToolHandler, ToolSpec } from '@hypha/tools';
-import { callThetaBridge } from './bridge.js';
+import { callThetaTools } from './theta-tools.js';
 import {
   thetaDatasetColumnCandidateSchema,
   thetaDatasetFileInputSchema,
@@ -82,7 +82,7 @@ const normalizeDatasetInput = (input: unknown): ThetaDatasetFileInput => {
 
 const ensureDatasetDetectColumnsOutput = (data: unknown): ThetaDatasetDetectColumnsOutput => {
   if (!data || typeof data !== 'object') {
-    throw new Error('dataset.detect_columns bridge returned a non-object payload.');
+    throw new Error('dataset.detect_columns THETA tools returned a non-object payload.');
   }
   return data as ThetaDatasetDetectColumnsOutput;
 };
@@ -93,7 +93,7 @@ export const thetaDatasetDetectColumnsHandler: ToolHandler<
 > = async (input: unknown, context: ToolCallContext) => {
   const normalized = normalizeDatasetInput(input);
   const resolved = await resolveDatasetFile(normalized.filePath);
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     'dataset.detect_columns',
     {
       filePath: resolved.filePath,
@@ -106,7 +106,7 @@ export const thetaDatasetDetectColumnsHandler: ToolHandler<
   );
 
   if (response.status !== 'ok') {
-    throw new Error(response.error?.message ?? 'dataset.detect_columns bridge command failed.');
+    throw new Error(response.error?.message ?? 'dataset.detect_columns THETA tools command failed.');
   }
 
   return ensureDatasetDetectColumnsOutput(response.data);

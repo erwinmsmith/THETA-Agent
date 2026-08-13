@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,10 +10,10 @@ const repositoryRoot = path.resolve(
 const lockPath = path.join(repositoryRoot, 'config', 'upstreams.lock.json');
 const command = process.argv[2] ?? 'status';
 const requestedNames = process.argv.slice(3);
-const supportedCommands = new Set(['status', 'sync', 'update']);
+const supportedCommands = new Set(['ensure', 'status', 'sync', 'update']);
 
 if (!supportedCommands.has(command)) {
-  fail(`Unsupported command: ${command}. Use status, sync, or update.`);
+  fail(`Unsupported command: ${command}. Use ensure, status, sync, or update.`);
 }
 
 const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
@@ -28,9 +28,20 @@ if (requestedNames.length && selected.length !== requestedNames.length) {
 }
 
 for (const [name, dependency] of selected) {
+  if (command === 'ensure') ensureDependency(name, dependency);
   if (command === 'status') showStatus(name, dependency);
   if (command === 'sync') syncDependency(name, dependency);
   if (command === 'update') updateDependency(name, dependency);
+}
+
+function ensureDependency(name, dependency) {
+  const directory = resolveDirectory(dependency);
+  const existed = existsSync(path.join(directory, '.git'));
+  const checkout = ensureCheckout(name, dependency);
+  verifyRemote(name, checkout, dependency.repository);
+  const revision = git(checkout, ['rev-parse', 'HEAD']);
+  const action = existed ? 'available' : `cloned latest ${dependency.branch}`;
+  console.log(`${name}: ${action} at ${short(revision)}.`);
 }
 
 if (command === 'update') {
@@ -76,6 +87,7 @@ function ensureCheckout(name, dependency) {
   if (existsSync(directory)) {
     fail(`${name}: ${dependency.directory} exists but is not a Git checkout.`);
   }
+  mkdirSync(path.dirname(directory), { recursive: true });
   execFileSync(
     'git',
     [

@@ -6,7 +6,7 @@ import {
   type CancellationReceipt,
   type TrainingRunStatus,
 } from "../training/contracts.js";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 
 export interface ThetaTrainingCancelInput {
@@ -94,7 +94,7 @@ const ensureTrainingCancelOutput = (
   data: unknown,
 ): ThetaTrainingCancelOutput => {
   if (!data || typeof data !== "object") {
-    throw new Error("training.cancel bridge returned a non-object payload.");
+    throw new Error("training.cancel THETA tools returned a non-object payload.");
   }
   const value = data as Record<string, unknown>;
   return {
@@ -111,7 +111,7 @@ export const thetaTrainingCancelHandler: ToolHandler<
   unknown,
   ThetaTrainingCancelOutput
 > = async (input: unknown, context: ToolCallContext) => {
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "training.cancel",
     {
       ...normalizeTrainingCancelInput(input),
@@ -125,7 +125,7 @@ export const thetaTrainingCancelHandler: ToolHandler<
 
   if (response.status !== "ok") {
     throw new Error(
-      response.error?.message ?? "training.cancel bridge command failed.",
+      response.error?.message ?? "training.cancel THETA tools command failed.",
     );
   }
 

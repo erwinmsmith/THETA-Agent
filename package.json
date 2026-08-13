@@ -5,6 +5,7 @@
   "description": "Agent-first conversational auto-research system with THETA as its first research domain.",
   "type": "module",
   "scripts": {
+    "deps:ensure": "node scripts/upstreams.mjs ensure",
     "deps:status": "node scripts/upstreams.mjs status",
     "deps:sync": "node scripts/upstreams.mjs sync",
     "deps:update": "node scripts/upstreams.mjs update",
@@ -14,7 +15,9 @@
     "hypha:build": "npm --prefix third_party/Hypha run build:packages",
     "cli:install": "pnpm --dir apps/cli install --frozen-lockfile",
     "build": "pnpm --dir apps/cli run build",
+    "predoctor": "npm run deps:ensure",
     "doctor": "pnpm --dir apps/cli run cli -- doctor",
+    "prestart": "npm run deps:ensure",
     "start": "pnpm --dir apps/cli run cli -- repl",
     "validate": "node scripts/validate-repository.mjs"
   },

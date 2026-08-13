@@ -16,12 +16,12 @@ export interface ThetaPythonProbe extends ThetaPythonRuntime {
   modules: Record<string, boolean>;
 }
 
-export interface BridgeCallContext {
+export interface ThetaToolsCallContext {
   runId: string;
   stepId: string;
 }
 
-export interface BridgeResponse {
+export interface ThetaToolsResponse {
   status: 'ok' | 'error';
   protocol?: string;
   command?: string;
@@ -32,7 +32,7 @@ export interface BridgeResponse {
   };
 }
 
-const bridgeRoot = (): string => {
+const thetaToolsRoot = (): string => {
   return resolve(repositoryRoot, 'packages');
 };
 
@@ -49,7 +49,7 @@ const runtimeProbe = [
 export const resolveThetaPythonRuntime = (): ThetaPythonRuntime => {
   const requested =
     process.env.THETA_AGENT_PYTHON?.trim() ||
-    process.env.THETA_AGENT_BRIDGE_PYTHON?.trim() ||
+    process.env.THETA_AGENT_TOOLS_PYTHON?.trim() ||
     uvPythonExecutable;
   const result = spawnSync(requested, ['-c', runtimeProbe], {
     encoding: 'utf8',
@@ -134,17 +134,17 @@ const thetaPythonChildEnv = (
 ): NodeJS.ProcessEnv => ({
   ...process.env,
   THETA_AGENT_PYTHON: runtime.executable,
-  THETA_AGENT_BRIDGE_PYTHON: runtime.executable,
+  THETA_AGENT_TOOLS_PYTHON: runtime.executable,
   PYTHONIOENCODING: 'utf-8',
   PYTHONUTF8: '1',
 });
 
-export const callThetaBridge = async (
+export const callThetaTools = async (
   command: string,
   input: unknown,
-  context: BridgeCallContext,
-): Promise<BridgeResponse> => {
-  const cwd = bridgeRoot();
+  context: ThetaToolsCallContext,
+): Promise<ThetaToolsResponse> => {
+  const cwd = thetaToolsRoot();
   let runtime;
   try {
     runtime = resolveThetaPythonRuntime();
@@ -169,7 +169,7 @@ export const callThetaBridge = async (
   });
 
   return new Promise((resolvePromise) => {
-    const child = spawn(python, ['-m', 'theta_agent_bridge'], {
+    const child = spawn(python, ['-m', 'THETA_tools'], {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
@@ -208,25 +208,25 @@ export const callThetaBridge = async (
           status: 'error',
           command,
           error: {
-            type: 'EmptyBridgeResponse',
-            message: stderr || `Bridge exited with code ${code}`,
+            type: 'EmptyThetaToolsResponse',
+            message: stderr || `THETA tools exited with code ${code}`,
           },
         });
         return;
       }
 
       try {
-        resolvePromise(JSON.parse(trimmed) as BridgeResponse);
+        resolvePromise(JSON.parse(trimmed) as ThetaToolsResponse);
       } catch (error) {
         resolvePromise({
           status: 'error',
           command,
           error: {
-            type: 'InvalidBridgeJson',
+            type: 'InvalidThetaToolsJson',
             message:
               error instanceof Error
                 ? error.message
-                : 'Bridge returned invalid JSON',
+                : 'THETA tools returned invalid JSON',
           },
           data: {
             stdout: trimmed,

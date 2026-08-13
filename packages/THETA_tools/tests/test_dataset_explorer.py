@@ -8,8 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from theta_agent_bridge.dataset.explorer import explore_dataset
-from theta_agent_bridge.dataset.readers import load_dataset
+from THETA_tools.dataset.explorer import explore_dataset
+from THETA_tools.dataset.readers import load_dataset
 
 
 class DatasetExplorerTest(unittest.TestCase):

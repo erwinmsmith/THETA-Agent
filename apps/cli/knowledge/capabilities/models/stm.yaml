@@ -10,7 +10,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/prepare_data.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: 元数据列会由 Agent 传入准备阶段，缺少 covariates 时推荐器会硬性排除 STM。

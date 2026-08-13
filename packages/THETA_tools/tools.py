@@ -21,7 +21,7 @@ from typing import Any, Iterator
 from .dataset import explore_dataset
 
 
-BRIDGE_PROTOCOL = "theta-agent-bridge/v1"
+TOOLS_PROTOCOL = "theta-tools/v1"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 THETA_ROOT = Path(
     os.environ.get("THETA_UPSTREAM_ROOT")
@@ -130,13 +130,13 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any]:
     }
     handler = handlers.get(command)
     if handler is None:
-        return error_response(command, "UnknownCommand", f"Unsupported bridge command: {command}")
+        return error_response(command, "UnknownCommand", f"Unsupported THETA tools command: {command}")
 
     try:
         data = handler(payload)
         return {
             "status": "ok",
-            "protocol": BRIDGE_PROTOCOL,
+            "protocol": TOOLS_PROTOCOL,
             "command": command,
             "data": data,
         }
@@ -147,7 +147,7 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any]:
 def error_response(command: Any, error_type: str, message: str) -> dict[str, Any]:
     return {
         "status": "error",
-        "protocol": BRIDGE_PROTOCOL,
+        "protocol": TOOLS_PROTOCOL,
         "command": command,
         "error": {
             "type": error_type,
@@ -159,7 +159,7 @@ def error_response(command: Any, error_type: str, message: str) -> dict[str, Any
 def resolve_dataset_path(payload: dict[str, Any]) -> Path:
     raw_path = payload.get("filePath")
     if not raw_path:
-        raise ValueError("filePath is required for local dataset bridge calls")
+        raise ValueError("filePath is required for local dataset THETA tools calls")
 
     candidate = Path(str(raw_path))
     if not candidate.is_absolute():
@@ -1735,7 +1735,7 @@ def events_export(payload: dict[str, Any]) -> dict[str, Any]:
         snapshot = build_state_snapshot(conn) if include_snapshots else None
 
     export_body: dict[str, Any] = {
-        "protocol": BRIDGE_PROTOCOL,
+        "protocol": TOOLS_PROTOCOL,
         "exportedAt": utc_now_iso(),
         "stateDb": str(STATE_DB_PATH),
         "filters": {
@@ -3906,7 +3906,7 @@ def spawn_training_runner(training_run_id: str) -> int:
         kwargs["start_new_session"] = True
 
     process = subprocess.Popen(
-        [PYTHON_BIN, "-m", "theta_agent_bridge.runner", training_run_id],
+        [PYTHON_BIN, "-m", "THETA_tools.runner", training_run_id],
         **kwargs,
     )
     return int(process.pid)

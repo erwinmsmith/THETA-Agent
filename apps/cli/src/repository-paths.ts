@@ -20,10 +20,10 @@ export const hyphaUpstreamRoot = path.resolve(
     path.join(repositoryRoot, 'third_party', 'Hypha'),
 );
 
-export const thetaBridgePackageRoot = path.join(
+export const thetaToolsPackageRoot = path.join(
   repositoryRoot,
   'packages',
-  'theta_agent_bridge',
+  'THETA_tools',
 );
 
 export const upstreamLockPath = path.join(

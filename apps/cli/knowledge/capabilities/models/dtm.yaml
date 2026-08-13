@@ -11,7 +11,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/prepare_data.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: 时间切片、固定主题数、epochs 与 batchSize 已贯通；当前仍作为实验性动态神经实现，必须披露并经人工审批。

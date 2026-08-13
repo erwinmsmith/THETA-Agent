@@ -1,6 +1,6 @@
 import type { JsonSchema } from "@hypha/core";
 import type { ToolCallContext, ToolHandler, ToolSpec } from "@hypha/tools";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 
 export interface ThetaModelCatalogInput {
@@ -29,7 +29,7 @@ const modelCatalogInputSchema: JsonSchema = {
     includeExperimental: {
       type: "boolean",
       description:
-        "Include experimental THETA model entries when the bridge exposes them.",
+        "Include experimental THETA model entries when THETA tools expose them.",
     },
   },
   additionalProperties: false,
@@ -92,7 +92,7 @@ export const thetaModelCatalogToolSpec: ToolSpec = {
 
 const ensureModelCatalogOutput = (data: unknown): ThetaModelCatalogOutput => {
   if (!data || typeof data !== "object") {
-    throw new Error("model.catalog bridge returned a non-object payload.");
+    throw new Error("model.catalog THETA tools returned a non-object payload.");
   }
   return data as ThetaModelCatalogOutput;
 };
@@ -108,7 +108,7 @@ export const thetaModelCatalogHandler: ToolHandler<
   unknown,
   ThetaModelCatalogOutput
 > = async (input: unknown, context: ToolCallContext) => {
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "model.catalog",
     normalizeModelCatalogInput(input),
     {
@@ -119,7 +119,7 @@ export const thetaModelCatalogHandler: ToolHandler<
 
   if (response.status !== "ok") {
     throw new Error(
-      response.error?.message ?? "model.catalog bridge command failed.",
+      response.error?.message ?? "model.catalog THETA tools command failed.",
     );
   }
 

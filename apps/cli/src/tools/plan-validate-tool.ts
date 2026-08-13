@@ -1,6 +1,6 @@
 import type { JsonSchema } from "@hypha/core";
 import type { ToolCallContext, ToolHandler, ToolSpec } from "@hypha/tools";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 import {
   PLAN_VALIDATOR_VERSION,
@@ -184,7 +184,7 @@ export const thetaPlanValidateHandler: ToolHandler<
   ThetaPlanValidateOutput
 > = async (input: unknown, context: ToolCallContext) => {
   const normalized = normalizePlanValidateInput(input);
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "model.catalog",
     {},
     {
@@ -199,7 +199,7 @@ export const thetaPlanValidateHandler: ToolHandler<
     typeof response.data !== "object"
   ) {
     throw new Error(
-      response.error?.message ?? "model.catalog bridge command failed.",
+      response.error?.message ?? "model.catalog THETA tools command failed.",
     );
   }
   const models = Array.isArray(

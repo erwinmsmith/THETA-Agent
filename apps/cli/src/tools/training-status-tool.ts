@@ -4,7 +4,7 @@ import {
   trainingStatusOutputSchema as trainingStatusContractSchema,
   type TrainingStatusOutput,
 } from "../training/contracts.js";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 
 export interface ThetaTrainingStatusInput {
@@ -84,7 +84,7 @@ const ensureTrainingStatusOutput = (
   data: unknown,
 ): ThetaTrainingStatusOutput => {
   if (!data || typeof data !== "object") {
-    throw new Error("training.status bridge returned a non-object payload.");
+    throw new Error("training.status THETA tools returned a non-object payload.");
   }
   return trainingStatusContractSchema.parse(data);
 };
@@ -93,7 +93,7 @@ export const thetaTrainingStatusHandler: ToolHandler<
   unknown,
   ThetaTrainingStatusOutput
 > = async (input: unknown, context: ToolCallContext) => {
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "training.status",
     normalizeTrainingStatusInput(input),
     {
@@ -104,7 +104,7 @@ export const thetaTrainingStatusHandler: ToolHandler<
 
   if (response.status !== "ok") {
     throw new Error(
-      response.error?.message ?? "training.status bridge command failed.",
+      response.error?.message ?? "training.status THETA tools command failed.",
     );
   }
 

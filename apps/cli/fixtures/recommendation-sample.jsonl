@@ -26,5 +26,5 @@
 {"id":26,"text":"Authority levels prioritize current model configuration over lower-trust notes.","created_at":"2026-07-05","category":"evidence"}
 {"id":27,"text":"No-evidence results remain visible and never produce fabricated source references.","created_at":"2026-07-10","category":"governance"}
 {"id":28,"text":"The command line delegates state transitions to the compiled Hypha finite state machine.","created_at":"2026-07-15","category":"runtime"}
-{"id":29,"text":"Governed tools enforce permissions and schemas before invoking the Python bridge.","created_at":"2026-07-20","category":"runtime"}
+{"id":29,"text":"Governed tools enforce permissions and schemas before invoking the Python THETA tools.","created_at":"2026-07-20","category":"runtime"}
 {"id":30,"text":"The final review confirms deterministic recommendations and a traceable event history.","created_at":"2026-07-25","category":"quality"}

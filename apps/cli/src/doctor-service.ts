@@ -10,7 +10,7 @@ import { ThetaWorkflowService } from './theta-workflow-service.js';
 import { createThetaWorkflowRuntime } from './theta-workflow-runtime.js';
 import { runThetaModelCatalog } from './tools/hypha-runner.js';
 import { createMiniMaxProviderFromEnv } from './providers/minimax.js';
-import { probeThetaPythonModules } from './tools/bridge.js';
+import { probeThetaPythonModules } from './tools/theta-tools.js';
 import { CapabilityRegistry } from './capabilities/registry.js';
 import { getKnowledgeIndexStatus } from './rag/service.js';
 import {
@@ -250,13 +250,13 @@ export class DoctorService {
       }
       return pass(
         'python.models',
-        `Governed Python Bridge loaded ${models.length} THETA models.`,
+        `Governed THETA tools loaded ${models.length} models.`,
       );
     } catch (error) {
       return fail(
         'python.models',
         `Governed Python/model probe failed: ${message(error)}`,
-        'Verify THETA_AGENT_BRIDGE_PYTHON, install requirements.txt, then run npm run smoke:hypha-import.',
+        'Verify THETA_AGENT_TOOLS_PYTHON, synchronize the uv environment, and run the check again.',
       );
     }
   }

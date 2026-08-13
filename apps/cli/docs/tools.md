@@ -35,9 +35,9 @@ idempotency keys, audit records and human approval rules.
 | `theta.events.export` | read | `theta:events:read` | Export local audit events. |
 | `theta.events.replay` | read | `theta:events:read` | Replay exported events without side effects. |
 
-## Bridge Status
+## THETA Tools Status
 
-The first read-only bridge commands are wired through `theta_agent_bridge`:
+The governed Python commands are wired through `THETA_tools`:
 
 - `theta.dataset.inspect`
 - `theta.dataset.detect_columns`
@@ -64,7 +64,7 @@ The first read-only bridge commands are wired through `theta_agent_bridge`:
 the legacy Agent SQLite database and is not consulted by DomainPack 3.0.
 
 `theta.training.dry_run` v2 accepts the canonical plan, the
-`HumanPlanReview` receipt, and the dataset path. The Bridge checks dataset
+`HumanPlanReview` receipt, and the dataset path. `THETA_tools` checks dataset
 existence and hash, Python and model-script availability, writable working
 directory, disk capacity, GPU requirements, and network policy. TypeScript
 then creates the stable `DryRunReceipt` and `dryRunHash`; no training process

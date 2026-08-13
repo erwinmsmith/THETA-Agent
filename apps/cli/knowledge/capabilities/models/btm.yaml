@@ -9,7 +9,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline/btm.py
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: 项目内置 BTM 已接通 BOW、主题数与迭代次数，适合短文本候选。

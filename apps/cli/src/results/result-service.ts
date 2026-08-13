@@ -19,7 +19,7 @@ import {
   dryRunReceiptSchema,
   trainingPlanRecordSchema,
 } from '../planning/contracts.js';
-import { openLocalFolder } from '../tools/bridge.js';
+import { openLocalFolder } from '../tools/theta-tools.js';
 
 export interface ResultArtifactView {
   kind: string;

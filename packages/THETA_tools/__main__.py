@@ -1,7 +1,7 @@
 import json
 import sys
 
-from .bridge import handle_request
+from .tools import handle_request
 
 
 def main() -> None:
@@ -9,7 +9,7 @@ def main() -> None:
     try:
         request = json.loads(raw) if raw.strip() else {}
         response = handle_request(request)
-    except Exception as exc:  # Keep the bridge protocol stable on unexpected errors.
+    except Exception as exc:  # Keep the THETA tools protocol stable on unexpected errors.
         response = {
             "status": "error",
             "error": {

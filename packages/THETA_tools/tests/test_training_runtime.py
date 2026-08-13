@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from theta_agent_bridge import bridge
+from THETA_tools import tools
 
 
 class TrainingRuntimeRecoveryTest(unittest.TestCase):
@@ -17,13 +17,13 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
         root = Path(self.temp.name)
         self.dataset_path = root / "dataset.csv"
         self.dataset_path.write_text("text\nA governed runtime fixture.\n", encoding="utf-8")
-        self.state_dir_patch = patch.object(bridge, "STATE_DIR", root)
+        self.state_dir_patch = patch.object(tools, "STATE_DIR", root)
         self.state_db_patch = patch.object(
-            bridge, "STATE_DB_PATH", root / "state.sqlite"
+            tools, "STATE_DB_PATH", root / "state.sqlite"
         )
-        self.runs_dir_patch = patch.object(bridge, "RUNS_DIR", root / "runs")
+        self.runs_dir_patch = patch.object(tools, "RUNS_DIR", root / "runs")
         self.spawn_patch = patch.object(
-            bridge, "spawn_training_runner", return_value=999_999_991
+            tools, "spawn_training_runner", return_value=999_999_991
         )
         for active_patch in (
             self.state_dir_patch,
@@ -72,18 +72,18 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
                 "confidence": "low",
             },
         }
-        plan_hash = bridge.sha256_json(canonical_plan)
+        plan_hash = tools.sha256_json(canonical_plan)
         plan_record = {
             "planId": plan_id,
             "planHash": plan_hash,
             "canonicalPlan": canonical_plan,
         }
-        resolved_plan = bridge.legacy_plan_from_record(
+        resolved_plan = tools.legacy_plan_from_record(
             plan_record,
             self.dataset_path,
         )
-        commands = bridge.build_training_commands(resolved_plan)
-        expected_artifacts = bridge.expected_training_artifacts(resolved_plan)
+        commands = tools.build_training_commands(resolved_plan)
+        expected_artifacts = tools.expected_training_artifacts(resolved_plan)
         dry_run_material = {
             "planId": plan_id,
             "planHash": plan_hash,
@@ -100,7 +100,7 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
             "expectedArtifacts": expected_artifacts,
             "notes": [],
         }
-        dry_run_hash = bridge.sha256_json(dry_run_material)
+        dry_run_hash = tools.sha256_json(dry_run_material)
         return {
             "plan": plan_record,
             "planReview": {
@@ -124,17 +124,17 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
         }
 
     def test_missing_runner_is_quarantined_and_failed_retry_is_explicit(self) -> None:
-        first = bridge.training_start(self.training_payload("runtime-recovery"))
-        repeated = bridge.training_start(self.training_payload("runtime-recovery"))
+        first = tools.training_start(self.training_payload("runtime-recovery"))
+        repeated = tools.training_start(self.training_payload("runtime-recovery"))
         self.assertEqual(repeated["trainingRunId"], first["trainingRunId"])
         self.assertEqual(repeated["status"], "quarantined")
-        status = bridge.training_status({"trainingRunId": first["trainingRunId"]})
+        status = tools.training_status({"trainingRunId": first["trainingRunId"]})
         self.assertEqual(status["status"], "quarantined")
         self.assertIn("runner is absent", status["receipt"]["quarantineReason"])
 
-        source = bridge.training_start(self.training_payload("runtime-retry-source"))
-        with bridge.connect_state_db() as conn:
-            bridge.init_state_db(conn)
+        source = tools.training_start(self.training_payload("runtime-retry-source"))
+        with tools.connect_state_db() as conn:
+            tools.init_state_db(conn)
             conn.execute(
                 """
                 UPDATE training_runs
@@ -145,17 +145,17 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
             )
 
         with self.assertRaisesRegex(ValueError, "new idempotencyKey"):
-            bridge.training_start(self.training_payload("runtime-retry-source"))
+            tools.training_start(self.training_payload("runtime-retry-source"))
 
         retry_payload = self.training_payload("runtime-retry-attempt-2")
         retry_payload["retryOfTrainingRunId"] = source["trainingRunId"]
         retry_payload["retryReason"] = "Operator approved a corrected retry."
-        retry = bridge.training_start(retry_payload)
+        retry = tools.training_start(retry_payload)
         self.assertEqual(retry["attempt"], 2)
         self.assertEqual(retry["retryOfTrainingRunId"], source["trainingRunId"])
 
     def test_expected_artifacts_follow_dtm_preparation_layout(self) -> None:
-        dtm_artifacts = bridge.expected_training_artifacts(
+        dtm_artifacts = tools.expected_training_artifacts(
             {
                 "datasetId": "dataset",
                 "modelId": "dtm",
@@ -171,7 +171,7 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
             "third_party/THETA/result/local_user/dataset/dtm/approved_plan__primary_dtm_s42",
         )
 
-        baseline_artifacts = bridge.expected_training_artifacts(
+        baseline_artifacts = tools.expected_training_artifacts(
             {
                 "datasetId": "dataset",
                 "modelId": "btm",
@@ -188,7 +188,7 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
         )
 
     def test_training_phase_context_identifies_model_seed_and_run(self) -> None:
-        phase = bridge.training_phase_from_step(
+        phase = tools.training_phase_from_step(
             "run_pipeline_primary_dtm_s42",
             [
                 {"step": "run_pipeline_primary_dtm_s42"},
@@ -203,7 +203,7 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
 
     def test_quality_reassessment_receipts_are_append_only(self) -> None:
         artifacts = [{"path": "result/topics.csv", "sha256": "a" * 64}]
-        first = bridge.persist_quality_reassessment(
+        first = tools.persist_quality_reassessment(
             "run_" + "b" * 12,
             artifacts,
             {
@@ -214,7 +214,7 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
                 "assessedAt": "2026-08-04T00:00:00.000Z",
             },
         )
-        second = bridge.persist_quality_reassessment(
+        second = tools.persist_quality_reassessment(
             "run_" + "b" * 12,
             artifacts,
             {
@@ -226,8 +226,8 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
             },
         )
         self.assertNotEqual(first["receiptId"], second["receiptId"])
-        with bridge.connect_state_db() as conn:
-            bridge.init_state_db(conn)
+        with tools.connect_state_db() as conn:
+            tools.init_state_db(conn)
             count = conn.execute(
                 "SELECT COUNT(*) AS count FROM quality_reassessments"
             ).fetchone()["count"]

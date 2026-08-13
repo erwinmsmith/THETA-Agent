@@ -9,7 +9,7 @@ audit:
     - ../../third_party/THETA/src/models/model/baseline/bertopic.py
     - ../../third_party/THETA/src/models/model/baseline_trainer.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: Validator V2 明确区分 auto 与 target_reduction，并将 UMAP/HDBSCAN 参数编译进真实训练命令。

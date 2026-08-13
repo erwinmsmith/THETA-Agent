@@ -10,7 +10,7 @@ audit:
     - ../../third_party/THETA/src/models/config.py
     - ../../third_party/THETA/src/models/prepare_data.py
     - ../../third_party/THETA/src/models/run_pipeline.py
-    - ../../packages/theta_agent_bridge/bridge.py
+    - ../../packages/THETA_tools/tools.py
 planner:
   eligible: true
   reason: 模型大小、训练模式、主题数、epochs 与 batchSize 已由 CanonicalPlan 编译，依赖条件可由资源约束进一步筛选。

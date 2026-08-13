@@ -12,7 +12,7 @@ CLI / REPL
   -> ThetaWorkflowService
   -> Hypha bounded FSM driver
   -> state-scoped GovernedToolRunner
-  -> THETA Python Bridge
+  -> THETA_tools
 ```
 
 The conversation layer routes input and formats output. Canonical Run state is

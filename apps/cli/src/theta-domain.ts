@@ -301,7 +301,7 @@ const workflowStates: WorkflowStateSpec[] = [
   ),
   state(
     THETA_WORKFLOW_STATES.startTraining,
-    "Start training through the governed Bridge.",
+    "Start training through the governed THETA tools.",
     {
       allowedTools: [THETA_TOOL_IDS.trainingStart],
       allowedToolRefs: [toolRef(THETA_TOOL_IDS.trainingStart, "3.1.0")],

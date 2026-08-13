@@ -28,7 +28,7 @@ The current code has four concrete ownership areas:
 
 1. `apps/cli` owns terminal I/O, conversation, intent clarification, planning,
    policy, approvals, evidence retrieval, orchestration, and presentation.
-2. `packages/theta_agent_bridge` owns the narrow JSON protocol between the
+2. `packages/THETA_tools` owns the narrow JSON protocol between the
    TypeScript agent and the THETA Python engine.
 3. `third_party/Hypha` supplies the governed agent runtime and tool contracts.
 4. `third_party/THETA` supplies model training, evaluation, and visualization.
@@ -52,14 +52,16 @@ commands, or data structures.
 
 `config/upstreams.lock.json` is the reproducibility contract. It records the
 repository, tracking branch, reviewed revision, local directory, and license
-for each standard upstream. `scripts/upstreams.mjs` provides three operations:
+for each standard upstream. `scripts/upstreams.mjs` provides four operations:
 
+- `ensure` clones the latest tracking-branch revision only when a checkout is
+  missing and leaves existing checkouts untouched.
 - `status` compares local checkouts with the reviewed pins.
 - `sync` materializes the exact reviewed revisions.
 - `update` advances local checkouts to the tracking branches and rewrites the
   pins for review.
 
-An upstream update is complete only after agent contract tests, bridge tests,
+An upstream update is complete only after agent contract tests, THETA tools tests,
 and an end-to-end dry run pass. Never commit `third_party/` content.
 
 ## Extension contract
@@ -69,7 +71,7 @@ A future research domain should provide:
 - a capability catalog and evidence sources;
 - governed tool definitions and permission scopes;
 - deterministic plan validation and execution boundaries;
-- a bridge or adapter to its execution engine;
+- a tools adapter to its execution engine;
 - result normalization for the common presentation layer;
 - domain-specific tests and fixtures.
 

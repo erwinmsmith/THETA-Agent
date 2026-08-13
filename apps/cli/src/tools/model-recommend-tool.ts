@@ -16,7 +16,7 @@ import { CapabilityRegistry } from "../capabilities/registry.js";
 import type { ModelCapabilityCard } from "../capabilities/contracts.js";
 import type { ModelCapabilities } from "../recommendation/model-capabilities.js";
 import { evidenceRefSchema, type EvidenceRef } from "../rag/contracts.js";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 
 export interface ThetaModelRecommendInput {
@@ -179,7 +179,7 @@ export const thetaModelRecommendHandler: ToolHandler<
   ThetaModelRecommendOutput
 > = async (input: unknown, context: ToolCallContext) => {
   const normalized = normalizeModelRecommendInput(input);
-  const response = await callThetaBridge(
+  const response = await callThetaTools(
     "model.catalog",
     {},
     {
@@ -190,7 +190,7 @@ export const thetaModelRecommendHandler: ToolHandler<
 
   if (response.status !== "ok" || !isRecord(response.data)) {
     throw new Error(
-      response.error?.message ?? "model.catalog bridge command failed.",
+      response.error?.message ?? "model.catalog THETA tools command failed.",
     );
   }
   const models = Array.isArray(response.data.models)

@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .bridge import (
+from .tools import (
     PROJECT_ROOT,
     assess_result_quality,
     bind_result_artifacts,
@@ -28,7 +28,7 @@ TERMINATE_TIMEOUT_SECONDS = 10
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m theta_agent_bridge.runner <training_run_id>")
+        raise SystemExit("Usage: python -m THETA_tools.runner <training_run_id>")
     training_run_id = sys.argv[1]
     run_training(training_run_id)
 

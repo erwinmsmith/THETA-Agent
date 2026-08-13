@@ -2,7 +2,7 @@ import type { JsonSchema } from '@hypha/core';
 import type { InferenceToolDescriptor } from '@hypha/inference';
 import type { ToolCallContext, ToolHandler, ToolSpec } from '@hypha/tools';
 import { SQLiteDatasetRegistry } from '../storage/dataset-registry.js';
-import { callThetaBridge } from './bridge.js';
+import { callThetaTools } from './theta-tools.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export interface ThetaDatasetExploreInput {
@@ -189,7 +189,7 @@ export const thetaDatasetExploreHandler: ToolHandler<
   );
   try {
     const record = registry.require(input.datasetRef, { userId, workspaceId });
-    const response = await callThetaBridge(
+    const response = await callThetaTools(
       'dataset.explore',
       {
         filePath: record.managedPath,
@@ -202,7 +202,7 @@ export const thetaDatasetExploreHandler: ToolHandler<
       { runId: context.runId, stepId: context.stepId },
     );
     if (response.status !== 'ok') {
-      throw new Error(response.error?.message ?? 'dataset.explore bridge command failed.');
+      throw new Error(response.error?.message ?? 'dataset.explore THETA tools command failed.');
     }
     return response.data as ThetaDatasetExploreOutput;
   } finally {

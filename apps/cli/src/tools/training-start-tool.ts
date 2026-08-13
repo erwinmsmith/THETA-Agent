@@ -13,7 +13,7 @@ import {
   trainingReceiptSchema,
   type TrainingReceipt,
 } from "../training/contracts.js";
-import { callThetaBridge } from "./bridge.js";
+import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 import { validateCanonicalTrainingPlanV2 } from "../planning/validator-v2.js";
 import type { CapabilityCatalogModel } from "../capabilities/contracts.js";
@@ -260,7 +260,7 @@ export const thetaTrainingStartHandler: ToolHandler<
   ThetaTrainingStartOutput
 > = async (input: unknown, context: ToolCallContext) => {
   const value = normalizeTrainingStartInput(input);
-  const catalogResponse = await callThetaBridge(
+  const catalogResponse = await callThetaTools(
     "model.catalog",
     {},
     {
@@ -274,7 +274,7 @@ export const thetaTrainingStartHandler: ToolHandler<
     typeof catalogResponse.data !== "object"
   ) {
     throw new Error(
-      catalogResponse.error?.message ?? "model.catalog bridge command failed.",
+      catalogResponse.error?.message ?? "model.catalog THETA tools command failed.",
     );
   }
   const models = Array.isArray(
@@ -292,7 +292,7 @@ export const thetaTrainingStartHandler: ToolHandler<
       `Validator V2 rejected training.start: ${validation.errors.join("; ")}`,
     );
   }
-  const response = await callThetaBridge("training.start", value, {
+  const response = await callThetaTools("training.start", value, {
     runId: context.runId,
     stepId: context.stepId,
   });
@@ -302,7 +302,7 @@ export const thetaTrainingStartHandler: ToolHandler<
     typeof response.data !== "object"
   ) {
     throw new Error(
-      response.error?.message ?? "training.start bridge command failed.",
+      response.error?.message ?? "training.start THETA tools command failed.",
     );
   }
   return trainingReceiptSchema.parse(response.data);
