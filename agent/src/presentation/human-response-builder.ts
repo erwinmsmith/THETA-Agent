@@ -15,6 +15,7 @@ export const buildHumanResponse = (value: unknown): HumanFacingResponse => {
   }
 
   const kind = text(record.kind) ?? 'workflow';
+  if (kind.startsWith('inference.')) return inferenceSelection(record, value);
   if (kind === 'language.consent') return languageConsent(record, value);
   if (kind === 'run.required') return runRequired(record, value);
   if (kind === 'research.brief') return researchBrief(record, value);
@@ -103,6 +104,30 @@ export const buildHumanResponse = (value: unknown): HumanFacingResponse => {
     text(record.message) ?? text(record.response) ?? '命令已完成。',
     summarizeRecord(record),
     value,
+  );
+};
+
+const inferenceSelection = (
+  record: Record<string, unknown>,
+  raw: unknown,
+): HumanFacingResponse => {
+  const selection = asRecord(record.selection);
+  const providers = Array.isArray(record.providers) ? record.providers : [];
+  const lines = providers.map((item) => {
+    const provider = asRecord(item) ?? {};
+    const selected = provider.selected === true ? '当前' : '可选';
+    const status = provider.configured === true ? '配置可用' : '配置不完整';
+    return `${human(provider.id)} · ${human(provider.configuredModel ?? '未选择模型')} · ${selected} · ${status}`;
+  });
+  const summary = text(record.message) ?? (selection
+    ? `当前使用 ${human(selection.providerId)}/${human(selection.model)}。`
+    : '当前没有可用的外部模型，将使用确定性后备。');
+  return response(
+    text(record.kind) ?? 'inference.model',
+    '语言模型配置',
+    summary,
+    lines.length ? [{ title: '供应商', lines }] : undefined,
+    raw,
   );
 };
 
@@ -411,19 +436,19 @@ const plan = (
   const plannerSource = text(proposalEnvelope.source);
   const plannerFallbackReason = text(proposalEnvelope.fallbackReason);
   const plannerFallbackLabels: Record<string, string> = {
-    planner_not_enabled: '当前 Run 未启用 MiniMax Planner',
-    provider_not_configured: '未配置 MiniMax Provider',
-    network_failure: 'MiniMax 网络请求失败',
-    timeout: 'MiniMax Planner 请求超时',
-    provider_error: 'MiniMax Provider 返回错误',
-    schema_validation_failed: 'MiniMax 紧凑方案结构无效',
-    evidence_violation: 'MiniMax 证据选择未通过兼容性校验',
-    catalog_violation: 'MiniMax 选择超出本地模型或参数目录',
+    planner_not_enabled: '当前 Run 未启用语言模型 Planner',
+    provider_not_configured: '未配置语言模型供应商',
+    network_failure: '语言模型网络请求失败',
+    timeout: '语言模型 Planner 请求超时',
+    provider_error: '语言模型供应商返回错误',
+    schema_validation_failed: '语言模型紧凑方案结构无效',
+    evidence_violation: '语言模型证据选择未通过兼容性校验',
+    catalog_violation: '语言模型选择超出本地模型或参数目录',
   };
-  const plannerStatusLines = plannerSource === 'minimax'
-    ? ['MiniMax Planner：已采纳；模型角色、实验协议与证据绑定均通过治理校验。']
+  const plannerStatusLines = plannerSource === 'provider'
+    ? ['语言模型 Planner：已采纳；模型角色、实验协议与证据绑定均通过治理校验。']
     : [
-        'MiniMax Planner：未采纳；当前执行的是确定性后备方案。',
+        '语言模型 Planner：未采纳；当前执行的是确定性后备方案。',
         plannerFallbackReason
           ? `回退原因：${plannerFallbackLabels[plannerFallbackReason] ?? plannerFallbackReason}。`
           : undefined,
@@ -691,7 +716,7 @@ const plan = (
         : []),
       ...(plannerDecisionLines.length
         ? [{
-            title: proposalEnvelope.source === 'minimax' ? 'MiniMax 规划判断' : '确定性后备规划',
+            title: proposalEnvelope.source === 'provider' ? '语言模型规划判断' : '确定性后备规划',
             lines: plannerDecisionLines,
           }]
         : []),
@@ -785,7 +810,7 @@ const nativePlannerPlan = (
     : [];
   const state = text(record.currentState);
   const sourceLabel = (source: unknown): string =>
-    source === 'user_override' ? '用户覆盖' : source === 'validated_default' ? '校验默认值' : 'MiniMax 建议';
+    source === 'user_override' ? '用户覆盖' : source === 'validated_default' ? '校验默认值' : '语言模型建议';
   const parameterLines = keyParameters.map((item) =>
     `${fieldLabel(human(item?.field))}：${human(item?.value)}（${sourceLabel(item?.source)}）${text(item?.rationale) ? `；${text(item?.rationale)}` : ''}`,
   );
@@ -823,9 +848,9 @@ const nativePlannerPlan = (
       ? '审批 2/2：启动真实训练'
       : state === 'Completed'
         ? '已执行的训练方案'
-        : text(presentation.title) ?? '审批 1/2：确认 MiniMax 训练方案',
+        : text(presentation.title) ?? '审批 1/2：确认语言模型训练方案',
     summary: text(presentation.summary) ??
-      `MiniMax 建议使用 ${human(primary.modelId ?? presentation.model)} 完成“${human(intent.researchQuestion)}”。`,
+      `语言模型建议使用 ${human(primary.modelId ?? presentation.model)} 完成“${human(intent.researchQuestion)}”。`,
     sections: [
       {
         title: '为什么选择这个模型',
@@ -1009,10 +1034,10 @@ const languageConsent = (
   raw: unknown,
 ): HumanFacingResponse => ({
   kind: 'language.consent',
-  title: record.enabled === true ? 'MiniMax 语言辅助已开启' : 'MiniMax 语言辅助已关闭',
+  title: record.enabled === true ? '语言模型辅助已开启' : '语言模型辅助已关闭',
   summary:
     record.enabled === true
-      ? 'MiniMax 可以解释回答、润色问题和调用受限只读工具；它不能审批计划或启动训练。'
+      ? '语言模型可以解释回答、润色问题和调用受限只读工具；它不能审批计划或启动训练。'
       : '后续语言处理将使用本地确定性规则。',
   sections: [
     {

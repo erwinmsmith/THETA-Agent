@@ -12,7 +12,7 @@ export type ConversationTurnStatus =
 export interface ConversationSession {
   sessionId: string;
   activeRunId?: string;
-  providerMode: 'deterministic' | 'minimax';
+  providerMode: 'deterministic' | 'provider';
   languageConsent: boolean;
   createdAt: string;
   updatedAt: string;
@@ -58,7 +58,7 @@ export interface LanguageInterpretationRecord {
   runId?: string;
   sourceMessageId?: string;
   task: string;
-  provider: 'minimax' | 'deterministic';
+  provider: 'provider' | 'deterministic';
   requestHash: string;
   responseHash: string;
   structuredOutput: unknown;

@@ -87,12 +87,12 @@ export const executeSelectEvidence = (
   const root = record(output);
   if (root.kind !== "tool_calls") {
     throw new EvidenceSelectionError(
-      "MiniMax must call select_evidence; plain text or JSON evidence selection is not accepted.",
+      "The selected provider must call select_evidence; plain text or JSON evidence selection is not accepted.",
     );
   }
   const calls = array(root.toolCalls);
   if (calls.length !== 1) {
-    throw new EvidenceSelectionError("MiniMax must call select_evidence exactly once.");
+    throw new EvidenceSelectionError("The selected provider must call select_evidence exactly once.");
   }
   const call = record(calls[0]);
   if (call.name !== SELECT_EVIDENCE_TOOL_NAME) {

@@ -8,7 +8,7 @@ import {
   type PlannerDecisionV2,
   type PlannerInputV2,
 } from '@theta-agent/domain/planner/v2-contracts.js';
-import { createMiniMaxProviderFromEnv } from './support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from './support/providers/registry.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export interface ThetaPlanProposeInput {
@@ -57,8 +57,8 @@ export const thetaPlanProposeToolSpec: ToolSpec = {
   id: THETA_TOOL_IDS.planPropose,
   version: '2.0.0',
   displayName: 'Create Native Planner V2 Decision',
-  description: 'Let MiniMax create a complete plan directly from confirmed data, research intent, candidates, and RAG evidence.',
-  tags: ['theta', 'plan', 'planner-v2', 'minimax'],
+  description: 'Let the selected inference provider create a complete plan from confirmed data, research intent, candidates, and RAG evidence.',
+  tags: ['theta', 'plan', 'planner-v2', 'inference'],
   inputSchema,
   outputSchema,
   sideEffectLevel: 'read',
@@ -80,15 +80,18 @@ export const thetaPlanProposeHandler: ToolHandler<unknown, ThetaPlanProposeOutpu
   const value = input as Record<string, unknown>;
   const plannerInput = plannerInputV2Schema.parse(value.plannerInput);
   const evidenceBundle = evidenceBundleSchema.parse(value.evidenceBundle);
-  const provider = createMiniMaxProviderFromEnv({ timeoutMs: plannerTimeoutMs() });
-  if (!provider) throw new Error('MiniMax is required by the native Planner V2.');
+  const provider = createInferenceProviderFromEnv({ timeoutMs: plannerTimeoutMs() });
+  if (!provider) throw new Error('A configured inference provider is required by Planner V2.');
   return plannerDecisionV2Schema.parse(
     await new NativePlannerV2Service(provider).propose(plannerInput, evidenceBundle),
   );
 };
 
 const plannerTimeoutMs = (): number => {
-  const configured = Number(process.env.MINIMAX_PLANNER_TIMEOUT_MS);
+  const configured = Number(
+    process.env.THETA_LLM_PLANNER_TIMEOUT_MS ??
+      process.env.MINIMAX_PLANNER_TIMEOUT_MS,
+  );
   return Number.isInteger(configured) && configured >= 1 && configured <= 180_000
     ? configured
     : 150_000;

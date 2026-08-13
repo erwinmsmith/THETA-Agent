@@ -7,7 +7,7 @@ import {
   datasetFactsSchema,
   type DatasetFacts,
 } from '@theta-agent/domain/dataset-understanding/contracts.js';
-import { createMiniMaxProviderFromEnv } from './support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from './support/providers/registry.js';
 import {
   thetaDatasetExploreInferenceTool,
   type ThetaDatasetExploreOutput,
@@ -50,7 +50,7 @@ export type DatasetUnderstandingLanguageDecision = z.infer<typeof decisionSchema
 
 export interface DatasetUnderstandingLanguageResult {
   schemaVersion: '2.0.0';
-  source: 'minimax' | 'deterministic';
+  source: 'provider' | 'deterministic';
   contextHash: string;
   decision: DatasetUnderstandingLanguageDecision;
   fallbackReason?:
@@ -80,7 +80,7 @@ const outputSchema: JsonSchema = {
   required: ['schemaVersion', 'source', 'contextHash', 'decision', 'telemetry'],
   properties: {
     schemaVersion: { const: '2.0.0' },
-    source: { enum: ['minimax', 'deterministic'] },
+    source: { enum: ['provider', 'deterministic'] },
     contextHash: { type: 'string', pattern: '^[a-f0-9]{64}$' },
     decision: { type: 'object', additionalProperties: true },
     fallbackReason: { type: 'string' },
@@ -94,7 +94,7 @@ export const thetaDatasetUnderstandingLanguageToolSpec: ToolSpec = {
   version: '2.0.0',
   displayName: 'Understand Dataset Through Tool Calling',
   description:
-    'Let MiniMax call the governed dataset explorer and form a validated dataset understanding.',
+    'Let the selected provider call the governed dataset explorer and form a validated dataset understanding.',
   tags: ['theta', 'dataset', 'understanding', 'language', 'inference'],
   inputSchema,
   outputSchema,
@@ -105,7 +105,7 @@ export const thetaDatasetUnderstandingLanguageToolSpec: ToolSpec = {
   ],
   humanApprovalPolicy: {
     required: true,
-    reason: 'Sending at most ten locally redacted rows to MiniMax requires consent.',
+    reason: 'Sending at most ten locally redacted rows to an external provider requires consent.',
   },
   idempotencyPolicy: { mode: 'required' },
   timeoutPolicy: { timeoutMs: 180_000, onTimeout: 'fail' },
@@ -123,8 +123,12 @@ export const thetaDatasetUnderstandingLanguageHandler: ToolHandler<
   if (!request.allowRemoteSamples) {
     return fallback(contextHash, 'consent_required');
   }
-  const provider = createMiniMaxProviderFromEnv({
-    timeoutMs: boundedTimeout(process.env.MINIMAX_UNDERSTANDING_TIMEOUT_MS, 120_000),
+  const provider = createInferenceProviderFromEnv({
+    timeoutMs: boundedTimeout(
+      process.env.THETA_LLM_UNDERSTANDING_TIMEOUT_MS ??
+        process.env.MINIMAX_UNDERSTANDING_TIMEOUT_MS,
+      120_000,
+    ),
   });
   if (!provider) return fallback(contextHash, 'provider_not_configured');
   try {
@@ -155,11 +159,11 @@ export const thetaDatasetUnderstandingLanguageHandler: ToolHandler<
       ? decisionSchema.parse(response.output)
       : parseToolCall(response.output, request.datasetRef);
     if (hasObservation && decision.kind !== 'final') {
-      throw new Error('MiniMax must return a final understanding after the tool result.');
+      throw new Error('The selected provider must return a final understanding after the tool result.');
     }
     return {
       schemaVersion: '2.0.0',
-      source: 'minimax',
+      source: 'provider',
       contextHash,
       decision,
       telemetry: {
@@ -235,15 +239,15 @@ const parseToolCall = (
 ): DatasetUnderstandingLanguageDecision => {
   const root = record(value);
   if (root.kind !== 'tool_calls' || !Array.isArray(root.toolCalls)) {
-    throw new Error('MiniMax did not call theta.dataset.explore.');
+    throw new Error('The selected provider did not call theta.dataset.explore.');
   }
   const raw = record(root.toolCalls[0]);
   if (raw.name !== thetaDatasetExploreInferenceTool.name) {
-    throw new Error('MiniMax requested a tool outside the dataset-understanding allowlist.');
+    throw new Error('The selected provider requested a tool outside the dataset-understanding allowlist.');
   }
   const args = record(raw.arguments);
   if (args.datasetRef !== datasetRef) {
-    throw new Error('MiniMax requested a different dataset reference.');
+    throw new Error('The selected provider requested a different dataset reference.');
   }
   return decisionSchema.parse({
     kind: 'tool_call',

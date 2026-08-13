@@ -141,7 +141,7 @@ const routeRequest = async (
           datasetRef: datasetRecord.datasetRef,
           workflowVersion: '2.0.0',
           researchGoal,
-          plannerMode: input.useMiniMax ? 'minimax' : 'deterministic',
+          plannerMode: languageProviderEnabled(input) ? 'provider' : 'deterministic',
           allowRemoteSamples: input.allowRemoteSamples,
         },
         runtimeDb: options.runtimeDb,
@@ -702,7 +702,7 @@ const executeRunAction = async (
             : isAutonomousDelegationAnswer(action.text)
             ? '已根据数据证据和系统建议补全剩余研究设置。接下来请审核训练方案；批准方案不会直接启动训练。'
             : context.status.currentState === 'AwaitPlanCreationApproval'
-              ? '研究意图已经明确。MiniMax 已依据数据事实、能力目录和 RAG 证据形成可执行方案；请审核方案，批准方案不会直接启动训练。'
+              ? '研究意图已经明确。语言模型已依据数据事实、能力目录和 RAG 证据形成可执行方案；请审核方案，批准方案不会直接启动训练。'
               : '研究意图已经明确；请查看当前状态和下一步提示。',
           createdAt: new Date().toISOString(),
         });
@@ -739,8 +739,8 @@ const executeRunAction = async (
     if (action.action === 'message') {
       store.getOrCreateSession(sessionId, { activeRunId: runId });
       store.updateSession(sessionId, {
-        languageConsent: action.useMiniMax,
-        providerMode: action.useMiniMax ? 'minimax' : 'deterministic',
+        languageConsent: languageProviderEnabled(action),
+        providerMode: languageProviderEnabled(action) ? 'provider' : 'deterministic',
       });
     }
     const orchestrator = new ThetaTurnOrchestrator(store, workflow);
@@ -1087,6 +1087,12 @@ const boundedLimit = (value: string | null): number => {
   const parsed = value ? Number.parseInt(value, 10) : 30;
   return Number.isInteger(parsed) ? Math.max(1, Math.min(parsed, 100)) : 30;
 };
+
+const languageProviderEnabled = (input: {
+  useLanguageProvider?: boolean;
+  /** @deprecated Kept for API compatibility with provider-specific clients. */
+  useMiniMax?: boolean;
+}): boolean => input.useLanguageProvider ?? input.useMiniMax ?? true;
 
 const formatWebIntentSummary = (
   summary: NonNullable<ThetaWorkflowConversationContext['researchIntentSummary']>,

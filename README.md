@@ -118,17 +118,47 @@ npm run python:sync:training
 
 The CLI automatically uses `.venv/bin/python` (or the Windows equivalent).
 
-### 4. Configure the optional language provider
+### 4. Configure and select a language model
 
-The deterministic agent works without an API key. To enable the optional
-MiniMax language layer, create a local environment file and fill only the
-required values:
+The deterministic agent works without an API key. The optional language layer
+supports MiniMax, OpenAI, DeepSeek, OpenRouter, local Ollama, and any custom
+OpenAI-compatible endpoint. Create a local environment file and fill only one
+provider's required values:
 
 ```bash
 cp .env.example .env
 ```
 
 `.env` is ignored and must never be committed.
+
+Set `THETA_LLM_PROVIDER` and `THETA_LLM_MODEL` in `.env` for an environment
+default, or switch models without editing the file:
+
+```bash
+npm run build
+npm run model -- list
+npm run model -- use --provider openai --model <model-id>
+npm run model -- current
+```
+
+The selected provider and model are saved in the ignored
+`.theta_agent/inference-selection.json`; credentials remain only in `.env`.
+A saved choice takes precedence over `THETA_LLM_PROVIDER`. Reset it to return
+to the environment default:
+
+```bash
+npm run model -- reset
+```
+
+Inside the interactive Agent, the equivalent commands are `/model list`,
+`/model use <provider> <model>`, `/model`, and `/model reset`. `/llm on` enables
+language assistance for the current conversation; model selection and consent
+are intentionally separate controls.
+
+Provider-specific variables are documented in [.env.example](.env.example).
+Ollama normally requires only `OLLAMA_MODEL`; the other built-in remote
+providers require their corresponding API key. `npm run doctor` reports the
+active selection and whether its configuration is usable.
 
 ### 5. Verify and start the system
 

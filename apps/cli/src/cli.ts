@@ -120,8 +120,14 @@ Commands:
       --reason-codes <csv> [--warnings <csv>] [--evidence <text>] [--approve]
       Explain an existing deterministic recommendation without changing it.
 
+  model list [--json]
+  model current [--json]
+  model use --provider <id> --model <model> [--json]
+  model reset [--json]
+      Inspect or change the persisted inference provider and model selection.
+
   repl [--run-id <id>] [--runtime-db <path>]
-      Open the persistent conversational REPL with bounded MiniMax assistance.
+      Open the persistent conversational REPL with bounded provider assistance.
 
   dataset inspect --file <path> [--sample-size <number>]
       Inspect an allowed local dataset through Hypha governance.

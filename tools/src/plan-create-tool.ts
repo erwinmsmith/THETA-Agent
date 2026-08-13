@@ -62,7 +62,7 @@ export const thetaPlanCreateToolSpec: ToolSpec = {
   id: THETA_TOOL_IDS.planCreate,
   version: '3.0.0',
   displayName: 'Create Native Planner V2 Training Plan',
-  description: 'Create the canonical plan directly from DatasetFacts, ResearchIntent and the validated native MiniMax Planner V2 decision.',
+  description: 'Create the canonical plan from DatasetFacts, ResearchIntent and a validated provider Planner V2 decision.',
   tags: ['theta', 'plan', 'planner-v2'],
   inputSchema: planCreateInputSchema,
   outputSchema: planCreateOutputSchema,

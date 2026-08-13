@@ -144,6 +144,7 @@ import {
   type WorkflowMetricsV2,
   type WorkflowVersion,
 } from './acceptance/v2-acceptance.js';
+import { resolveInferenceSelection } from '@theta-agent/tools/support/providers/registry.js';
 
 const USER_ID = "local_user";
 const WORKSPACE_ID = "local_workspace";
@@ -168,7 +169,7 @@ export interface ThetaWorkflowInput {
   constraints?: Record<string, unknown>;
   plan?: Record<string, unknown>;
   sampleSize?: number;
-  plannerMode?: "deterministic" | "minimax";
+  plannerMode?: "deterministic" | "provider" | "minimax";
   allowRemoteSamples?: boolean;
   recoveredResearchIntent?: Record<string, unknown>;
   recoveryOfRunId?: string;
@@ -1851,7 +1852,7 @@ const executeThetaState = async (
         }
         const proposal = planProposalResultSchema.parse(
           await invoke(THETA_TOOL_IDS.planPropose, {
-            enabled: input.plannerMode === "minimax",
+            enabled: isProviderPlannerMode(input.plannerMode),
             researchBrief,
             datasetProfile,
             columnConfirmation,
@@ -3553,11 +3554,16 @@ const prepareWorkflowInput = async (
       ? { requestedVersion: input.workflowVersion }
       : {}),
   });
+  const plannerMode = isProviderPlannerMode(input.plannerMode)
+    ? 'provider'
+    : input.plannerMode ?? 'provider';
   if (workflowVersion !== "2.0.0" || input.datasetRef) {
     return {
       ...input,
       workflowVersion,
-      ...(workflowVersion === '2.0.0' ? { plannerMode: 'minimax' as const } : {}),
+      ...(workflowVersion === '2.0.0' || input.plannerMode !== undefined
+        ? { plannerMode }
+        : {}),
     };
   }
   const registry = new SQLiteDatasetRegistry(runtimeDb);
@@ -3569,7 +3575,7 @@ const prepareWorkflowInput = async (
     return {
       ...input,
       workflowVersion,
-      plannerMode: 'minimax',
+      plannerMode,
       datasetRef: dataset.datasetRef,
     };
   } finally {
@@ -3614,11 +3620,12 @@ const syncV2ResearchReadModel = async (
         typeof sampleReceipt.rowCount === 'number' &&
         typeof sampleReceipt.redactedValueCount === 'number'
       ) {
+        const inferenceSelection = resolveInferenceSelection();
         store.saveRemoteSampleReceipt({
           runId,
           datasetHash: facts.data.datasetHash,
-          provider: 'minimax-openai-compatible',
-          model: process.env.MINIMAX_MODEL?.trim() || 'MiniMax-M2.7',
+          provider: inferenceSelection?.providerId ?? 'unconfigured',
+          model: inferenceSelection?.model ?? 'deterministic',
           payloadHash: sampleReceipt.payloadHash,
           rowCount: sampleReceipt.rowCount,
           redactedValueCount: sampleReceipt.redactedValueCount,
@@ -3697,8 +3704,12 @@ const validateInput = (input: ThetaWorkflowInput): void => {
   ) {
     throw new Error("input.workflowVersion must be 1.0.0 or 2.0.0.");
   }
-  if (input.plannerMode !== undefined && input.plannerMode !== "deterministic" && input.plannerMode !== "minimax") {
-    throw new Error("input.plannerMode must be deterministic or minimax.");
+  if (
+    input.plannerMode !== undefined &&
+    input.plannerMode !== "deterministic" &&
+    !isProviderPlannerMode(input.plannerMode)
+  ) {
+    throw new Error("input.plannerMode must be deterministic or provider.");
   }
   if (
     input.allowRemoteSamples !== undefined &&
@@ -3715,6 +3726,9 @@ const validateInput = (input: ThetaWorkflowInput): void => {
     throw new Error("input.sampleSize must be an integer from 1 to 1000.");
   }
 };
+
+const isProviderPlannerMode = (value: unknown): boolean =>
+  value === 'provider' || value === 'minimax';
 
 const canonicalJson = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;

@@ -5,7 +5,9 @@ export const thetaWebRunActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('message'),
     text: z.string().trim().min(1).max(4000),
-    useMiniMax: z.boolean().default(true),
+    useLanguageProvider: z.boolean().optional(),
+    /** @deprecated Use useLanguageProvider. */
+    useMiniMax: z.boolean().optional(),
   }).strict(),
   z.object({ action: z.literal('columns'), text: z.string().trim().min(1).max(4000) }).strict(),
   z.object({
@@ -43,7 +45,9 @@ export const thetaWebCreateRunSchema = z.object({
   datasetRef: z.string().trim().min(1).optional(),
   filePath: z.string().trim().min(1).optional(),
   researchGoal: z.string().trim().min(4).max(2000).optional(),
-  useMiniMax: z.boolean().default(true),
+  useLanguageProvider: z.boolean().optional(),
+  /** @deprecated Use useLanguageProvider. */
+  useMiniMax: z.boolean().optional(),
   allowRemoteSamples: z.boolean().default(false),
 }).strict().refine(
   (input) => Boolean(input.datasetRef || input.filePath),

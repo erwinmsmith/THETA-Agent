@@ -368,7 +368,9 @@ const session = (row: Row): ConversationSession => ({
     ? { activeRunId: nullableString(row.active_run_id) }
     : {}),
   providerMode:
-    row.provider_mode === 'minimax' ? 'minimax' : 'deterministic',
+    row.provider_mode === 'provider' || row.provider_mode === 'minimax'
+      ? 'provider'
+      : 'deterministic',
   languageConsent: number(row.language_consent) === 1,
   createdAt: string(row.created_at),
   updatedAt: string(row.updated_at),

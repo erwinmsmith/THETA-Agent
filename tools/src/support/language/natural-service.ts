@@ -67,7 +67,7 @@ export class ThetaNaturalLanguageService {
       );
       const output = preferSafeDeterministicResolution(request, parsedOutput);
       validateOutput(request, output);
-      return result(request, output, factsHash, 'minimax', undefined, {
+      return result(request, output, factsHash, 'provider', undefined, {
         providerId:
           typeof response.metadata?.providerId === 'string'
             ? response.metadata.providerId
@@ -893,7 +893,7 @@ const result = (
   request: NaturalLanguageRequest,
   output: NaturalLanguageProviderOutput,
   factsHash: string,
-  source: 'minimax' | 'deterministic',
+  source: 'provider' | 'deterministic',
   fallbackReason?: string,
   telemetry: {
     providerId: string;

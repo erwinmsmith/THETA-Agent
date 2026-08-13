@@ -98,15 +98,34 @@ npm run python:sync:training
 
 CLI 会自动使用 `.venv/bin/python`，Windows 则使用对应的虚拟环境解释器。
 
-### 4. 配置可选语言模型服务
+### 4. 配置并切换语言模型
 
-确定性 Agent 不需要 API Key 也能运行。如需启用可选的 MiniMax 语言层，请创建本地环境文件并只填写必需配置：
+确定性 Agent 不需要 API Key 也能运行。可选语言模型层支持 MiniMax、OpenAI、DeepSeek、OpenRouter、本地 Ollama，以及任意 OpenAI-compatible 接口。创建本地环境文件，只需填写一个供应商的必需配置：
 
 ```bash
 cp .env.example .env
 ```
 
 `.env` 已被忽略，禁止提交到版本控制。
+
+可以在 `.env` 中设置 `THETA_LLM_PROVIDER` 和 `THETA_LLM_MODEL` 作为环境默认值，也可以不修改文件直接切换：
+
+```bash
+npm run build
+npm run model -- list
+npm run model -- use --provider openai --model <model-id>
+npm run model -- current
+```
+
+当前供应商和模型会保存到已忽略的 `.theta_agent/inference-selection.json`，API Key 仍然只保留在 `.env` 中。已保存的选择优先级高于 `THETA_LLM_PROVIDER`；清除后会恢复环境默认值：
+
+```bash
+npm run model -- reset
+```
+
+在交互式 Agent 内，对应命令是 `/model list`、`/model use <provider> <model>`、`/model` 和 `/model reset`。`/llm on` 用于开启当前会话的语言辅助；模型选择与会话授权是两个独立控制。
+
+各供应商的环境变量说明见 [.env.example](.env.example)。Ollama 通常只需设置 `OLLAMA_MODEL`；其他内置远程供应商需要对应的 API Key。`npm run doctor` 会报告当前选择及其配置是否可用。
 
 ### 5. 验证并启动系统
 

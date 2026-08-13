@@ -22,6 +22,8 @@
     "build": "npm run build:domain && npm run build:tools && npm run build:agent && npm run build:apps",
     "test:python": "pnpm --filter @theta-agent/tools run test:python",
     "test:registries": "node scripts/check-registries.mjs",
+    "test:providers": "node scripts/check-providers.mjs",
+    "model": "pnpm --filter @theta-agent/cli run cli -- model",
     "rag:build": "pnpm --filter @theta-agent/cli run cli -- rag build --json",
     "predoctor": "npm run deps:ensure",
     "doctor": "pnpm --filter @theta-agent/cli run cli -- doctor",

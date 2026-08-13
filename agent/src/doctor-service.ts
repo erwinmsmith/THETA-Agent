@@ -9,7 +9,11 @@ import path from 'node:path';
 import { ThetaWorkflowService } from './theta-workflow-service.js';
 import { createThetaWorkflowRuntime } from './runtime/hypha-runtime.js';
 import { runThetaModelCatalog } from '@theta-agent/tools/hypha-runner.js';
-import { createMiniMaxProviderFromEnv } from '@theta-agent/tools/support/providers/minimax.js';
+import {
+  createInferenceProviderFromEnv,
+  listInferenceProviders,
+  resolveInferenceSelection,
+} from '@theta-agent/tools/support/providers/registry.js';
 import { probeThetaPythonModules } from '@theta-agent/tools/theta-tools.js';
 import { CapabilityRegistry } from '@theta-agent/tools/support/capabilities/registry.js';
 import { getKnowledgeIndexStatus } from '@theta-agent/tools/support/rag/service.js';
@@ -67,7 +71,7 @@ export class DoctorService {
     checks.push(await this.capabilityRegistryCheck());
     checks.push(await this.structuredKnowledgeCheck());
     checks.push(gpuCheck());
-    checks.push(minimaxCheck());
+    checks.push(inferenceProviderCheck());
 
     return {
       status: checks.some((check) => check.status === 'FAIL')
@@ -350,7 +354,7 @@ export class DoctorService {
       if (status.status !== 'ready' || status.totalObjects === 0) {
         return warn(
           'knowledge.structured-v1',
-          '结构化知识库尚未构建；推荐仍可使用确定性后备，但 MiniMax Planner 缺少本地证据集。',
+          '结构化知识库尚未构建；推荐仍可使用确定性后备，但外部模型 Planner 缺少本地证据集。',
           'Run npm run rag:build at the repository root.',
         );
       }
@@ -406,25 +410,34 @@ const gpuCheck = (): DoctorCheck => {
       );
 };
 
-const minimaxCheck = (): DoctorCheck => {
-  if (!process.env.MINIMAX_API_KEY?.trim()) {
-    return warn(
-      'minimax.optional',
-      'MiniMax is not configured; deterministic CLI operation is unaffected.',
-      'Set MINIMAX_API_KEY in the repository-root .env only when bounded language inference or MiniMax Planner is required.',
-    );
-  }
+const inferenceProviderCheck = (): DoctorCheck => {
   try {
-    const provider = createMiniMaxProviderFromEnv();
+    const selection = resolveInferenceSelection();
+    if (!selection) {
+      return warn(
+        'inference.provider',
+        'No external inference provider is configured; deterministic operation is unaffected.',
+        'Configure a provider in .env, then run theta model use --provider <id> --model <model>.',
+      );
+    }
+    const provider = createInferenceProviderFromEnv();
+    if (!provider) {
+      const status = listInferenceProviders().find((item) => item.selected);
+      return fail(
+        'inference.provider',
+        `Selected provider ${selection.providerId}/${selection.model} is missing credentials.`,
+        `Configure the required key for ${status?.displayName ?? selection.providerId} without exposing it.`,
+      );
+    }
     return pass(
-      'minimax.optional',
-      `MiniMax provider configuration is valid for bounded language tasks and Planner model ${provider?.model ?? 'unknown'} (60s default timeout).`,
+      'inference.provider',
+      `Provider ${provider.id}/${provider.model} is selected for bounded language tasks and planning.`,
     );
   } catch (error) {
     return fail(
-      'minimax.optional',
-      `MiniMax configuration is invalid: ${message(error)}`,
-      'Correct MINIMAX_API_BASE, MINIMAX_MODEL, or MINIMAX_TIMEOUT_MS without exposing MINIMAX_API_KEY.',
+      'inference.provider',
+      `Inference provider configuration is invalid: ${message(error)}`,
+      'Correct the provider base URL, model, timeout, or API key without exposing secrets.',
     );
   }
 };

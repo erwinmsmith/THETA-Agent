@@ -99,7 +99,10 @@ export const datasetUnderstandingDraftSchema = z.object({
   assumptions: z.array(z.string()),
   confidence: z.number().min(0).max(1),
   provenance: z.object({
-    source: z.enum(['deterministic', 'minimax', 'user', 'hybrid']),
+    source: z.preprocess(
+      (value) => value === 'minimax' ? 'provider' : value,
+      z.enum(['deterministic', 'provider', 'user', 'hybrid']),
+    ),
     toolIds: z.array(z.string()),
     sampleSeed: z.string().min(1),
     generatedAt: z.string().datetime(),

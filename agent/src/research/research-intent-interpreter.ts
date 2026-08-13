@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { PromptMessage } from '@hypha/inference';
 import { z } from 'zod';
-import { createMiniMaxProviderFromEnv } from '@theta-agent/tools/support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';
 import {
   researchIntentSchema,
   type DatasetConfirmation,
@@ -67,7 +67,7 @@ export class ResearchIntentInterpreter {
       input.answer,
       input.memory,
     ), explicitPatch, input.gaps);
-    const provider = createMiniMaxProviderFromEnv({ timeoutMs: 90_000 });
+    const provider = createInferenceProviderFromEnv({ timeoutMs: 90_000 });
     if (!provider) return fallback;
     try {
       const response = await provider.infer({
@@ -162,7 +162,7 @@ export class ResearchIntentInterpreter {
     answer: string;
   }): Promise<ResearchIntent> {
     const explicitPatch = extractExplicitPatch(input.answer, input.confirmation);
-    const provider = createMiniMaxProviderFromEnv({ timeoutMs: 90_000 });
+    const provider = createInferenceProviderFromEnv({ timeoutMs: 90_000 });
     let languagePatch: ResearchIntentPatch = {};
     if (provider) {
       try {

@@ -30,7 +30,7 @@ export interface PresentedPlanV2 {
   openQuestions: string[];
   evidenceRefs: string[];
   evidenceSelectionReceipts: NonNullable<PlannerDecisionV2['evidenceSelectionReceipts']>;
-  plannerSource: 'minimax';
+  plannerSource: 'provider';
   approvalRequired: boolean;
 }
 
@@ -39,7 +39,7 @@ export const presentPlanV2 = (
   decision: PlannerDecisionV2,
   validation: PlannerValidationResultV2,
 ): PresentedPlanV2 => ({
-  title: validation.valid ? 'MiniMax 研究方案已通过硬约束校验' : 'MiniMax 研究方案需要修正',
+  title: validation.valid ? '语言模型研究方案已通过硬约束校验' : '语言模型研究方案需要修正',
   summary: validation.valid
     ? `建议使用 ${decision.modelId} 完成“${input.intent.researchQuestion}”；批准前不会启动训练。`
     : `当前方案存在 ${validation.errors.length} 项阻塞问题。`,
@@ -62,7 +62,7 @@ export const presentPlanV2 = (
   keyParameters: Object.entries(decision.parameters).map(([field, value]) => ({
     field,
     value,
-    rationale: '该值由 MiniMax 在能力目录和 RAG 证据约束下提出。',
+    rationale: '该值由当前语言模型在能力目录和 RAG 证据约束下提出。',
     source: Object.prototype.hasOwnProperty.call(input.userOverrides, field)
       ? 'user_override'
       : 'planner_recommendation',
@@ -80,7 +80,7 @@ export const presentPlanV2 = (
   openQuestions: [],
   evidenceRefs: decision.evidenceRefs,
   evidenceSelectionReceipts: decision.evidenceSelectionReceipts ?? [],
-  plannerSource: 'minimax',
+  plannerSource: 'provider',
   approvalRequired: validation.valid,
 });
 

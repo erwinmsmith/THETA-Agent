@@ -7,7 +7,7 @@ import {
   type NaturalLanguageResult,
 } from '@theta-agent/domain/conversation/natural-contracts.js';
 import { ThetaNaturalLanguageService } from './support/language/natural-service.js';
-import { createMiniMaxProviderFromEnv } from './support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from './support/providers/registry.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export type ThetaConversationLanguageInput = NaturalLanguageRequest;
@@ -58,7 +58,7 @@ const outputSchema: JsonSchema = {
   required: ['schemaVersion', 'source', 'factsHash', 'telemetry', 'output'],
   properties: {
     schemaVersion: { const: '1.0.0' },
-    source: { enum: ['minimax', 'deterministic'] },
+    source: { enum: ['provider', 'deterministic'] },
     fallbackReason: { type: 'string' },
     factsHash: { type: 'string', pattern: '^[a-f0-9]{64}$' },
     telemetry: { type: 'object', additionalProperties: true },
@@ -81,7 +81,7 @@ export const thetaConversationLanguageToolSpec: ToolSpec = {
   humanApprovalPolicy: {
     required: true,
     reason:
-      'A session consent is required before sanitized conversation context is sent to MiniMax.',
+      'A session consent is required before sanitized conversation context is sent to the selected provider.',
   },
   idempotencyPolicy: { mode: 'required' },
   timeoutPolicy: { timeoutMs: 75_000, onTimeout: 'fail' },
@@ -99,7 +99,7 @@ export const thetaConversationLanguageHandler: ToolHandler<
   ThetaConversationLanguageOutput
 > = async (input) => {
   const request = naturalLanguageRequestSchema.parse(input);
-  const provider = createMiniMaxProviderFromEnv();
+  const provider = createInferenceProviderFromEnv();
   return naturalLanguageResultSchema.parse(
     await new ThetaNaturalLanguageService({
       provider,

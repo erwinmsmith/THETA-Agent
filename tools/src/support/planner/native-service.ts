@@ -87,7 +87,7 @@ export class NativePlannerV2Service {
           : [error instanceof Error ? error.message : String(error)];
       }
     }
-    throw new Error(`MiniMax Planner V2 failed validation: ${validationErrors.join('; ')}`);
+    throw new Error(`Provider Planner V2 failed validation: ${validationErrors.join('; ')}`);
   }
 
   private async selectEvidence(

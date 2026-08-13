@@ -29,7 +29,7 @@ The selected Runtime SQLite database stores:
 - immutable `ResearchBrief` revisions.
 
 These records support conversation recovery but do not replace Run events.
-Replay reads canonical events only and does not call MiniMax or execute tools.
+Replay reads canonical events only and does not call a language-model provider or execute tools.
 
 ## Field Authority
 

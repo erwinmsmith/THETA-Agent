@@ -36,6 +36,7 @@ import {
   runThetaRagSearch,
 } from '@theta-agent/tools/hypha-runner.js';
 import { ThetaConversationWorkflowExecutor } from './workflow-executor.js';
+import { ModelSelectionService } from '../inference/model-selection-service.js';
 import {
   commandNeedsActiveRun,
   noActiveRunResult,
@@ -91,6 +92,7 @@ export interface TurnResult {
 
 export class ThetaTurnOrchestrator {
   private readonly merger = new ResearchBriefMerger();
+  private readonly modelSelection = new ModelSelectionService();
 
   constructor(
     private readonly store: ConversationStore,
@@ -113,7 +115,7 @@ export class ThetaTurnOrchestrator {
     if (command.kind === 'llm') {
       const updated = this.store.updateSession(context.sessionId, {
         languageConsent: command.enabled,
-        providerMode: command.enabled ? 'minimax' : 'deterministic',
+        providerMode: command.enabled ? 'provider' : 'deterministic',
       });
       return {
         value: {
@@ -132,6 +134,20 @@ export class ThetaTurnOrchestrator {
           trainingApprovalGranted: false,
           hasActiveRun: Boolean(activeRunId),
         },
+        activeRunId,
+      };
+    }
+    if (command.kind === 'model') {
+      return {
+        value: this.modelSelection.execute(
+          command.action === 'use'
+            ? {
+                action: 'use',
+                providerId: command.providerId!,
+                model: command.model!,
+              }
+            : { action: command.action },
+        ),
         activeRunId,
       };
     }

@@ -145,7 +145,10 @@ export const languageResultSchema = z
       'word_question',
       'explain_recommendation',
     ]),
-    source: z.enum(['minimax', 'deterministic']),
+    source: z.preprocess(
+      (value) => value === 'minimax' ? 'provider' : value,
+      z.enum(['provider', 'deterministic']),
+    ),
     text: boundedText,
     intent: safeIntentSchema.optional(),
     fallbackReason: languageFallbackReasonSchema.optional(),

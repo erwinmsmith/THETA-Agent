@@ -1,6 +1,6 @@
 import type { PromptMessage } from '@hypha/inference';
 import { z } from 'zod';
-import { createMiniMaxProviderFromEnv } from '@theta-agent/tools/support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';
 import {
   datasetConfirmationDraftSchema,
   datasetFactsSchema,
@@ -30,7 +30,7 @@ export interface DatasetCorrectionResult {
   draft: DatasetConfirmationDraft;
   correctionSummary: string;
   evidenceSpans: string[];
-  source: 'minimax' | 'deterministic';
+  source: 'provider' | 'deterministic';
   fallbackReason?: string;
 }
 
@@ -43,8 +43,8 @@ export class DatasetCorrectionService {
     const facts = datasetFactsSchema.parse(input.facts);
     const understanding = datasetUnderstandingDraftSchema.parse(input.understanding);
     const base = baseDraft(understanding);
-    const provider = createMiniMaxProviderFromEnv({ timeoutMs: 90_000 });
-    let providerError = provider ? '' : 'MiniMax is not configured.';
+    const provider = createInferenceProviderFromEnv({ timeoutMs: 90_000 });
+    let providerError = provider ? '' : 'No language model provider is configured.';
     if (provider) {
       let validationErrors: string[] = [];
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -63,7 +63,7 @@ export class DatasetCorrectionService {
             metadata: { purpose: 'dataset_correction', datasetRef: facts.datasetRef },
           });
           const patch = correctionPatchSchema.parse(response.output);
-          return finalizeCorrection(facts, base, patch, 'minimax');
+          return finalizeCorrection(facts, base, patch, 'provider');
         } catch (error) {
           validationErrors = error instanceof z.ZodError
             ? error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)

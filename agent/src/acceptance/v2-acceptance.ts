@@ -27,12 +27,14 @@ export const workflowMetricsV2Schema = z.object({
   datasetUnderstandingDurationMs: z.number().int().nonnegative(),
   datasetUnderstandingSource: z.enum([
     'deterministic',
-    'minimax',
+    'provider',
     'user',
     'hybrid',
     'unavailable',
   ]),
   datasetUnderstandingValidationFailures: z.number().int().nonnegative(),
+  providerFallbackCount: z.number().int().nonnegative(),
+  /** @deprecated Use providerFallbackCount. */
   minimaxFallbackCount: z.number().int().nonnegative(),
   userDatasetCorrectionCount: z.number().int().nonnegative(),
   textColumnCorrectionCount: z.number().int().nonnegative(),
@@ -79,7 +81,8 @@ export const deriveWorkflowMetricsV2 = (
       input.events,
       'theta.dataset-understanding.validation.failed',
     ),
-    minimaxFallbackCount: countEvents(input.events, 'theta.minimax.fallback'),
+    providerFallbackCount: providerFallbackCount(input.events),
+    minimaxFallbackCount: providerFallbackCount(input.events),
     userDatasetCorrectionCount: confirmation?.status === 'corrected' ? 1 : 0,
     textColumnCorrectionCount: correctionCount(
       understanding?.textColumns,
@@ -102,6 +105,10 @@ export const deriveWorkflowMetricsV2 = (
     ),
   });
 };
+
+const providerFallbackCount = (events: readonly MetricEvent[]): number =>
+  countEvents(events, 'theta.provider.fallback') +
+  countEvents(events, 'theta.minimax.fallback');
 
 export const goldenTranscriptSchema = z.object({
   schemaVersion: z.literal('2.0.0'),
@@ -254,7 +261,7 @@ const correctionCount = (suggested: unknown, confirmed: unknown): number => {
 const understandingSource = (
   value: unknown,
 ): WorkflowMetricsV2['datasetUnderstandingSource'] =>
-  value === 'deterministic' || value === 'minimax' || value === 'user' || value === 'hybrid'
+  value === 'deterministic' || value === 'provider' || value === 'user' || value === 'hybrid'
     ? value
     : 'unavailable';
 

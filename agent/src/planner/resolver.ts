@@ -21,7 +21,7 @@ export interface ResolvePlannerInput {
 
 export interface PlannerResolution {
   schemaVersion: "1.0.0";
-  source: "minimax" | "deterministic" | "explicit_user_plan";
+  source: "provider" | "deterministic" | "explicit_user_plan";
   resolvedPlan: ThetaTrainingPlan;
   acceptedFields: string[];
   rejectedFields: Array<{ field: string; reason: string }>;

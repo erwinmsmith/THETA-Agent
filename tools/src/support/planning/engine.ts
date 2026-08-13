@@ -429,7 +429,7 @@ export const createTrainingPlanRecordV2 = (
       reasonCodes: ["NATIVE_PLANNER_V2"],
       evidence: acceptedEvidence,
       evidenceBundleHash: evidenceBundle.bundleHash,
-      planProposalSource: "minimax",
+      planProposalSource: "provider",
       plannerAcceptedEvidenceRefs: decision.evidenceRefs,
       evidenceSelectionReceipts: [],
       validatorVersion: PLAN_VALIDATOR_VERSION,

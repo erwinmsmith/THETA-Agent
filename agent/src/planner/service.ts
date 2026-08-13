@@ -118,7 +118,7 @@ export class ThetaPlannerService {
       await progress.record("final_review", "completed", 1);
       return planProposalResultSchema.parse({
         schemaVersion: PLANNER_CONTRACT_VERSION,
-        source: "minimax",
+        source: "provider",
         factsHash,
         inputSnapshot,
         plannerProgress: progress.events,
@@ -191,7 +191,7 @@ export class ThetaPlannerService {
       options: {
         temperature: 0,
         maxTokens: compact ? 900 : 1400,
-        // MiniMax's documented tool_choice modes are auto/none. The local
+        // Compatible providers commonly expose auto/none tool-choice modes. The local
         // executor supplies the strictness by rejecting a non-tool response.
         extra: { toolChoice: "auto" },
       },
@@ -213,7 +213,7 @@ export class ThetaPlannerService {
           targets,
           factsHash,
           attempt,
-          provider: "minimax",
+          provider: this.options.provider.id,
           model: this.options.modelAlias ?? "configured-planner-model",
         }, error));
       }
@@ -226,7 +226,7 @@ export class ThetaPlannerService {
         selections: selected,
         factsHash,
         attempt,
-        provider: "minimax",
+        provider: this.options.provider.id,
         model: this.options.modelAlias ?? "configured-planner-model",
       }));
     } catch (error) {

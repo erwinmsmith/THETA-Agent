@@ -250,7 +250,10 @@ export const plannerInputChangeSchema = z
 export const planProposalResultSchema = z
   .object({
     schemaVersion: z.literal(PLANNER_CONTRACT_VERSION),
-    source: z.enum(["minimax", "deterministic"]),
+    source: z.preprocess(
+      (value) => value === "minimax" ? "provider" : value,
+      z.enum(["provider", "deterministic"]),
+    ),
     fallbackReason: z.enum([
       "planner_not_enabled",
       "provider_not_configured",

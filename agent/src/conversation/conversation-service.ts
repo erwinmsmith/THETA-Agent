@@ -174,6 +174,28 @@ export class ConversationService {
         json: options.booleans.has('json'),
       });
     }
+    if (command === 'model') {
+      const action = rest[0] ?? 'current';
+      if (!['list', 'current', 'use', 'reset'].includes(action)) {
+        throw new Error('Expected "model list", "model current", "model use", or "model reset".');
+      }
+      const options = parseOptions(
+        rest.slice(1),
+        new Set(action === 'use' ? ['provider', 'model'] : []),
+        new Set(['json']),
+      );
+      return agentInvocationSchema.parse({
+        kind: 'model',
+        action,
+        ...(action === 'use'
+          ? {
+              providerId: requiredOption(options.values, 'provider'),
+              model: requiredOption(options.values, 'model'),
+            }
+          : {}),
+        json: options.booleans.has('json'),
+      });
+    }
     if (command === 'language') {
       const action = rest[0];
       if (
@@ -306,6 +328,23 @@ export class ConversationService {
       return conversationCommandSchema.parse({
         kind: 'llm',
         enabled: argument === 'on',
+      });
+    }
+    if (name === 'model') {
+      const parts = argument?.split(/\s+/u).filter(Boolean) ?? [];
+      const action = parts[0] ?? 'current';
+      if (action === 'list' || action === 'current' || action === 'reset') {
+        if (parts.length > 1) throw new Error(`/model ${action} does not accept arguments.`);
+        return conversationCommandSchema.parse({ kind: 'model', action });
+      }
+      if (action !== 'use' || parts.length !== 3) {
+        throw new Error('/model requires "list", "current", "reset", or "use <provider> <model>".');
+      }
+      return conversationCommandSchema.parse({
+        kind: 'model',
+        action,
+        providerId: parts[1],
+        model: parts[2],
       });
     }
     if (name === 'history' || name === 'brief') {

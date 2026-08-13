@@ -46,6 +46,7 @@ export const agentCommandNames = new Set([
   'rag',
   'train',
   'language',
+  'model',
   'answer',
   'columns',
   'repl',
@@ -214,7 +215,7 @@ export const runRepl = async (
   });
   let lastRawValue: unknown;
   output.write(
-    '\nTHETA 研究训练助手\n\n直接用自然语言回答问题；使用 /llm on 开启 MiniMax，/next 查看下一步，/help 查看命令。\n',
+    '\nTHETA 研究训练助手\n\n直接用自然语言回答问题；使用 /model list 查看供应商，/llm on 开启语言辅助，/help 查看命令。\n',
   );
   if (readline.terminal) readline.setPrompt('theta-agent> ');
   if (readline.terminal) readline.prompt();
@@ -327,7 +328,7 @@ export const runRepl = async (
                       '正在理解并校验列角色',
                       '正在更新数据画像并推进工作流',
                       '正在检索模型、参数和评估证据',
-                      'MiniMax 正在拟定候选方案',
+                      '语言模型正在拟定候选方案',
                       '正在绑定证据并执行硬约束验证',
                     ]
                   : [
@@ -382,7 +383,12 @@ const replHelp = `THETA 交互命令
   /start <数据文件>       创建持久化训练任务
   /answer <回答>          显式提交研究问题回答
   /columns <说明>         确认正文、时间、ID 和元数据列
-  /llm on|off             开启或关闭 MiniMax 语言辅助
+  /llm on|off             开启或关闭外部语言模型辅助
+  /model                  查看当前供应商和模型
+  /model list             查看可用供应商及配置状态
+  /model use <供应商> <模型>
+                          切换并持久化当前模型
+  /model reset            清除持久化选择并恢复环境默认值
   /brief                  查看当前研究档案
   /history                查看已持久化的最近对话
   /next                   查看当前推荐的下一步

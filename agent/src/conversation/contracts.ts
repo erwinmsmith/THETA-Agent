@@ -73,6 +73,15 @@ export const agentInvocationSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('model'),
+      action: z.enum(['list', 'current', 'use', 'reset']),
+      providerId: z.string().trim().min(1).max(40).optional(),
+      model: z.string().trim().min(1).max(200).optional(),
+      json: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('conversationTurn'),
       action: z.enum(['answer', 'columns']),
       text: z.string().trim().min(1).max(4000),
@@ -169,6 +178,14 @@ export const conversationCommandSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('llm'),
       enabled: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('model'),
+      action: z.enum(['list', 'current', 'use', 'reset']),
+      providerId: z.string().trim().min(1).max(40).optional(),
+      model: z.string().trim().min(1).max(200).optional(),
     })
     .strict(),
   z

@@ -57,7 +57,7 @@ export class ThetaLanguageService {
       return languageResultSchema.parse({
         schemaVersion: LANGUAGE_CONTRACT_VERSION,
         task: sanitized.task,
-        source: 'minimax',
+        source: 'provider',
         text: output.text,
         ...('intent' in output ? { intent: output.intent } : {}),
         factsHash: languageFactsHash(sanitized),

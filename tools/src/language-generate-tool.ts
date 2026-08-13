@@ -7,7 +7,7 @@ import {
   type LanguageResult,
 } from '@theta-agent/domain/language/contracts.js';
 import { ThetaLanguageService } from './support/language/service.js';
-import { createMiniMaxProviderFromEnv } from './support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from './support/providers/registry.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 
 export type ThetaLanguageGenerateInput = LanguageRequest;
@@ -53,7 +53,7 @@ const resultSchema: JsonSchema = {
         'explain_recommendation',
       ],
     },
-    source: { enum: ['minimax', 'deterministic'] },
+    source: { enum: ['provider', 'deterministic'] },
     text: { type: 'string', minLength: 1, maxLength: 1200 },
     intent: {
       enum: [
@@ -109,7 +109,7 @@ export const thetaLanguageGenerateHandler: ToolHandler<
   ThetaLanguageGenerateOutput
 > = async (input) => {
   const request = languageRequestSchema.parse(input);
-  const provider = createMiniMaxProviderFromEnv();
+  const provider = createInferenceProviderFromEnv();
   return languageResultSchema.parse(
     await new ThetaLanguageService({
       provider,

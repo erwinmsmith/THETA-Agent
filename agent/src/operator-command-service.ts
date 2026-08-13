@@ -4,9 +4,10 @@ import type { AgentInvocation } from './conversation/contracts.js';
 import type { LanguageRequest, LanguageResult } from '@theta-agent/domain/language/contracts.js';
 import { deterministicLanguageResult } from '@theta-agent/tools/support/language/fallback.js';
 import { sanitizeLanguageRequest } from '@theta-agent/tools/support/language/sanitizer.js';
-import { isMiniMaxConfigured } from '@theta-agent/tools/support/providers/minimax.js';
+import { isInferenceProviderConfigured } from '@theta-agent/tools/support/providers/registry.js';
 import { THETA_APPROVAL_KEYS } from '@theta-agent/domain/domain.js';
 import { ThetaWorkflowService } from './theta-workflow-service.js';
+import { ModelSelectionService } from './inference/model-selection-service.js';
 import {
   requestThetaTrainingCancel,
   requestThetaLanguageGenerate,
@@ -59,6 +60,17 @@ export class ThetaOperatorCommandService implements OperatorCommandExecutor {
   }
 
   async execute(invocation: OperatorInvocation): Promise<unknown> {
+    if (invocation.kind === 'model') {
+      return new ModelSelectionService().execute(
+        invocation.action === 'use'
+          ? {
+              action: 'use',
+              providerId: invocation.providerId!,
+              model: invocation.model!,
+            }
+          : { action: invocation.action },
+      );
+    }
     if (invocation.kind === 'planShow') {
       return this.workflow.plan(invocation.runId, invocation.runtimeDb);
     }
@@ -139,7 +151,7 @@ export class ThetaOperatorCommandService implements OperatorCommandExecutor {
     if (invocation.kind === 'languageGenerate') {
       const request = sanitizeLanguageRequest(invocation.request);
       const configured = (
-        this.dependencies.languageProviderConfigured ?? isMiniMaxConfigured
+        this.dependencies.languageProviderConfigured ?? isInferenceProviderConfigured
       )();
       if (!configured) {
         return (

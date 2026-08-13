@@ -228,9 +228,10 @@ const parseWorkflowVersion = (
 
 const parsePlannerMode = (
   value: string,
-): "deterministic" | "minimax" => {
-  if (value !== "deterministic" && value !== "minimax") {
-    throw new Error("--planner-mode must be deterministic or minimax.");
+): "deterministic" | "provider" => {
+  if (value === "minimax") return "provider";
+  if (value !== "deterministic" && value !== "provider") {
+    throw new Error("--planner-mode must be deterministic or provider.");
   }
   return value;
 };

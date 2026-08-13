@@ -45,7 +45,7 @@ to match the requested action.
 
 ## Language Assistance
 
-MiniMax is optional. `/llm on` records consent for the persisted conversation
+The configured language-model provider is optional. `/llm on` records consent for the persisted conversation
 session, while `/llm off` revokes it. Language output is schema-validated and
 advisory. Invalid, unavailable, or out-of-scope output falls back to
 deterministic interpretation without changing Runtime authority.

@@ -27,7 +27,7 @@ export interface DatasetUnderstandingLanguageLoopOptions {
 export interface DatasetUnderstandingLanguageLoopResult {
   facts: DatasetFacts;
   draft: DatasetUnderstandingDraft;
-  source: 'minimax' | 'deterministic';
+  source: 'provider' | 'deterministic';
   explorationCalls: number;
   sampleReceipt?: {
     payloadHash: string;
@@ -62,7 +62,7 @@ export class DatasetUnderstandingLanguageLoop {
     } catch {
       return this.fallback(datasetRef, 'provider_error');
     }
-    if (first.source !== 'minimax' || first.decision.kind === 'fallback') {
+    if (first.source !== 'provider' || first.decision.kind === 'fallback') {
       return this.fallback(datasetRef, first.fallbackReason ?? 'provider_not_configured');
     }
     if (first.decision.kind !== 'tool_call') {
@@ -94,7 +94,7 @@ export class DatasetUnderstandingLanguageLoop {
           allowRemoteSamples: true,
           validationErrors,
         });
-        if (turn.source !== 'minimax' || turn.decision.kind !== 'final') {
+        if (turn.source !== 'provider' || turn.decision.kind !== 'final') {
           return this.deterministic(
             facts,
             output,
@@ -114,7 +114,7 @@ export class DatasetUnderstandingLanguageLoop {
           datasetRef: facts.datasetRef,
           datasetHash: facts.datasetHash,
           provenance: {
-            source: 'minimax',
+            source: 'provider',
             toolIds: ['theta.dataset.understanding.language', 'theta.dataset.explore'],
             sampleSeed: output.sampleSeed,
             generatedAt: new Date().toISOString(),
@@ -125,7 +125,7 @@ export class DatasetUnderstandingLanguageLoop {
           return {
             facts,
             draft,
-            source: 'minimax',
+            source: 'provider',
             explorationCalls: 1,
             sampleReceipt,
           };
@@ -258,7 +258,7 @@ const normalizeRoleEntries = (
     return [{
       column,
       confidence: boundedConfidence(item.confidence ?? item.score, 0.7),
-      reason: firstText(item.reason, `MiniMax classified ${column} as ${field}.`),
+      reason: firstText(item.reason, `The language model classified ${column} as ${field}.`),
     }];
   });
 };

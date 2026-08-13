@@ -1,7 +1,7 @@
 import type { InferenceProvider, PromptMessage } from '@hypha/inference';
 import type { ResearchBrief } from '@theta-agent/domain/research/contracts.js';
 import type { ConversationMessage } from '../conversation/message-store.js';
-import { createMiniMaxProviderFromEnv } from '@theta-agent/tools/support/providers/minimax.js';
+import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';
 import { SQLiteConversationStore } from '../storage/sqlite-conversation-store.js';
 import type { ThetaWorkflowService } from '../theta-workflow-service.js';
 import type { ThetaResultAnalysisRequest } from '../api/contracts.js';
@@ -48,7 +48,7 @@ export class ResultAnalysisService {
 
   constructor(
     workflow: ThetaWorkflowService,
-    private readonly provider: InferenceProvider | undefined = createMiniMaxProviderFromEnv({
+    private readonly provider: InferenceProvider | undefined = createInferenceProviderFromEnv({
       timeoutMs: resultAnalysisTimeoutMs(),
     }),
   ) {
@@ -61,7 +61,7 @@ export class ResultAnalysisService {
     request: ThetaResultAnalysisRequest,
   ): Promise<ResultAnalysisResponse> {
     if (!this.provider) {
-      throw new Error('MiniMax 尚未配置，无法使用猫咪科学家分析结果。');
+      throw new Error('尚未配置语言模型供应商，无法使用猫咪科学家分析结果。');
     }
     const results = await this.resultService.overview(runId, runtimeDb);
     if (results.status !== 'completed') {
@@ -112,7 +112,7 @@ export class ResultAnalysisService {
     });
     const output = asRecord(response.output);
     const answer = typeof output.answer === 'string' ? output.answer.trim() : '';
-    if (!answer) throw new Error('MiniMax 未返回可展示的分析回答。');
+    if (!answer) throw new Error('语言模型未返回可展示的分析回答。');
     return {
       answer,
       provider: String(response.metadata?.providerId ?? this.provider.id),

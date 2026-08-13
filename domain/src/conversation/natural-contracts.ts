@@ -254,7 +254,10 @@ export const naturalLanguageProviderOutputSchema = z.discriminatedUnion(
 export const naturalLanguageResultSchema = z
   .object({
     schemaVersion: z.literal(NATURAL_LANGUAGE_CONTRACT_VERSION),
-    source: z.enum(['minimax', 'deterministic']),
+    source: z.preprocess(
+      (value) => value === 'minimax' ? 'provider' : value,
+      z.enum(['provider', 'deterministic']),
+    ),
     fallbackReason: z.string().optional(),
     factsHash: z.string().regex(/^[a-f0-9]{64}$/),
     telemetry: z

@@ -35,7 +35,7 @@ export class ThetaConversationWorkflowExecutor {
       const result = await this.workflow.run({
         input: {
           filePath: path.resolve(process.cwd(), command.filePath),
-          plannerMode: context.plannerConsent ? 'minimax' : 'deterministic',
+          plannerMode: context.plannerConsent ? 'provider' : 'deterministic',
         },
         ...(context.runtimeDb ? { runtimeDb: context.runtimeDb } : {}),
       });
@@ -295,7 +295,7 @@ const explainPlanDecision = (
           (item) =>
             `${String(item.field)}=${String(item.value)}：${String(item.rationale ?? '采用能力表约束后的候选值')}；证据 ${stringList(item.evidenceRefs).join('、') || '不足，使用确定性默认值'}`,
         )
-      : ['当前没有 MiniMax 参数覆盖，使用 Capability Registry 与确定性推荐器的值。'],
+      : ['当前没有语言模型参数覆盖，使用 Capability Registry 与确定性推荐器的值。'],
   });
   const protocol = record(proposal.experimentProtocol);
   sections.push({

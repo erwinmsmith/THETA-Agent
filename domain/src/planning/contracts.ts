@@ -182,7 +182,10 @@ export const planReviewSnapshotSchema = z
     reasonCodes: z.array(z.string().min(1)),
     evidence: z.array(evidenceRefSchema),
     evidenceBundleHash: sha256Schema,
-    planProposalSource: z.enum(["minimax", "deterministic", "explicit_user_plan"]),
+    planProposalSource: z.preprocess(
+      (value) => value === "minimax" ? "provider" : value,
+      z.enum(["provider", "deterministic", "explicit_user_plan"]),
+    ),
     plannerAcceptedEvidenceRefs: z.array(z.string().min(1)),
     evidenceSelectionReceipts: z.array(evidenceSelectionReceiptSchema),
     plannerInputSnapshot: plannerInputSnapshotSchema.optional(),

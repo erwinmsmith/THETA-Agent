@@ -2,6 +2,8 @@ export * from "./registry/tool-registry.js";
 export * from "./hypha-runner.js";
 export * from "./tool-ids.js";
 export * from "./dataset-path-policy.js";
+export * from "./support/providers/openai-compatible.js";
+export * from "./support/providers/registry.js";
 export type { ThetaDatasetDetectColumnsOutput } from "./dataset-detect-columns-tool.js";
 export type {
   ThetaPlanProposeInput,
