@@ -1,0 +1,99 @@
+schemaVersion: 1.0.0
+modelId: btm
+displayName: Biterm Topic Model
+audit:
+  status: audited
+  auditedAt: 2026-07-31
+  sourceRefs:
+    - ../../third_party/THETA/src/models/models_config/models.yaml
+    - ../../third_party/THETA/src/models/model/baseline/btm.py
+    - ../../third_party/THETA/src/models/model/baseline_trainer.py
+    - ../../third_party/THETA/src/models/run_pipeline.py
+    - ../../packages/theta_agent_bridge/bridge.py
+planner:
+  eligible: true
+  reason: 项目内置 BTM 已接通 BOW、主题数与迭代次数，适合短文本候选。
+catalog:
+  requires: [bow]
+  autoTopics: false
+implementation:
+  family: short_text_probabilistic
+  language: python
+  modulePath: ../../third_party/THETA/src/models/model/baseline/btm.py
+  trainerEntry: BaselineTrainer.train_btm
+  prepareMode: baseline
+  runtimePackages: [numpy, scipy]
+  actualInputs: [bow_matrix, vocabulary, reconstructed_biterms]
+capabilities:
+  temporalTopics: false
+  metadataEffects: false
+  shortTextOptimized: true
+  topicCountMode: fixed
+  offlineExecution: supported
+  cpuExecution: supported
+  nativeOutputs: [static_topics, document_topic_distribution]
+parameters:
+  - parameterId: num_topics
+    valueType: integer
+    defaultValue: 20
+    catalogName: num_topics
+    planField: numTopics
+    trainFlag: --num_topics
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 2
+    maximum: 200
+    choices: []
+    notes: 固定主题数。
+  - parameterId: n_iter
+    valueType: integer
+    defaultValue: 100
+    catalogName: n_iter
+    planField: epochs
+    trainFlag: --n_iter
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 当前通用计划字段 epochs 在 BTM 命令中被明确映射为 Gibbs n_iter。
+  - parameterId: alpha
+    valueType: number
+    defaultValue: 1.0
+    catalogName: alpha
+    planField: null
+    trainFlag: --alpha
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: null
+    choices: []
+    notes: pipeline 支持但 Agent 尚未编译。
+  - parameterId: beta
+    valueType: number
+    defaultValue: 0.01
+    catalogName: beta
+    planField: null
+    trainFlag: --beta
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: null
+    choices: []
+    notes: pipeline 支持但 Agent 尚未编译。
+artifacts:
+  - artifactId: document_topic_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/btm/{run}/btm/model/theta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_btm
+    description: 文档—主题概率矩阵。
+  - artifactId: topic_word_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/btm/{run}/btm/model/beta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_btm
+    description: 主题—词概率矩阵。
+limitations:
+  - 不依赖 bitermplus；项目使用自己的纯 Python BTM 实现。
+  - 当前 Agent 不允许调整 alpha 与 beta。
+  - 原生训练不建模时间或元数据效应。
+unverifiedClaims: []

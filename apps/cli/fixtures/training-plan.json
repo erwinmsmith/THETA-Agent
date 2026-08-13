@@ -1,0 +1,114 @@
+{
+  "validatedPlan": {
+    "datasetId": "demo-dataset",
+    "modelId": "lda",
+    "mode": "unsupervised",
+    "numTopics": 8,
+    "textColumn": "content"
+  },
+  "researchBrief": {
+    "schemaVersion": "1.0.0",
+    "researchQuestion": "What stable themes are present in the corpus?",
+    "dataSources": ["local fixture"],
+    "collectionMethod": "controlled export",
+    "analysisUnit": "one document",
+    "language": "English",
+    "comparisonGroups": [],
+    "topicGranularity": "medium",
+    "knownBiases": [],
+    "sensitiveData": { "status": "no", "categories": [] },
+    "successCriteria": ["Produce stable and interpretable themes."],
+    "hardwareLimit": { "device": "cpu", "memoryGb": 16 },
+    "textFieldIntent": "Analyze the content field.",
+    "trendAnalysis": false,
+    "offlineOnly": true,
+    "requestedEmbedding": "none",
+    "expectedRowCount": 120,
+    "candidateTimeColumns": ["created_at"],
+    "candidateGroupColumns": [],
+    "unknownFields": []
+  },
+  "datasetProfile": {
+    "schemaVersion": "1.0.0",
+    "datasetSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "fileName": "sample.jsonl",
+    "fileSizeBytes": 4096,
+    "format": "jsonl",
+    "encoding": "utf8",
+    "rowCount": 120,
+    "columnCount": 2,
+    "columns": ["content", "created_at"],
+    "missingRatio": 0,
+    "duplicateRatio": 0,
+    "textLengthDistribution": { "average": 80, "maximum": 240 },
+    "languageDistribution": [{ "language": "English", "ratio": 1 }],
+    "timeCoverage": { "start": null, "end": null },
+    "columnCandidates": {
+      "text": [{ "name": "content", "score": 1, "reason": "Primary text field." }],
+      "time": [{ "name": "created_at", "score": 1, "reason": "Timestamp field." }],
+      "metadata": []
+    },
+    "sensitiveRiskCodes": []
+  },
+  "columnConfirmation": {
+    "schemaVersion": "1.0.0",
+    "datasetSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "textColumns": ["content"],
+    "timeColumn": "created_at",
+    "idColumn": null,
+    "metadataColumns": [],
+    "confirmedBy": "owner.fixture",
+    "confirmedAt": "2026-07-28T00:00:00.000Z"
+  },
+  "recommendation": {
+    "schemaVersion": "1.0.0",
+    "deterministic": true,
+    "recommendationVersion": "1.0.0",
+    "catalogSource": "theta-model-catalog",
+    "dataProfileSummary": {
+      "rowCount": 120,
+      "textColumnCount": 1,
+      "timeColumnCount": 1,
+      "metadataColumnCount": 0,
+      "averageTextLength": 80
+    },
+    "recommendations": [{
+      "rank": 1,
+      "modelId": "lda",
+      "modelName": "LDA",
+      "score": 80,
+      "confidence": "medium",
+      "reasonCodes": ["TEXT_PROFILE_MATCH"],
+      "warnings": [],
+      "requirements": ["text"],
+      "topicRecommendation": { "range": [5, 10], "firstRun": 8, "alternatives": [5, 10] },
+      "parameters": [],
+      "resourceEstimate": {
+        "cpu": "medium",
+        "gpu": "none",
+        "memory": "medium",
+        "disk": "medium",
+        "relativeRuntime": "medium",
+        "network": "none"
+      },
+      "evidenceRefs": [],
+      "recommendedPlanPatch": {
+        "modelId": "lda",
+        "mode": "unsupervised",
+        "numTopics": 8
+      }
+    }],
+    "skipped": [],
+    "warnings": ["NO_EVIDENCE_AVAILABLE"],
+    "constraintsApplied": {
+      "preferredModelIds": [],
+      "forbiddenModelIds": [],
+      "unavailableRequirements": [],
+      "mode": null,
+      "maxTopics": 8
+    },
+    "noEvidence": true
+  },
+  "domainPack": { "id": "domain.theta.training", "version": "2.0.0" },
+  "createdAt": "2026-07-28T00:00:00.000Z"
+}

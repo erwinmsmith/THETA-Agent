@@ -1,0 +1,14 @@
+THETA Agent
+
+The initial CLI agent implementation and Python bridge were derived, with
+permission, from the `cli` branch of:
+
+    https://github.com/passerby169/AGENT-THETA
+    Imported revision: 83bf3af28c94c81dfa560acbfa6c11828f72ee65
+
+THETA and Hypha are independent upstream projects. Their source code is
+downloaded into the ignored `third_party/` directory and is not distributed in
+this repository:
+
+    THETA: https://github.com/CodeSoul-co/THETA (MIT)
+    Hypha: https://github.com/CodeSoul-co/Hypha (Apache-2.0)

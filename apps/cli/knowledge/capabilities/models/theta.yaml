@@ -1,0 +1,200 @@
+schemaVersion: 1.0.0
+modelId: theta
+displayName: THETA
+audit:
+  status: audited
+  auditedAt: 2026-07-31
+  sourceRefs:
+    - ../../third_party/THETA/src/models/models_config/models.yaml
+    - ../../third_party/THETA/src/models/main.py
+    - ../../third_party/THETA/src/models/config.py
+    - ../../third_party/THETA/src/models/prepare_data.py
+    - ../../third_party/THETA/src/models/run_pipeline.py
+    - ../../packages/theta_agent_bridge/bridge.py
+planner:
+  eligible: true
+  reason: 模型大小、训练模式、主题数、epochs 与 batchSize 已由 CanonicalPlan 编译，依赖条件可由资源约束进一步筛选。
+catalog:
+  requires: [bow, qwen]
+  autoTopics: false
+implementation:
+  family: llm_embedding_neural
+  language: python
+  modulePath: ../../third_party/THETA/src/models/main.py
+  trainerEntry: main.run_train
+  prepareMode: theta
+  runtimePackages: [numpy, scipy, torch, transformers, accelerate]
+  actualInputs: [bow_matrix, vocabulary, document_embeddings, vocabulary_embeddings]
+capabilities:
+  temporalTopics: false
+  metadataEffects: false
+  shortTextOptimized: false
+  topicCountMode: fixed
+  offlineExecution: conditional
+  cpuExecution: conditional
+  nativeOutputs: [static_topics, document_topic_distribution, topic_embeddings, training_history]
+parameters:
+  - parameterId: model_size
+    valueType: string
+    defaultValue: 0.6B
+    catalogName: model_size
+    planField: modelSize
+    trainFlag: --model_size
+    exposure: agent_compiled
+    usedByTraining: true
+    choices: [0.6B, 4B, 8B]
+    notes: Qwen 模型规模。
+  - parameterId: mode
+    valueType: string
+    defaultValue: zero_shot
+    catalogName: mode
+    planField: mode
+    trainFlag: --mode
+    exposure: agent_compiled
+    usedByTraining: true
+    choices: [zero_shot, supervised, unsupervised]
+    notes: catalog 未列出 finetune；Agent 不应推荐 catalog 之外的模式。
+  - parameterId: num_topics
+    valueType: integer
+    defaultValue: 20
+    catalogName: num_topics
+    planField: numTopics
+    trainFlag: --num_topics
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 2
+    maximum: 200
+    choices: []
+    notes: 固定主题数。
+  - parameterId: epochs
+    valueType: integer
+    defaultValue: 100
+    catalogName: epochs
+    planField: epochs
+    trainFlag: --epochs
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 训练轮数。
+  - parameterId: batch_size
+    valueType: integer
+    defaultValue: 64
+    catalogName: batch_size
+    planField: batchSize
+    trainFlag: --batch_size
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 批大小。
+  - parameterId: hidden_dim
+    valueType: integer
+    defaultValue: 512
+    catalogName: hidden_dim
+    planField: null
+    trainFlag: --hidden_dim
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 128
+    maximum: 1024
+    choices: []
+    notes: pipeline 支持但 Agent 未编译。
+  - parameterId: learning_rate
+    valueType: number
+    defaultValue: 0.002
+    catalogName: learning_rate
+    planField: null
+    trainFlag: --learning_rate
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0.00001
+    maximum: 0.1
+    choices: []
+    notes: pipeline 支持但 Agent 未编译。
+  - parameterId: kl_start
+    valueType: number
+    defaultValue: 0.0
+    catalogName: kl_start
+    planField: null
+    trainFlag: --kl_start
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: 1
+    choices: []
+    notes: KL 退火初始权重，Agent 未编译。
+  - parameterId: kl_end
+    valueType: number
+    defaultValue: 1.0
+    catalogName: kl_end
+    planField: null
+    trainFlag: --kl_end
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: 1
+    choices: []
+    notes: KL 退火终止权重，Agent 未编译。
+  - parameterId: kl_warmup
+    valueType: integer
+    defaultValue: 50
+    catalogName: kl_warmup
+    planField: null
+    trainFlag: --kl_warmup
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: null
+    choices: []
+    notes: KL 预热轮数，Agent 未编译。
+  - parameterId: patience
+    valueType: integer
+    defaultValue: 10
+    catalogName: patience
+    planField: null
+    trainFlag: --patience
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 早停耐心值，Agent 未编译。
+artifacts:
+  - artifactId: document_topic_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/theta.npy
+    required: true
+    producedBy: main.save_results
+    description: 文档—主题概率矩阵。
+  - artifactId: topic_word_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/beta.npy
+    required: true
+    producedBy: main.save_results
+    description: 主题—词概率矩阵。
+  - artifactId: topic_embeddings
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/topic_embeddings.npy
+    required: true
+    producedBy: main.save_results
+    description: 主题语义向量。
+  - artifactId: topic_words
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/topic_words.json
+    required: true
+    producedBy: main.save_results
+    description: 主题词。
+  - artifactId: training_history
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/training_history.json
+    required: true
+    producedBy: main.save_results
+    description: 训练历史。
+  - artifactId: model_checkpoint
+    pathPattern: THETA/result/{userId}/{datasetId}/theta/{run}/model/etm_model.pt
+    required: true
+    producedBy: main.save_results
+    description: PyTorch 模型权重。
+limitations:
+  - 离线运行要求 Qwen 权重和全部嵌入资产已存在于本地；否则准备阶段可能失败或需要网络。
+  - CPU 能否实用取决于模型大小和语料规模，8B 不应在 CPU 计划中自动推荐。
+  - learningRate、hiddenDim、KL 与早停参数虽由 pipeline 支持，但当前 Agent 未编译。
+unverifiedClaims: []

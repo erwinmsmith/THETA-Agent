@@ -1,0 +1,94 @@
+schemaVersion: 1.0.0
+modelId: lda
+displayName: Latent Dirichlet Allocation
+audit:
+  status: audited
+  auditedAt: 2026-07-31
+  sourceRefs:
+    - ../../third_party/THETA/src/models/models_config/models.yaml
+    - ../../third_party/THETA/src/models/model/baseline/lda.py
+    - ../../third_party/THETA/src/models/model/baseline_trainer.py
+    - ../../third_party/THETA/src/models/run_pipeline.py
+    - ../../packages/theta_agent_bridge/bridge.py
+planner:
+  eligible: true
+  reason: 固定主题数、BOW 前置条件和 Agent 已编译参数之间不存在语义冲突。
+catalog:
+  requires: [bow]
+  autoTopics: false
+implementation:
+  family: probabilistic_bow
+  language: python
+  modulePath: ../../third_party/THETA/src/models/model/baseline/lda.py
+  trainerEntry: BaselineTrainer.train_lda
+  prepareMode: baseline
+  runtimePackages: [numpy, scipy, scikit-learn, joblib]
+  actualInputs: [bow_matrix, vocabulary]
+capabilities:
+  temporalTopics: false
+  metadataEffects: false
+  shortTextOptimized: false
+  topicCountMode: fixed
+  offlineExecution: supported
+  cpuExecution: supported
+  nativeOutputs: [static_topics, document_topic_distribution, perplexity]
+parameters:
+  - parameterId: num_topics
+    valueType: integer
+    defaultValue: 20
+    catalogName: num_topics
+    planField: numTopics
+    trainFlag: --num_topics
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 2
+    maximum: 200
+    choices: []
+    notes: Agent 计划中的 numTopics 会直接传入 sklearn LDA。
+  - parameterId: max_iter
+    valueType: integer
+    defaultValue: 100
+    catalogName: max_iter
+    planField: null
+    trainFlag: --max_iter
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: run_pipeline 支持该参数，但当前 Agent command compiler 不传递它。
+  - parameterId: learning_method
+    valueType: string
+    defaultValue: batch
+    catalogName: learning_method
+    planField: null
+    trainFlag: null
+    exposure: catalog_only
+    usedByTraining: true
+    choices: [batch, online]
+    notes: trainer 支持 batch/online，但 run_pipeline 与 Agent 尚未暴露。
+artifacts:
+  - artifactId: document_topic_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/lda/{run}/lda/theta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_lda
+    description: 文档—主题概率矩阵。
+  - artifactId: topic_word_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/lda/{run}/lda/beta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_lda
+    description: 主题—词概率矩阵。
+  - artifactId: topic_words
+    pathPattern: THETA/result/{userId}/{datasetId}/lda/{run}/lda/topic_words_k{numTopics}.json
+    required: true
+    producedBy: BaselineTrainer.train_lda
+    description: 每个主题的高概率词。
+  - artifactId: serialized_model
+    pathPattern: THETA/result/{userId}/{datasetId}/lda/{run}/lda/model_k{numTopics}.pkl
+    required: true
+    producedBy: SklearnLDA.save_model
+    description: sklearn LDA 序列化模型。
+limitations:
+  - 当前 Agent 的 epochs 字段不控制 LDA 迭代次数；真正参数是尚未编译的 max_iter。
+  - 原生训练不建模时间或元数据效应；相关比较只能作为训练后分析。
+unverifiedClaims: []

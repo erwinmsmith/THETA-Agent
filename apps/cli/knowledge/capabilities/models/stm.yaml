@@ -1,0 +1,86 @@
+schemaVersion: 1.0.0
+modelId: stm
+displayName: Structural Topic Model
+audit:
+  status: audited
+  auditedAt: 2026-07-31
+  sourceRefs:
+    - ../../third_party/THETA/src/models/models_config/models.yaml
+    - ../../third_party/THETA/src/models/model/baseline/stm.py
+    - ../../third_party/THETA/src/models/model/baseline_trainer.py
+    - ../../third_party/THETA/src/models/prepare_data.py
+    - ../../third_party/THETA/src/models/run_pipeline.py
+    - ../../packages/theta_agent_bridge/bridge.py
+planner:
+  eligible: true
+  reason: 元数据列会由 Agent 传入准备阶段，缺少 covariates 时推荐器会硬性排除 STM。
+catalog:
+  requires: [bow, covariates]
+  autoTopics: false
+implementation:
+  family: structural_covariate
+  language: python_r_optional
+  modulePath: ../../third_party/THETA/src/models/model/baseline/stm.py
+  trainerEntry: BaselineTrainer.train_stm
+  prepareMode: baseline
+  runtimePackages: [numpy, scipy, scikit-learn, rpy2_optional, R_stm_optional]
+  actualInputs: [bow_matrix, vocabulary, covariates, covariate_names]
+capabilities:
+  temporalTopics: false
+  metadataEffects: true
+  shortTextOptimized: false
+  topicCountMode: fixed
+  offlineExecution: supported
+  cpuExecution: supported
+  nativeOutputs: [metadata_effects, group_topic_association, document_topic_distribution]
+parameters:
+  - parameterId: num_topics
+    valueType: integer
+    defaultValue: 20
+    catalogName: num_topics
+    planField: numTopics
+    trainFlag: --num_topics
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 2
+    maximum: 200
+    choices: []
+    notes: 固定主题数。
+  - parameterId: max_iter
+    valueType: integer
+    defaultValue: 100
+    catalogName: max_iter
+    planField: null
+    trainFlag: --max_iter
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: pipeline 支持但 Agent 尚未编译。
+artifacts:
+  - artifactId: document_topic_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/stm/{run}/stm/model/theta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_stm
+    description: 文档—主题概率矩阵。
+  - artifactId: topic_word_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/stm/{run}/stm/model/beta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_stm
+    description: 主题—词概率矩阵。
+  - artifactId: covariate_info
+    pathPattern: THETA/result/{userId}/{datasetId}/stm/{run}/stm/model/covariate_info_k{numTopics}.json
+    required: true
+    producedBy: BaselineTrainer.train_stm
+    description: 协变量名称、维度和效应文件状态。
+  - artifactId: covariate_effects
+    pathPattern: THETA/result/{userId}/{datasetId}/stm/{run}/stm/model/covariate_effects_k{numTopics}.json
+    required: false
+    producedBy: BaselineTrainer.train_stm
+    description: 可序列化时输出的协变量—主题效应。
+limitations:
+  - 无协变量时模型会拒绝训练。
+  - 环境存在 R/rpy2/stm 时可走 R 实现，否则使用项目的 Python 近似实现；两种后端不应视为数值等价。
+  - 当前 Agent 的 epochs 不控制 STM；真正参数 max_iter 尚未编译。
+unverifiedClaims: []

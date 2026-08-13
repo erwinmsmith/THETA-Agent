@@ -1,0 +1,15 @@
+{
+  "analysisUnit": "one research document",
+  "textFieldIntent": "analyze the primary document body",
+  "sensitiveData": {
+    "status": "no",
+    "categories": []
+  },
+  "successCriteria": [
+    "Produce stable, interpretable topics."
+  ],
+  "hardwareLimit": {
+    "device": "cpu",
+    "memoryGb": 16
+  }
+}

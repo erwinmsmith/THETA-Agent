@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "datasetSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "textColumns": [
+    "content"
+  ],
+  "timeColumn": "created_at",
+  "idColumn": null,
+  "covariateColumns": [],
+  "metadataColumns": [
+    "source"
+  ],
+  "groupingColumns": [
+    "source"
+  ],
+  "evaluationLabelColumns": [],
+  "confirmedBy": "fixture",
+  "confirmedAt": "2026-08-04T00:00:00.000Z"
+}

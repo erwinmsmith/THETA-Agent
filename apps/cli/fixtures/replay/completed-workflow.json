@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "theta-workflow-completed",
+  "digestAlgorithm": "sha256-canonical-replay-v1",
+  "canonicalEventCount": 59,
+  "policyDecisionCount": 21,
+  "statePath": [
+    "Intake",
+    "InspectDataset",
+    "ColumnConfirmation",
+    "ColumnConfirmation",
+    "RecommendModel",
+    "ValidatePlan",
+    "AwaitPlanCreationApproval",
+    "AwaitPlanCreationApproval",
+    "CreatePlan",
+    "DryRun",
+    "AwaitTrainingStartApproval",
+    "AwaitTrainingStartApproval",
+    "VerifyDatasetBeforeTraining",
+    "StartTraining",
+    "MonitorTraining",
+    "Completed"
+  ],
+  "requiredToolCalls": [
+    "theta.dataset.inspect",
+    "theta.dataset.detect_columns",
+    "theta.model.catalog",
+    "theta.rag.search",
+    "theta.model.recommend",
+    "theta.plan.propose",
+    "theta.plan.validate",
+    "theta.plan.create",
+    "theta.training.dry_run",
+    "theta.training.start",
+    "theta.training.status"
+  ],
+  "expectedOutput": {
+    "status": "completed",
+    "modelId": "bertopic",
+    "artifactCount": 1
+  }
+}

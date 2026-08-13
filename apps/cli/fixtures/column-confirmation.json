@@ -1,0 +1,10 @@
+{
+  "textColumns": [
+    "text"
+  ],
+  "timeColumn": "created_at",
+  "idColumn": "id",
+  "metadataColumns": [
+    "category"
+  ]
+}

@@ -1,0 +1,30 @@
+{"id":1,"text":"Researchers discuss topic quality and interpretable labels in the first monthly review.","created_at":"2026-01-05","category":"quality"}
+{"id":2,"text":"The team compares training speed across traditional and neural topic models.","created_at":"2026-01-12","category":"performance"}
+{"id":3,"text":"Users request clearer evidence for every recommendation and parameter choice.","created_at":"2026-01-19","category":"governance"}
+{"id":4,"text":"Dataset privacy checks are reviewed before any samples enter the analysis workflow.","created_at":"2026-01-26","category":"privacy"}
+{"id":5,"text":"Analysts evaluate whether temporal changes indicate a stable shift in research themes.","created_at":"2026-02-02","category":"trend"}
+{"id":6,"text":"A baseline model provides a reproducible comparison for later neural experiments.","created_at":"2026-02-09","category":"baseline"}
+{"id":7,"text":"Reviewers ask for confidence levels instead of unsupported precise runtime estimates.","created_at":"2026-02-16","category":"governance"}
+{"id":8,"text":"The corpus includes enough documents to test a small deterministic recommendation run.","created_at":"2026-02-23","category":"dataset"}
+{"id":9,"text":"Hardware constraints favor moderate memory use and avoid unnecessary model downloads.","created_at":"2026-03-02","category":"resources"}
+{"id":10,"text":"Topic granularity is adjusted after reviewers identify fragmented low-frequency themes.","created_at":"2026-03-09","category":"quality"}
+{"id":11,"text":"The evidence index links model requirements to versioned configuration source lines.","created_at":"2026-03-16","category":"evidence"}
+{"id":12,"text":"Researchers compare topic prevalence between product feedback and technical reports.","created_at":"2026-03-23","category":"comparison"}
+{"id":13,"text":"A time column enables the workflow to consider dynamic topic modeling candidates.","created_at":"2026-04-06","category":"trend"}
+{"id":14,"text":"Missing metadata prevents structural models from entering the compatible candidate set.","created_at":"2026-04-13","category":"constraints"}
+{"id":15,"text":"Every incompatible model records a machine-readable hard constraint reason code.","created_at":"2026-04-20","category":"constraints"}
+{"id":16,"text":"The first topic count run uses a bounded range rather than a pseudo-precise answer.","created_at":"2026-04-27","category":"parameters"}
+{"id":17,"text":"Batch size recommendations explain the tradeoff between memory and throughput.","created_at":"2026-05-04","category":"parameters"}
+{"id":18,"text":"Epoch recommendations describe runtime and overfitting effects for reviewers.","created_at":"2026-05-11","category":"parameters"}
+{"id":19,"text":"The workflow pauses before plan creation so the owner can inspect the proposal.","created_at":"2026-05-18","category":"approval"}
+{"id":20,"text":"Training cannot start until a separate approval and dry-run have completed.","created_at":"2026-05-25","category":"approval"}
+{"id":21,"text":"Replay reconstructs the recommendation decision from canonical runtime events.","created_at":"2026-06-01","category":"replay"}
+{"id":22,"text":"A changed dataset hash invalidates confirmed columns and downstream approvals.","created_at":"2026-06-08","category":"integrity"}
+{"id":23,"text":"Raw document samples remain private while aggregate dataset observations are retained.","created_at":"2026-06-15","category":"privacy"}
+{"id":24,"text":"The local evidence index is refreshed only through an explicit operator command.","created_at":"2026-06-22","category":"evidence"}
+{"id":25,"text":"Repeated index builds skip unchanged sources by comparing deterministic content hashes.","created_at":"2026-07-01","category":"evidence"}
+{"id":26,"text":"Authority levels prioritize current model configuration over lower-trust notes.","created_at":"2026-07-05","category":"evidence"}
+{"id":27,"text":"No-evidence results remain visible and never produce fabricated source references.","created_at":"2026-07-10","category":"governance"}
+{"id":28,"text":"The command line delegates state transitions to the compiled Hypha finite state machine.","created_at":"2026-07-15","category":"runtime"}
+{"id":29,"text":"Governed tools enforce permissions and schemas before invoking the Python bridge.","created_at":"2026-07-20","category":"runtime"}
+{"id":30,"text":"The final review confirms deterministic recommendations and a traceable event history.","created_at":"2026-07-25","category":"quality"}

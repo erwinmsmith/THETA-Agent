@@ -1,0 +1,394 @@
+schema_version: 1.0.0
+objects:
+  - &evaluation_paper_base
+    object_id: paper_source.evaluation.wallach2009
+    object_type: source
+    title: Wallach 2009 主题模型预测评估论文
+    model_ids: [lda]
+    parameter_ids: []
+    scenario_tags: [paper, evaluation, heldout_likelihood, perplexity]
+    language: bilingual
+    aliases_zh: [主题模型评估方法论文, held-out likelihood论文]
+    aliases_en: [Evaluation Methods for Topic Models, Wallach 2009]
+    authority_level: L3
+    evidence_type: paper
+    source_id: paper.evaluation.wallach2009
+    source_year: 2009
+    source_locator: https://doi.org/10.1145/1553374.1553515
+    claim_scope: 主题模型 held-out probability 估计方法、方差和偏差风险。
+    implementation_name: null
+    implementation_version: null
+    theta_support_status: unknown
+    confidence: high
+    conflict_group_id: null
+    content_markdown: |
+      Wallach 等比较了多种 held-out document probability 估计方法，指出常用估计器可能不准确或方差很高。预测拟合指标需要使用可复现且适当的估计方法；它们回答“模型如何解释未见词/文档”，不直接回答主题是否便于人类解释。
+    content_hash: null
+    updated_at: 2026-08-01T00:00:00.000Z
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_heldout_likelihood
+    object_type: evaluation_metric
+    title: Held-out likelihood 与 perplexity 评估边界
+    model_ids: [lda, hdp, stm, btm, prodlda, etm, theta]
+    scenario_tags: [evaluation, heldout_likelihood, perplexity, predictive_fit]
+    aliases_zh: [留出似然, 困惑度边界, 预测拟合]
+    aliases_en: [held-out likelihood, perplexity evaluation]
+    source_id: paper.evaluation.wallach2009
+    source_year: 2009
+    source_locator: https://doi.org/10.1145/1553374.1553515
+    claim_scope: 预测拟合指标的用途和不应承担的语义解释任务。
+    theta_support_status: conditional
+    content_markdown: |
+      Held-out likelihood/perplexity 适合比较同一数据划分、预处理和模型家族中的预测拟合。必须记录估计方法、划分和随机种子。较低 perplexity 或较高 likelihood 不能单独证明主题更连贯、更有意义或更符合研究问题，也不适合直接跨不同数据处理管线比较。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.evaluation.chang2009
+    title: Chang 2009 人类主题解释论文
+    model_ids: [lda]
+    scenario_tags: [paper, evaluation, human_evaluation, interpretability]
+    aliases_zh: [Reading Tea Leaves论文, 主题人工解释论文]
+    aliases_en: [Reading Tea Leaves, Chang 2009]
+    source_id: paper.evaluation.chang2009
+    source_year: 2009
+    source_locator: https://proceedings.neurips.cc/paper/2009/hash/f92586a25bb3145facd64ab20fd554ff-Abstract.html
+    claim_scope: word intrusion 等人工任务与 held-out likelihood 的解释差异。
+    content_markdown: |
+      Chang 等通过大规模用户研究提出主题词入侵等任务，发现预测指标较好的模型可能产生更难解释的主题。该论文支持把人类判断纳入验收，而不是把语义质量完全交给 likelihood 或 perplexity。
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_word_intrusion
+    object_type: evaluation_metric
+    title: Word intrusion 主题可解释性评估
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    scenario_tags: [evaluation, human_evaluation, word_intrusion, interpretability]
+    aliases_zh: [主题词入侵, 词入侵测试, 人工主题评估]
+    aliases_en: [word intrusion, human topic interpretability]
+    source_id: paper.evaluation.chang2009
+    source_year: 2009
+    source_locator: https://proceedings.neurips.cc/paper/2009/hash/f92586a25bb3145facd64ab20fd554ff-Abstract.html
+    claim_scope: 用人工识别不属于主题的词来衡量主题词集合的可解释性。
+    theta_support_status: supported
+    content_markdown: |
+      对每个主题混入一个与其不相关但表面合理的词，让评审者选择入侵词；更容易识别通常表示主题词集合更一致。实施时应随机化顺序、记录评审人数与一致性，并与代表文档阅读结合。它评估主题表示，不替代研究问题契合度判断。
+
+  - <<: *evaluation_paper_base
+    object_id: rule.paper_predictive_fit_not_interpretability
+    object_type: rule
+    title: 预测拟合不等于主题可解释性
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    scenario_tags: [evaluation, conflict, perplexity_warning, human_review]
+    aliases_zh: [困惑度不等于可解释性, 拟合好不代表主题好]
+    aliases_en: [predictive fit is not interpretability]
+    source_id: paper.evaluation.chang2009
+    source_year: 2009
+    source_locator: https://proceedings.neurips.cc/paper/2009/hash/f92586a25bb3145facd64ab20fd554ff-Abstract.html
+    claim_scope: 自动预测指标与人工语义目标之间的硬性解释边界。
+    theta_support_status: supported
+    conflict_group_id: predictive_fit_vs_interpretability
+    content_markdown: |
+      Planner 和结果解释器不得仅凭 perplexity 或 held-out likelihood 宣布主题模型“更好”。如果用户目标是理解主题，至少还要评估主题词、代表文档、重复主题、稳定性和领域专家判断；预测指标只能作为多目标证据之一。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.evaluation.mimno2011
+    title: Mimno 2011 Semantic Coherence 论文
+    model_ids: [lda]
+    scenario_tags: [paper, evaluation, semantic_coherence, document_cooccurrence]
+    aliases_zh: [Semantic Coherence论文, UMass连贯性论文]
+    aliases_en: [Optimizing Semantic Coherence, Mimno 2011]
+    source_id: paper.evaluation.mimno2011
+    source_year: 2011
+    source_locator: https://aclanthology.org/D11-1024/
+    claim_scope: 基于参考文档共现的主题词 semantic coherence。
+    content_markdown: |
+      Mimno 等提出使用高概率主题词在文档中的共现来近似人工连贯性判断，并将该指标用于模型优化。分数依赖词表、预处理、top-N 和统计语料；不同管线产生的数值不能脱离设置直接比较。
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_umass_coherence
+    object_type: evaluation_metric
+    title: UMass/Semantic Coherence 使用条件
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    parameter_ids: [topNWords]
+    scenario_tags: [evaluation, coherence, umass, document_cooccurrence]
+    aliases_zh: [UMass连贯性, 文档共现连贯性]
+    aliases_en: [UMass coherence, semantic coherence]
+    source_id: paper.evaluation.mimno2011
+    source_year: 2011
+    source_locator: https://aclanthology.org/D11-1024/
+    claim_scope: UMass 类文档共现指标的计算上下文与报告要求。
+    theta_support_status: supported
+    content_markdown: |
+      UMass 类 coherence 使用参考文档中的词共现。报告时必须固定或披露：分词与词表、参考语料、top-N、平滑方式和聚合方法。它适合作为相同设置下的辅助比较，不应跨语料或跨预处理直接比较绝对值。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.evaluation.lau2014
+    title: Lau 2014 自动主题连贯性论文
+    model_ids: [lda]
+    scenario_tags: [paper, evaluation, pmi, npmi, reference_corpus]
+    aliases_zh: [Machine Reading Tea Leaves论文, PMI主题评估论文]
+    aliases_en: [Machine Reading Tea Leaves, Lau 2014]
+    source_id: paper.evaluation.lau2014
+    source_year: 2014
+    source_locator: https://doi.org/10.3115/v1/E14-1056
+    claim_scope: PMI/NPMI、参考语料与自动化主题词入侵评估。
+    content_markdown: |
+      Lau、Newman 与 Baldwin 比较 PMI、NPMI 等自动指标与人工判断，并展示参考语料域内/跨域选择会影响相关性。自动指标不仅是一个公式，还依赖参考语料和统计窗口。
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_npmi_reference_corpus
+    object_type: evaluation_metric
+    title: PMI/NPMI 必须绑定参考语料
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    parameter_ids: [topNWords]
+    scenario_tags: [evaluation, pmi, npmi, reference_corpus, window]
+    aliases_zh: [NPMI参考语料, PMI窗口设置]
+    aliases_en: [NPMI reference corpus, PMI window]
+    source_id: paper.evaluation.lau2014
+    source_year: 2014
+    source_locator: https://doi.org/10.3115/v1/E14-1056
+    claim_scope: PMI/NPMI 指标对参考语料、领域和共现窗口的依赖。
+    theta_support_status: supported
+    content_markdown: |
+      NPMI/PMI 分数必须与参考语料、分词、滑动窗口和 top-N 一起保存。优先使用与目标语料语言和领域相近的参考统计；跨域语料可能改变排序。Planner 不得把来自不同参考语料的分数当作同一标尺。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.evaluation.roder2015
+    title: Röder 2015 Topic Coherence 框架论文
+    model_ids: [lda]
+    scenario_tags: [paper, evaluation, coherence_framework, c_v, npmi]
+    aliases_zh: [C_V连贯性论文, coherence组件框架]
+    aliases_en: [Exploring the Space of Topic Coherence Measures, Roeder 2015]
+    source_id: paper.evaluation.roder2015
+    source_year: 2015
+    source_locator: https://doi.org/10.1145/2684822.2685324
+    claim_scope: 将 coherence 拆成分段、概率估计、确认度和聚合组件的框架。
+    content_markdown: |
+      Röder 等系统组合 coherence 的分段、概率估计、确认度和聚合组件，得到包括 C_V 在内的有效组合。相同指标名称只有在组件与实现设置一致时才可比较；C_V 不是无上下文的通用真值。
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_cv_coherence
+    object_type: evaluation_metric
+    title: C_V coherence 的组件化解释
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    parameter_ids: [topNWords]
+    scenario_tags: [evaluation, coherence, c_v, sliding_window]
+    aliases_zh: [C_V指标, CV主题连贯性]
+    aliases_en: [C_V topic coherence, CV coherence]
+    source_id: paper.evaluation.roder2015
+    source_year: 2015
+    source_locator: https://doi.org/10.1145/2684822.2685324
+    claim_scope: C_V 指标的用途与可比性要求。
+    theta_support_status: supported
+    content_markdown: |
+      C_V 是由滑动窗口共现、间接确认度、上下文向量相似度和聚合构成的组合指标。结果报告必须披露实现、窗口、top-N 和参考语料。它适合筛选候选和发现明显退化，不足以单独确定最终模型。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.evaluation.hoyle2021
+    title: Hoyle 2021 自动 Coherence 局限论文
+    model_ids: [lda, prodlda, etm, theta]
+    scenario_tags: [paper, evaluation, coherence_warning, neural_topic_model]
+    aliases_zh: [Coherence失效论文, 自动评估局限]
+    aliases_en: [Incoherence of Coherence, Hoyle 2021]
+    source_id: paper.evaluation.hoyle2021
+    source_year: 2021
+    source_locator: https://proceedings.neurips.cc/paper/2021/hash/0f83556a305d789b1d71815e8ea4f4b0-Abstract.html
+    claim_scope: 自动 coherence 在经典与神经主题模型之间的验证缺口和标准化问题。
+    content_markdown: |
+      Hoyle 等发现自动 coherence 可能在人工评估没有相同结论时宣布神经模型胜出，并指出基准预处理和指标设置缺乏标准化。该证据要求 THETA 的模型选择采用自动指标加人工审阅，而不是单一排行榜。
+
+  - <<: *evaluation_paper_base
+    object_id: rule.paper_no_single_coherence_winner
+    object_type: rule
+    title: 禁止用单一 coherence 宣布冠军模型
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    scenario_tags: [evaluation, hard_warning, coherence, human_review]
+    aliases_zh: [不能只看连贯性, 单一C_V不能定模型]
+    aliases_en: [no single coherence winner]
+    source_id: paper.evaluation.hoyle2021
+    source_year: 2021
+    source_locator: https://proceedings.neurips.cc/paper/2021/hash/0f83556a305d789b1d71815e8ea4f4b0-Abstract.html
+    claim_scope: 自动 coherence 不能单独形成最终模型选择结论。
+    theta_support_status: supported
+    content_markdown: |
+      即使模型 A 的 C_V/NPMI 高于模型 B，Planner 也只能说“自动连贯性证据更好”。最终结论还必须检查主题多样性、稳定性、覆盖/离群、代表文档、主题粒度和研究问题契合度，并记录人工判断。缺少这些证据时应保持不确定性。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.selection.greene2014
+    title: Greene 2014 主题稳定性论文
+    model_ids: [lda]
+    scenario_tags: [paper, model_selection, topic_count, stability, resampling]
+    aliases_zh: [主题数稳定性论文, How Many Topics论文]
+    aliases_en: [How Many Topics, Greene 2014]
+    source_id: paper.selection.greene2014
+    source_year: 2014
+    source_locator: https://doi.org/10.1007/978-3-662-44848-9_32
+    claim_scope: 通过数据扰动和多次运行比较主题词排序稳定性的 K 选择方法。
+    content_markdown: |
+      Greene 等提出对数据重采样并重复拟合，用主题词排序的一致性辅助选择 K。稳定性反映结果对扰动的敏感度，但非常宽泛的低 K 也可能稳定；因此稳定性要与粒度、连贯性、多样性和人工解释联合使用。
+
+  - <<: *evaluation_paper_base
+    object_id: evaluation.paper_topic_stability
+    object_type: evaluation_metric
+    title: 多随机种子与重采样主题稳定性
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    parameter_ids: [randomState, numTopics]
+    scenario_tags: [evaluation, stability, resampling, random_seed]
+    aliases_zh: [主题稳定性, 重采样稳定性, 多随机种子]
+    aliases_en: [topic stability, resampling stability, multi-seed stability]
+    source_id: paper.selection.greene2014
+    source_year: 2014
+    source_locator: https://doi.org/10.1007/978-3-662-44848-9_32
+    claim_scope: 对同一候选配置使用多个种子或数据重采样评估主题可重复性。
+    theta_support_status: supported
+    content_markdown: |
+      对每个候选配置至少进行多个随机种子或重采样运行，使用主题匹配后比较 top-word 排名、主题分布或代表文档。必须保存种子和匹配方法。稳定性低说明结论不可靠；稳定性高仍需检查是否只是少量过宽主题。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.selection.lewis2022
+    title: Lewis 2022 LDA 配置识别论文
+    model_ids: [lda]
+    scenario_tags: [paper, model_selection, topic_count, statistical_testing]
+    aliases_zh: [LDA最优配置论文, 主题模型统计识别]
+    aliases_en: [Statistical Approach for Optimal Topic Model Identification, Lewis 2022]
+    source_id: paper.selection.lewis2022
+    source_year: 2022
+    source_locator: https://jmlr.org/papers/v23/19-297.html
+    claim_scope: 使用基于 LDA 多项分布假设的统计程序识别候选配置。
+    content_markdown: |
+      Lewis 与 Grossetti 提供一种基于 LDA 统计假设的配置识别方法，并用案例和模拟检验。它扩展了 K 选择工具箱，但不能替代语义解释、重采样稳定性或领域目标，也不应自动推广到 BERTopic、HDP 等不同模型家族。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.framework.terragni2021
+    title: Terragni 2021 OCTIS 评估框架论文
+    model_ids: [lda, prodlda, etm]
+    scenario_tags: [paper, practice, benchmarking, hyperparameter_optimization]
+    aliases_zh: [OCTIS论文, 主题模型统一评估]
+    aliases_en: [OCTIS paper, topic model benchmarking]
+    source_id: paper.framework.terragni2021
+    source_year: 2021
+    source_locator: https://doi.org/10.18653/v1/2021.eacl-demos.31
+    claim_scope: 统一预处理、模型接口、指标和超参数优化的可复现实验原则。
+    content_markdown: |
+      OCTIS 将数据、模型、指标与贝叶斯优化置于统一框架，以减少不一致预处理和固定默认值导致的不公平比较。THETA 不需要依赖 OCTIS 才能采用这些原则；Validator V2 仍负责可执行性与安全边界。
+
+  - <<: *evaluation_paper_base
+    object_id: recipe.paper_multiobjective_model_comparison
+    object_type: recipe
+    title: 多目标主题模型比较矩阵
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    parameter_ids: [numTopics, randomState, topNWords]
+    scenario_tags: [practice, evaluation, multi_metric, reproducibility, human_review]
+    aliases_zh: [多指标模型比较, 主题模型验收矩阵]
+    aliases_en: [multi-objective topic model comparison]
+    authority_level: L4
+    source_id: paper.framework.terragni2021
+    source_year: 2021
+    source_locator: https://doi.org/10.18653/v1/2021.eacl-demos.31
+    claim_scope: 结合多篇评估论文与 THETA 能力形成的实践配方，不是单篇论文原文规则。
+    theta_support_status: supported
+    confidence: medium
+    content_markdown: |
+      对每个候选模型记录同一数据版本、预处理、资源预算和随机种子。共同指标包括 coherence、topic diversity、稳定性和人工解释；概率模型可补充 held-out likelihood/perplexity，BERTopic 补充实际主题数、outlier/coverage，DTM 检查时间片稳定与演化可解释性，STM 检查协变量效应与组样本量，神经模型检查 loss、主题使用率和 collapse。最终选择需写明多目标取舍，不输出无依据的单一总分。
+
+  - <<: *evaluation_paper_base
+    object_id: recipe.paper_topic_count_candidate_set
+    object_type: recipe
+    title: 固定 K 的有限候选与逐轮收缩
+    model_ids: [lda, btm, dtm, stm, theta]
+    parameter_ids: [numTopics, randomState]
+    scenario_tags: [practice, topic_count, resource_control, iterative_search]
+    aliases_zh: [主题数候选集, K值逐轮筛选]
+    aliases_en: [topic count candidate set, iterative K selection]
+    authority_level: L4
+    source_id: paper.selection.greene2014
+    source_year: 2014
+    source_locator: https://doi.org/10.1007/978-3-662-44848-9_32
+    claim_scope: 由稳定性与多目标评估组合而成的资源受控 K 搜索实践。
+    theta_support_status: supported
+    confidence: medium
+    content_markdown: |
+      首轮根据数据规模、期望粒度和最小可解释主题规模选择低/中/高三个左右 K，而不是穷举大网格。每个 K 做多种子评估，淘汰明显重复、坍塌、过宽或不稳定的区域；第二轮只在有证据的邻域细化。HDP/BERTopic auto 可提供参照，但其实际主题数不是固定 K 的权威答案。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.selection.cao2009
+    title: Cao 2009 LDA 密度选 K 元数据条目
+    model_ids: [lda]
+    scenario_tags: [paper, metadata_only, model_selection, topic_density]
+    aliases_zh: [Cao主题数方法, LDA主题密度]
+    aliases_en: [Cao density-based LDA selection]
+    source_id: paper.selection.cao2009
+    source_year: 2009
+    source_locator: https://doi.org/10.1016/j.neucom.2008.06.011
+    claim_scope: 该传统主题数方法的可发现元数据；未核验全文前不提供公式级生产规则。
+    confidence: medium
+    content_markdown: |
+      该论文提出基于主题密度的 LDA 模型选择方法。本地资料包只保存了经核验的题名、作者、年份和 DOI，没有合法公开全文，因此只能作为进一步阅读线索，不能从摘要推导具体阈值、公式实现或硬规则。
+
+  - <<: *evaluation_paper_base
+    object_id: paper_source.selection.arun2010
+    title: Arun 2010 LDA 选 K 元数据条目
+    model_ids: [lda]
+    scenario_tags: [paper, metadata_only, model_selection, matrix_divergence]
+    aliases_zh: [Arun主题数方法, LDA自然主题数]
+    aliases_en: [Arun natural number of topics]
+    source_id: paper.selection.arun2010
+    source_year: 2010
+    source_locator: https://doi.org/10.1007/978-3-642-13657-3_43
+    claim_scope: 该传统主题数方法的可发现元数据；未核验全文前不提供公式级生产规则。
+    confidence: medium
+    content_markdown: |
+      该论文讨论使用主题—词与文档—主题矩阵性质选择 LDA 主题数。本地资料包没有合法公开全文，因此 RAG 只能返回文献身份和方法类别，不能自动生成计算公式、参数阈值或将其设为默认选 K 规则。
+
+  - <<: *evaluation_paper_base
+    object_id: rule.paper_metadata_only_no_hard_rule
+    object_type: rule
+    title: Metadata-only 文献不能生成细粒度硬规则
+    model_ids: [lda]
+    scenario_tags: [citation_governance, metadata_only, hard_constraint]
+    aliases_zh: [仅元数据不能写规则, 缺少全文不生成阈值]
+    aliases_en: [metadata-only cannot support hard rules]
+    authority_level: L2
+    source_id: paper.selection.cao2009
+    source_year: 2009
+    source_locator: D:/THETA/research_sources/manifests/source_manifest.yaml
+    claim_scope: 外部文献证据进入生产知识库前的治理规则。
+    theta_support_status: supported
+    confidence: high
+    content_markdown: |
+      只有题名、DOI 或摘要而没有可核验全文时，可以建立 source 对象和检索线索，但不能抽取公式、精确阈值、默认参数或不可绕过的选择规则。获得合法全文并完成人工复核后，才能升级证据对象。
+
+  - <<: *evaluation_paper_base
+    object_id: recipe.paper_human_acceptance_protocol
+    object_type: recipe
+    title: 主题结果人工验收协议
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    scenario_tags: [practice, human_review, interpretability, acceptance]
+    aliases_zh: [主题人工验收, 主题解释审阅流程]
+    aliases_en: [human topic acceptance protocol]
+    authority_level: L4
+    source_id: paper.evaluation.chang2009
+    source_year: 2009
+    source_locator: https://proceedings.neurips.cc/paper/2009/hash/f92586a25bb3145facd64ab20fd554ff-Abstract.html
+    claim_scope: 结合 word intrusion、主题评分与领域研究目标的本地人工验收配方。
+    theta_support_status: supported
+    confidence: medium
+    content_markdown: |
+      对最终候选随机抽取主题，展示 top words、代表文档和必要的组别/时间信息。评审者分别记录：能否命名、是否与其他主题重复、代表文档是否一致、是否回答研究问题、是否需要合并/拆分/废弃。可加入 word intrusion 或 1–5 主题评分，并记录评审者一致性。只有自动指标和人工审阅共同通过时，才把计划标记为研究可接受。
+
+  - <<: *evaluation_paper_base
+    object_id: failure.paper_benchmark_noncomparability
+    object_type: failure_mode
+    title: 不一致预处理导致模型比较失真
+    model_ids: [lda, btm, hdp, dtm, stm, bertopic, theta]
+    scenario_tags: [failure, benchmarking, preprocessing, reproducibility]
+    aliases_zh: [模型比较不可比, 预处理不一致]
+    aliases_en: [non-comparable topic model benchmark]
+    authority_level: L4
+    source_id: paper.framework.terragni2021
+    source_year: 2021
+    source_locator: https://doi.org/10.18653/v1/2021.eacl-demos.31
+    claim_scope: 多模型对照中数据版本、预处理和预算不一致的实践风险。
+    theta_support_status: supported
+    confidence: medium
+    content_markdown: |
+      若模型使用不同文本列、训练/测试划分、停用词、词表、嵌入版本、随机种子数量或资源预算，最终指标不可公平比较。计划必须保存统一的数据快照与共享设置，并把模型特有处理单独记录；否则结果只能作为探索性观察。

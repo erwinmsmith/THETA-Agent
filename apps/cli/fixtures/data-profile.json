@@ -1,0 +1,30 @@
+{
+  "rowCount": 240,
+  "columns": [
+    "content",
+    "created_at",
+    "source"
+  ],
+  "recommendedTextColumn": "content",
+  "textColumns": [
+    {
+      "name": "content"
+    }
+  ],
+  "timeColumns": [
+    {
+      "name": "created_at"
+    }
+  ],
+  "metadataColumns": [
+    {
+      "name": "source"
+    }
+  ],
+  "columnProfiles": [
+    {
+      "name": "content",
+      "avgLength": 92
+    }
+  ]
+}

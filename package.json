@@ -1,0 +1,18 @@
+{
+  "name": "theta-agent-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-first conversational auto-research system with THETA as its first research domain.",
+  "type": "module",
+  "scripts": {
+    "deps:status": "node scripts/upstreams.mjs status",
+    "deps:sync": "node scripts/upstreams.mjs sync",
+    "deps:update": "node scripts/upstreams.mjs update",
+    "python:sync": "uv sync",
+    "python:sync:training": "uv sync --extra training",
+    "validate": "node scripts/validate-repository.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

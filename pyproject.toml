@@ -1,0 +1,45 @@
+[project]
+name = "theta-agent-python"
+version = "0.1.0"
+description = "Python bridge and local runtime dependencies for THETA Agent."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+dependencies = [
+  "numpy>=1.26",
+  "openpyxl>=3.1",
+  "pandas>=2.0",
+  "pyarrow>=17.0",
+  "python-docx>=1.1",
+  "pyyaml>=6.0",
+  "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+training = [
+  "bertopic>=0.17",
+  "bitermplus>=0.9",
+  "click>=8.1",
+  "emoji>=2.0",
+  "gensim>=4.3",
+  "h5py>=3.10",
+  "hdbscan>=0.8.40",
+  "jieba>=0.42",
+  "langdetect>=1.0.9",
+  "matplotlib>=3.8",
+  "networkx>=3.2",
+  "pdf2docx>=0.5.8",
+  "pdfminer-six>=20231228",
+  "pyldavis>=3.4",
+  "pypdf2>=3.0",
+  "scipy>=1.11",
+  "seaborn>=0.13",
+  "sentence-transformers>=3.0",
+  "torch>=2.3",
+  "tqdm>=4.66",
+  "umap-learn>=0.5.6",
+  "wordcloud>=1.9",
+]
+
+[tool.uv]
+package = false

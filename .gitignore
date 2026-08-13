@@ -1,0 +1,32 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Third-party source checkouts are local dependencies, never repository content
+third_party/
+
+# JavaScript and TypeScript build artifacts
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python artifacts and environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Agent runtime state and research artifacts
+.theta_agent/
+/data/
+/models/
+/result/
+/results/
+/runs/
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/

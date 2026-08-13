@@ -1,0 +1,125 @@
+schemaVersion: 1.0.0
+modelId: dtm
+displayName: Dynamic Topic Model
+maturity: experimental
+audit:
+  status: audited
+  auditedAt: 2026-07-31
+  sourceRefs:
+    - ../../third_party/THETA/src/models/models_config/models.yaml
+    - ../../third_party/THETA/src/models/model/baseline/dtm.py
+    - ../../third_party/THETA/src/models/model/baseline_trainer.py
+    - ../../third_party/THETA/src/models/prepare_data.py
+    - ../../third_party/THETA/src/models/run_pipeline.py
+    - ../../packages/theta_agent_bridge/bridge.py
+planner:
+  eligible: true
+  reason: 时间切片、固定主题数、epochs 与 batchSize 已贯通；当前仍作为实验性动态神经实现，必须披露并经人工审批。
+catalog:
+  requires: [bow, sbert, time]
+  autoTopics: false
+implementation:
+  family: dynamic_neural
+  language: python
+  modulePath: ../../third_party/THETA/src/models/model/baseline/dtm.py
+  trainerEntry: BaselineTrainer.train_dtm
+  prepareMode: dtm
+  runtimePackages: [numpy, scipy, torch, scikit-learn, sentence-transformers]
+  actualInputs: [bow_matrix, vocabulary, time_indices, time_slices, sbert_or_bow_svd_embeddings]
+capabilities:
+  temporalTopics: true
+  metadataEffects: false
+  shortTextOptimized: false
+  topicCountMode: fixed
+  offlineExecution: conditional
+  cpuExecution: conditional
+  nativeOutputs: [temporal_topics, topic_evolution, document_topic_distribution, training_history]
+parameters:
+  - parameterId: num_topics
+    valueType: integer
+    defaultValue: 20
+    catalogName: num_topics
+    planField: numTopics
+    trainFlag: --num_topics
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 2
+    maximum: 200
+    choices: []
+    notes: 固定主题数。
+  - parameterId: epochs
+    valueType: integer
+    defaultValue: 100
+    catalogName: epochs
+    planField: epochs
+    trainFlag: --epochs
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 神经网络训练轮数。
+  - parameterId: batch_size
+    valueType: integer
+    defaultValue: 64
+    catalogName: batch_size
+    planField: batchSize
+    trainFlag: --batch_size
+    exposure: agent_compiled
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: 神经网络批大小。
+  - parameterId: hidden_dim
+    valueType: integer
+    defaultValue: 256
+    catalogName: hidden_dim
+    planField: null
+    trainFlag: --hidden_dim
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 1
+    maximum: null
+    choices: []
+    notes: pipeline 支持但 Agent 尚未编译。
+  - parameterId: learning_rate
+    valueType: number
+    defaultValue: 0.002
+    catalogName: learning_rate
+    planField: null
+    trainFlag: --learning_rate
+    exposure: catalog_only
+    usedByTraining: true
+    minimum: 0
+    maximum: null
+    choices: []
+    notes: pipeline 支持但 Agent 尚未编译。
+artifacts:
+  - artifactId: document_topic_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/dtm/{run}/dtm/model/theta_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_dtm
+    description: 文档—主题概率矩阵。
+  - artifactId: temporal_topic_word_matrix
+    pathPattern: THETA/result/{userId}/{datasetId}/dtm/{run}/dtm/model/beta_over_time_k{numTopics}.npy
+    required: true
+    producedBy: BaselineTrainer.train_dtm
+    description: 各时间切片的主题—词分布。
+  - artifactId: topic_evolution
+    pathPattern: THETA/result/{userId}/{datasetId}/dtm/{run}/dtm/model/topic_evolution_k{numTopics}.json
+    required: true
+    producedBy: BaselineTrainer.train_dtm
+    description: 按时间切片组织的主题词演变。
+  - artifactId: training_history
+    pathPattern: THETA/result/{userId}/{datasetId}/dtm/{run}/dtm/model/training_history_k{numTopics}.json
+    required: true
+    producedBy: BaselineTrainer.train_dtm
+    description: 训练与验证损失、困惑度历史。
+limitations:
+  - 这是项目自带 PyTorch 动态神经主题模型，不是经典 LDA-Seq 实现。
+  - catalog 将 SBERT 列为必需；trainer 在缺少 SBERT 时可以使用 BOW 的 TruncatedSVD 表示，但准备阶段仍可能需要本地模型或网络。
+  - CPU 可运行但在较大语料上可能很慢。
+unverifiedClaims:
+  - 当前动态神经实现已加入一阶与二阶时间平滑约束，但尚未完成独立科研有效性验收。
+  - 跨时间 topic identity、切片失衡稳健性与描述性演化解释仍需合成语料验证。

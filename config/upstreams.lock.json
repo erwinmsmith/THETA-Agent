@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "dependencies": {
+    "theta": {
+      "repository": "https://github.com/CodeSoul-co/THETA.git",
+      "branch": "main",
+      "revision": "3135a007d00782e71abb780b1ea6cdf12b1667d6",
+      "directory": "third_party/THETA",
+      "license": "MIT"
+    },
+    "hypha": {
+      "repository": "https://github.com/CodeSoul-co/Hypha.git",
+      "branch": "main",
+      "revision": "b03cca7476889051d5feee32363acbe254e023fe",
+      "directory": "third_party/Hypha",
+      "license": "Apache-2.0"
+    }
+  }
+}

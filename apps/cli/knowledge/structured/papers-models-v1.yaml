@@ -1,0 +1,403 @@
+schema_version: 1.0.0
+objects:
+  - &model_paper_base
+    object_id: paper_source.lda.blei2003
+    object_type: source
+    title: Blei 2003 LDA 原始论文
+    model_ids: [lda]
+    parameter_ids: []
+    scenario_tags: [paper, core_model, probabilistic, bow]
+    language: bilingual
+    aliases_zh: [LDA原始论文, 潜在狄利克雷分配论文]
+    aliases_en: [Latent Dirichlet Allocation paper, Blei 2003]
+    authority_level: L3
+    evidence_type: paper
+    source_id: paper.lda.blei2003
+    source_year: 2003
+    source_locator: https://jmlr.org/papers/v3/blei03a.html
+    claim_scope: LDA 的生成假设、文档—主题分布、主题—词分布和变分推断原理。
+    implementation_name: null
+    implementation_version: null
+    theta_support_status: unknown
+    confidence: high
+    conflict_group_id: null
+    content_markdown: |
+      Blei、Ng 与 Jordan 将 LDA 定义为层次贝叶斯生成模型：文档由主题混合生成，主题由词概率分布表示。该论文可解释为什么 LDA 是透明的静态词袋基线，但不规定 THETA 当前 sklearn 实现的默认参数，也不能证明主题天然具有时间、因果或群体效应含义。
+    content_hash: null
+    updated_at: 2026-08-01T00:00:00.000Z
+
+  - <<: *model_paper_base
+    object_id: rule.paper_lda_baseline_scope
+    object_type: rule
+    title: LDA 论文支持的基线范围
+    scenario_tags: [model_selection, static, baseline, interpretability]
+    aliases_zh: [LDA适用范围, LDA基线依据]
+    aliases_en: [LDA baseline scope, when to use LDA]
+    theta_support_status: supported
+    claim_scope: 从 LDA 原理推导出的候选模型角色，不涉及项目命令参数。
+    content_markdown: |
+      当研究目标是静态主题发现、语料具有足够词共现、用户需要 CPU 友好且可解释的对照时，可把 LDA 放入候选集。短文本稀疏、需要时间演化或协变量推断时，LDA 仍可作为基线，但不能单独回答这些结构化问题。最终参数必须由 THETA LDA Capability Registry 和 Validator V2 解析。
+
+  - <<: *model_paper_base
+    object_id: paper_source.hdp.teh2006
+    title: Teh 2006 HDP 原始论文
+    model_ids: [hdp]
+    scenario_tags: [paper, core_model, nonparametric_bayes, automatic_topic_count]
+    aliases_zh: [HDP原始论文, 层次狄利克雷过程论文]
+    aliases_en: [Hierarchical Dirichlet Processes paper, Teh 2006]
+    source_id: paper.hdp.teh2006
+    source_year: 2006
+    source_locator: https://doi.org/10.1198/016214506000000302
+    claim_scope: HDP 的共享随机测度、非参数混合与文本主题建模原理。
+    content_markdown: |
+      HDP 通过层次 Dirichlet process 在文档之间共享主题，使有效混合成分数量由数据和后验推断。所谓“非参数”并不表示实现没有有限截断、计算上界或后处理，也不保证每次训练返回唯一且完全相同的主题数。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_hdp_auto_is_bounded
+    object_type: rule
+    title: HDP 自动主题数仍是有界推断
+    model_ids: [hdp]
+    parameter_ids: [maxTopics, numTopics, topicCountMode]
+    scenario_tags: [model_selection, automatic_topic_count, truncation, uncertainty]
+    aliases_zh: [HDP自动主题有上界, HDP不是无限搜索]
+    aliases_en: [bounded HDP auto topics, HDP truncation]
+    source_id: paper.hdp.teh2006
+    source_year: 2006
+    source_locator: https://doi.org/10.1198/016214506000000302
+    claim_scope: HDP auto 语义的理论边界；具体截断参数以 Gensim 与 THETA 实现为准。
+    theta_support_status: supported
+    content_markdown: |
+      Planner 可以把 HDP 作为“不预先固定 K”的候选，但必须把结果描述为推断出的有效主题数，而不是“真实 K”。THETA 中仍应使用 topicCountMode=auto、numTopics=null，并由 maxTopics 表达上界；论文不能覆盖当前命令编译器的字段语义。
+
+  - <<: *model_paper_base
+    object_id: paper_source.dtm.blei2006
+    title: Blei 2006 经典 DTM 论文
+    model_ids: [dtm]
+    scenario_tags: [paper, core_model, temporal, lda_seq]
+    aliases_zh: [经典DTM论文, 动态主题模型论文]
+    aliases_en: [Dynamic Topic Models paper, LDA-Seq]
+    source_id: paper.dtm.blei2006
+    source_year: 2006
+    source_locator: https://doi.org/10.1145/1143844.1143859
+    claim_scope: 经典 DTM 通过状态空间结构平滑主题随时间演化的原理。
+    content_markdown: |
+      经典 DTM 在有序时间片之间连接主题的自然参数，用于描述主题词分布随时间平滑变化。它要求时间切片有真实研究含义；采集制度变化、极小切片或缺失时间可能制造伪演化。
+
+  - <<: *model_paper_base
+    object_id: conflict.paper_dtm_vs_theta_dtm
+    object_type: conflict_group
+    title: 经典 LDA-Seq 与 THETA DTM 实现不可混同
+    model_ids: [dtm]
+    parameter_ids: [numTopics, epochs, batchSize]
+    scenario_tags: [conflict, temporal, implementation_boundary]
+    aliases_zh: [DTM实现差异, 经典DTM与THETA DTM]
+    aliases_en: [classic DTM versus THETA DTM, LDA-Seq implementation mismatch]
+    source_id: paper.dtm.blei2006
+    source_year: 2006
+    source_locator: https://doi.org/10.1145/1143844.1143859
+    claim_scope: 经典论文与项目自带 PyTorch 动态神经模型之间的证据边界。
+    theta_support_status: conditional
+    conflict_group_id: dtm_implementation_identity
+    content_markdown: |
+      Blei 与 Lafferty 2006 支持“为什么需要时间演化主题模型”，但 THETA 当前 dtm 是自带的 PyTorch 动态神经模型，不是经典 LDA-Seq。Planner 不得从论文复制状态空间参数或推断算法到 THETA 计划；可执行字段只能来自 DTM 能力卡与 Resolver。
+
+  - <<: *model_paper_base
+    object_id: paper_source.btm.yan2013
+    title: Yan 2013 BTM 原始论文
+    model_ids: [btm]
+    scenario_tags: [paper, core_model, short_text, biterm]
+    aliases_zh: [BTM原始论文, 双词主题模型论文]
+    aliases_en: [Biterm Topic Model paper, Yan 2013]
+    source_id: paper.btm.yan2013
+    source_year: 2013
+    source_locator: https://doi.org/10.1145/2488388.2488514
+    claim_scope: BTM 使用全语料 biterm 缓解短文本文档级共现稀疏的原理。
+    content_markdown: |
+      BTM 直接建模全语料中的词对共现，而不是只依赖每篇短文内部的丰富词共现。论文支持在推文、标题、短评论和短问卷回答中把 BTM 作为候选，但不能证明它对任意短文本或任意语言都必然优于 LDA、BERTopic 或其他模型。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_btm_requires_biterms
+    object_type: rule
+    title: BTM 的短文本优势以有效 biterm 为前提
+    model_ids: [btm]
+    parameter_ids: [numTopics, epochs]
+    scenario_tags: [short_text, feasibility, preprocessing, biterm]
+    aliases_zh: [BTM有效词对前提, 短文本双词要求]
+    aliases_en: [BTM valid biterm prerequisite, short text cooccurrence requirement]
+    source_id: paper.btm.yan2013
+    source_year: 2013
+    source_locator: https://doi.org/10.1145/2488388.2488514
+    claim_scope: 从 BTM 生成机制得到的数据可行性条件。
+    theta_support_status: supported
+    content_markdown: |
+      推荐 BTM 前必须检查清洗和分词后的文本能否形成足够词对。若多数有效行少于两个 token，应先修正文本列或预处理，或改用其他候选。论文提供方法依据；THETA Validator V2 的 no-biterm 检查仍是不可绕过的 L1 硬约束。
+
+  - <<: *model_paper_base
+    object_id: paper_source.stm.roberts2014
+    title: Roberts 2014 STM 应用论文
+    model_ids: [stm]
+    scenario_tags: [paper, core_model, covariates, social_science]
+    aliases_zh: [STM开放问卷论文, 结构主题模型应用论文]
+    aliases_en: [Structural Topic Models for open-ended surveys, Roberts 2014]
+    source_id: paper.stm.roberts2014
+    source_year: 2014
+    source_locator: https://doi.org/10.1111/ajps.12103
+    claim_scope: STM 将文档协变量引入主题流行度与内容分析的研究设计依据。
+    content_markdown: |
+      STM 允许研究者分析处理条件、群体属性等协变量与主题流行度或主题内容之间的关系。该方法仍是计算机辅助分析，主题命名、代表文本阅读和研究解释需要领域专家参与；协变量关联也不能未经设计直接宣称为因果效应。
+
+  - <<: *model_paper_base
+    object_id: paper_source.stm.roberts2019
+    title: Roberts 2019 R stm 方法与软件论文
+    model_ids: [stm]
+    scenario_tags: [paper, core_model, covariates, model_selection, r_package]
+    aliases_zh: [R stm软件论文, STM模型选择论文]
+    aliases_en: [stm R package paper, Roberts 2019]
+    source_id: paper.stm.roberts2019
+    source_year: 2019
+    source_locator: https://doi.org/10.18637/jss.v091.i02
+    claim_scope: R stm 的模型规格、初始化、诊断、语义连贯性、排他性与协变量效应工作流。
+    content_markdown: |
+      R stm 工作流把模型拟合、主题数/初始化选择、语义连贯性与排他性诊断、代表文档和协变量效应解释结合起来。官方 R 实现细节只在 THETA 实际启用兼容的 R 后端时具有直接参数权威。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_stm_covariate_design
+    object_type: rule
+    title: STM 协变量必须服务明确比较问题
+    model_ids: [stm]
+    parameter_ids: [metadataColumns]
+    scenario_tags: [covariates, research_design, group_comparison, metadata]
+    aliases_zh: [STM协变量选择, 元数据比较设计]
+    aliases_en: [STM covariate design, structural topic metadata selection]
+    source_id: paper.stm.roberts2014
+    source_year: 2014
+    source_locator: https://doi.org/10.1111/ajps.12103
+    claim_scope: 选择 STM 与筛选协变量的研究设计原则。
+    theta_support_status: conditional
+    content_markdown: |
+      只有当用户明确想比较群体、来源、处理条件或其他文档属性时，才应把 STM 作为主候选。ID、高基数标识符、正文直接派生字段、近乎常量字段或存在明显泄漏的字段不能自动作为协变量。计划应说明协变量影响的是主题流行度、主题内容还是仅作训练后分组描述。
+
+  - <<: *model_paper_base
+    object_id: conflict.paper_stm_backend_equivalence
+    object_type: conflict_group
+    title: R stm 与 THETA Python 近似后端不等价
+    model_ids: [stm]
+    scenario_tags: [conflict, backend, covariates, inference]
+    aliases_zh: [STM后端差异, R与Python STM不等价]
+    aliases_en: [STM backend mismatch, R stm versus Python approximation]
+    source_id: paper.stm.roberts2019
+    source_year: 2019
+    source_locator: https://doi.org/10.18637/jss.v091.i02
+    claim_scope: R stm 论文结论与 THETA 可选 Python 近似实现之间的边界。
+    theta_support_status: conditional
+    conflict_group_id: stm_backend_identity
+    content_markdown: |
+      THETA 在具备 R、rpy2 与 stm 时可走 R 后端，否则使用项目的 Python 近似实现。两种后端的估计、诊断和不确定性不能宣称数值等价。Planner 必须在计划中记录后端，并仅对实际后端承诺其原生产物。
+
+  - <<: *model_paper_base
+    object_id: paper_source.bertopic.grootendorst2022
+    title: Grootendorst 2022 BERTopic 论文
+    model_ids: [bertopic]
+    scenario_tags: [paper, core_model, embedding, clustering, c_tf_idf]
+    aliases_zh: [BERTopic论文, c-TF-IDF论文]
+    aliases_en: [BERTopic paper, class-based TF-IDF]
+    source_id: paper.bertopic.grootendorst2022
+    source_year: 2022
+    source_locator: https://arxiv.org/abs/2203.05794
+    claim_scope: BERTopic 的嵌入、聚类与 c-TF-IDF 主题表示管线。
+    content_markdown: |
+      BERTopic 先生成文档嵌入，再进行降维和密度聚类，最后用 class-based TF-IDF 形成主题词表示。其主题本质更接近语义簇，不应自动当作 LDA 式混合成员生成模型；噪声点与离群文档是密度聚类行为的一部分。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_bertopic_pipeline_semantics
+    object_type: rule
+    title: BERTopic 参数必须按管线阶段解释
+    model_ids: [bertopic]
+    parameter_ids: [nNeighbors, nComponents, minClusterSize, minSamples, topNWords, numTopics]
+    scenario_tags: [hyperparameter, embedding, umap, hdbscan, topic_representation]
+    aliases_zh: [BERTopic管线参数, BERTopic参数阶段]
+    aliases_en: [BERTopic pipeline parameter semantics]
+    source_id: paper.bertopic.grootendorst2022
+    source_year: 2022
+    source_locator: https://arxiv.org/abs/2203.05794
+    claim_scope: BERTopic 参数所在阶段及其相互作用；具体默认值来自官方文档与 THETA 能力卡。
+    theta_support_status: conditional
+    content_markdown: |
+      nNeighbors/nComponents 改变 UMAP 表示，minClusterSize/minSamples 改变 HDBSCAN 簇与噪声，topNWords 只改变主题表示输出。target_reduction 是聚类后的归并目标，不是训练前固定 K。调参时必须重新观察主题数、噪声比例、主题重复和代表文档，不能孤立优化单一参数。
+
+  - <<: *model_paper_base
+    object_id: failure.paper_bertopic_outlier_microclusters
+    object_type: failure_mode
+    title: BERTopic 噪声过高或微小主题过多
+    model_ids: [bertopic]
+    parameter_ids: [minClusterSize, minSamples, nNeighbors]
+    scenario_tags: [failure, outliers, microclusters, clustering]
+    aliases_zh: [BERTopic大量噪声, BERTopic微小主题]
+    aliases_en: [BERTopic excessive outliers, BERTopic microclusters]
+    source_id: paper.bertopic.grootendorst2022
+    source_year: 2022
+    source_locator: https://arxiv.org/abs/2203.05794
+    claim_scope: BERTopic 密度聚类结果的常见失败表现与诊断方向。
+    theta_support_status: conditional
+    content_markdown: |
+      大量 -1 噪声可能来自嵌入不适配、语料规模不足、minSamples 过保守或数据本身缺少密度结构；大量微小主题可能来自 minClusterSize 过低或局部结构过强。不要以“必须覆盖全部文档”为目标强行消除离群点，应比较覆盖率、主题质量与代表文档。
+
+  - <<: *model_paper_base
+    object_id: paper_source.prodlda.srivastava2017
+    title: Srivastava 2017 ProdLDA/AVITM 论文
+    model_ids: [prodlda]
+    scenario_tags: [paper, neural_topic_model, variational_autoencoder, product_of_experts]
+    aliases_zh: [ProdLDA论文, AVITM论文]
+    aliases_en: [ProdLDA paper, AVITM]
+    source_id: paper.prodlda.srivastava2017
+    source_year: 2017
+    source_locator: https://openreview.net/forum?id=BybtVK9lg
+    claim_scope: 使用自动编码变分推断训练主题模型及 component collapse 风险。
+    theta_support_status: unknown
+    content_markdown: |
+      AVITM 将自动编码变分推断用于主题模型，ProdLDA 用 product of experts 改变词生成组合。论文说明神经主题模型需要关注先验近似与 component collapse；其公开实验不能证明 ProdLDA 或 THETA 在任意用户语料上必然优于经典模型。
+
+  - <<: *model_paper_base
+    object_id: failure.paper_neural_component_collapse
+    object_type: failure_mode
+    title: 神经主题模型 component collapse
+    model_ids: [prodlda, etm, ctm, theta]
+    parameter_ids: [epochs, learningRate]
+    scenario_tags: [failure, neural_topic_model, kl, collapse, training_diagnostics]
+    aliases_zh: [主题坍塌, 神经主题组件坍塌]
+    aliases_en: [component collapse, posterior collapse in topic models]
+    source_id: paper.prodlda.srivastava2017
+    source_year: 2017
+    source_locator: https://openreview.net/forum?id=BybtVK9lg
+    claim_scope: 神经主题模型训练中多个主题不被有效使用的风险。
+    theta_support_status: conditional
+    content_markdown: |
+      若少数主题吸收大部分质量、多个主题词高度重复、文档主题分布缺乏区分或 KL/重构项异常，可能发生 component collapse。计划应保留训练历史、主题使用率和多样性诊断，并与 LDA 等稳定基线比较；不能只看最终 loss。
+
+  - <<: *model_paper_base
+    object_id: paper_source.ctm.bianchi2021
+    title: Bianchi 2021 上下文化主题模型论文
+    model_ids: [ctm]
+    scenario_tags: [paper, neural_topic_model, contextual_embedding, coherence]
+    aliases_zh: [上下文化主题模型论文, CTM嵌入论文]
+    aliases_en: [contextualized topic model paper, pre-training is a hot topic]
+    source_id: paper.ctm.bianchi2021
+    source_year: 2021
+    source_locator: https://doi.org/10.18653/v1/2021.acl-short.96
+    claim_scope: 上下文化文档表示可为神经主题模型提供语义信息的实证依据。
+    theta_support_status: unknown
+    content_markdown: |
+      该研究表明把预训练语言模型的文档表示与词袋主题模型结合，可以改善特定基准上的主题连贯性。结论依赖语言、嵌入模型、数据领域和评估设置；Planner 仍需检查本地模型、中文支持、领域适配和人工解释。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_contextual_embedding_requires_fit
+    object_type: rule
+    title: 上下文化嵌入需要语言与领域适配
+    model_ids: [ctm, bertopic, theta, dtm]
+    scenario_tags: [embedding, language, domain_fit, offline]
+    aliases_zh: [嵌入领域适配, 中文嵌入检查]
+    aliases_en: [embedding domain fit, embedding language fit]
+    source_id: paper.ctm.bianchi2021
+    source_year: 2021
+    source_locator: https://doi.org/10.18653/v1/2021.acl-short.96
+    claim_scope: 选择上下文化嵌入模型前的适配性检查。
+    theta_support_status: conditional
+    content_markdown: |
+      不能因为某嵌入在通用排行榜或英文基准上表现好就直接用于中文领域语料。计划至少要确认语言覆盖、文本长度、领域术语、本地权重、硬件和小样本代表文本相似性；条件不足时保留词袋基线。
+
+  - <<: *model_paper_base
+    object_id: paper_source.etm.dieng2020
+    title: Dieng 2020 ETM 论文
+    model_ids: [etm, theta]
+    scenario_tags: [paper, neural_topic_model, word_embedding, topic_embedding]
+    aliases_zh: [ETM论文, 嵌入主题模型论文]
+    aliases_en: [Embedded Topic Model paper, Topic Modeling in Embedding Spaces]
+    source_id: paper.etm.dieng2020
+    source_year: 2020
+    source_locator: https://doi.org/10.1162/tacl_a_00325
+    claim_scope: 在同一嵌入空间中通过主题向量与词向量内积定义主题—词分布的原理。
+    theta_support_status: conditional
+    content_markdown: |
+      ETM 把词与主题置于同一嵌入空间，通过内积定义主题—词概率，并使用 amortized variational inference。该论文可帮助解释 THETA 的概念亲缘，但 THETA 的 Qwen 文档嵌入、损失项和训练模式构成不同实现，论文结果不能作为 THETA 性能证明。
+
+  - <<: *model_paper_base
+    object_id: rule.paper_theta_etm_conceptual_mapping
+    object_type: rule
+    title: THETA 与 ETM 只能建立概念映射
+    model_ids: [theta, etm]
+    scenario_tags: [implementation_boundary, embedding, bow_reconstruction, neural]
+    aliases_zh: [THETA与ETM关系, THETA嵌入主题原理]
+    aliases_en: [THETA ETM conceptual mapping]
+    source_id: paper.etm.dieng2020
+    source_year: 2020
+    source_locator: https://doi.org/10.1162/tacl_a_00325
+    claim_scope: ETM 论文与 THETA 代码之间的概念而非身份映射。
+    theta_support_status: supported
+    content_markdown: |
+      THETA 编码 Qwen 文档嵌入得到 theta，并以 topic_embeddings × word_embeddingsᵀ 得到 beta，再用 theta × beta 重构 BOW。它具有 ETM 风格的嵌入解码思想，但不是对 ETM 论文的逐行复现。可执行参数和产物只能由 THETA 代码证据确认。
+
+  - <<: *model_paper_base
+    object_id: paper_source.top2vec.angelov2020
+    title: Angelov 2020 Top2Vec 论文
+    model_ids: [top2vec, bertopic]
+    scenario_tags: [paper, embedding, clustering, automatic_topic_count]
+    aliases_zh: [Top2Vec论文, 分布式主题表示论文]
+    aliases_en: [Top2Vec paper, distributed representations of topics]
+    source_id: paper.top2vec.angelov2020
+    source_year: 2020
+    source_locator: https://arxiv.org/abs/2008.09470
+    claim_scope: 联合文档/词嵌入与密度聚类主题发现路线的对照证据。
+    theta_support_status: unsupported
+    content_markdown: |
+      Top2Vec 在联合文档和词语义空间中寻找主题向量，并通过密度结构形成主题。它可作为理解嵌入聚类路线的对照，但当前 THETA CLI Agent 不提供 Top2Vec 可执行能力。
+
+  - <<: *model_paper_base
+    object_id: constraint.paper_top2vec_not_executable
+    object_type: project_constraint
+    title: Top2Vec 只能作为对照知识而非可执行推荐
+    model_ids: [top2vec]
+    scenario_tags: [unsupported, catalog, planner, comparison]
+    aliases_zh: [Top2Vec不可执行, Top2Vec仅作对照]
+    aliases_en: [Top2Vec unsupported in THETA]
+    source_id: paper.top2vec.angelov2020
+    source_year: 2020
+    source_locator: https://arxiv.org/abs/2008.09470
+    claim_scope: 外部论文中存在但 THETA 目录未支持的模型处理方式。
+    theta_support_status: unsupported
+    content_markdown: |
+      RAG 可以用 Top2Vec 解释嵌入聚类方法或提出未来扩展，但 Planner 不得把 top2vec 放进 CanonicalPlan、生成训练命令或暗示当前项目能运行它。若用户需要相近能力，应在受支持候选中评估 BERTopic。
+
+  - <<: *model_paper_base
+    object_id: paper_source.short_text.qiang2022
+    title: Qiang 2022 短文本主题模型综述
+    model_ids: [btm, lda]
+    scenario_tags: [paper, survey, short_text, sparsity, comparison]
+    aliases_zh: [短文本主题模型综述, 短文本模型比较]
+    aliases_en: [short text topic modeling survey, Qiang 2022]
+    authority_level: L4
+    source_id: survey.short_text.qiang2022
+    source_year: 2022
+    source_locator: https://doi.org/10.1109/TKDE.2020.2992485
+    claim_scope: 短文本稀疏问题、方法类别与对照实验设计的二级证据。
+    theta_support_status: unknown
+    content_markdown: |
+      综述将短文本方法概括为更强混合假设、全局词共现与文本聚合等路线，并比较多种数据集上的表现。它适合扩展候选空间和失败模式，但综述汇总不能替代当前数据、语言和实现上的本地实验。
+
+  - <<: *model_paper_base
+    object_id: recipe.paper_short_text_minimal_comparison
+    object_type: recipe
+    title: 短文本最小对照实验方案
+    model_ids: [lda, btm, bertopic]
+    parameter_ids: [numTopics, minClusterSize, minSamples, randomState]
+    scenario_tags: [short_text, comparison, baseline, resource_control]
+    aliases_zh: [短文本对照方案, 短文本模型实验]
+    aliases_en: [short text minimal comparison recipe]
+    authority_level: L4
+    source_id: survey.short_text.qiang2022
+    source_year: 2022
+    source_locator: https://doi.org/10.1109/TKDE.2020.2992485
+    claim_scope: 将综述与当前 THETA 能力结合形成的本地实验启发式，不是论文原文结论。
+    theta_support_status: conditional
+    confidence: medium
+    content_markdown: |
+      对短文本先检查 token 长度与有效 biterm。最小方案通常包含 LDA CPU 基线与 BTM 短文本候选；本地 SBERT 与依赖齐全时再加入 BERTopic。固定 K 使用少量低/中/高粒度候选和多个随机种子；BERTopic 同时报告实际主题数与 outlier 比例。最终由连贯性、多样性、稳定性和代表文档人工审阅共同决定。
