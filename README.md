@@ -1,5 +1,7 @@
 # THETA Agent
 
+English | [简体中文](README.zh-CN.md)
+
 THETA Agent is an agent-first, conversational auto-research system for the
 command line. It helps a researcher understand a dataset, clarify a research
 question, select an evidence-backed model, review an executable plan, approve
