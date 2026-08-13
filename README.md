@@ -104,6 +104,8 @@ npm run build
 npm run test:registries
 ```
 
+When using nvm, run `nvm use` first; `.nvmrc` selects the tested Node release.
+
 The default uv environment supports THETA tools, data inspection, tests, and
 model catalog. Install the full THETA training stack only when training is
 needed:
