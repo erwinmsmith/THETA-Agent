@@ -9,9 +9,9 @@ import { repositoryRoot } from '../repository-paths.js';
 import { OpenAICompatibleInferenceProvider } from './openai-compatible.js';
 
 export const INFERENCE_PROVIDER_IDS = [
+  'deepseek',
   'minimax',
   'openai',
-  'deepseek',
   'openrouter',
   'ollama',
   'custom',
@@ -62,6 +62,16 @@ const MAX_TIMEOUT_MS = 180_000;
 
 const presets: readonly ProviderPreset[] = [
   {
+    id: 'deepseek',
+    displayName: 'DeepSeek',
+    baseUrl: () => value(process.env.DEEPSEEK_BASE_URL) ?? 'https://api.deepseek.com/v1',
+    apiKey: () => value(process.env.DEEPSEEK_API_KEY),
+    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-v4-flash',
+    apiKeyRequired: true,
+    local: false,
+    maxTokensField: 'max_tokens',
+  },
+  {
     id: 'minimax',
     displayName: 'MiniMax',
     baseUrl: () => value(process.env.MINIMAX_API_BASE) ?? 'https://api.minimax.io/v1',
@@ -80,16 +90,6 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_completion_tokens',
-  },
-  {
-    id: 'deepseek',
-    displayName: 'DeepSeek',
-    baseUrl: () => value(process.env.DEEPSEEK_BASE_URL) ?? 'https://api.deepseek.com',
-    apiKey: () => value(process.env.DEEPSEEK_API_KEY),
-    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-v4-flash',
-    apiKeyRequired: true,
-    local: false,
-    maxTokensField: 'max_tokens',
   },
   {
     id: 'openrouter',

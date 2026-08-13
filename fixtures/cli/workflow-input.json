@@ -1,0 +1,8 @@
+{
+  "filePath": "fixtures/sample.jsonl",
+  "workflowVersion": "2.0.0",
+  "researchGoal": "Discover stable themes and explain how they vary over time.",
+  "sampleSize": 10,
+  "plannerMode": "provider",
+  "allowRemoteSamples": false
+}

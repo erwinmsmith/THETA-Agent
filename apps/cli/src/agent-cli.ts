@@ -392,6 +392,7 @@ const replHelp = `THETA 交互命令
   /brief                  查看当前研究档案
   /history                查看已持久化的最近对话
   /next                   查看当前推荐的下一步
+  /done                   使用已确认或默认答案结束研究访谈
   /details [section] [页]  分区、分页查看上一条响应的技术详情
   /status [runId]         查看任务状态
   /why [model|parameters|protocol|evidence] [runId]

@@ -1,0 +1,9 @@
+{
+  "status": "confirmed",
+  "domainLabel": "research documents",
+  "analysisUnit": "one document",
+  "textColumns": ["text"],
+  "timeColumns": ["created_at"],
+  "idColumns": ["id"],
+  "metadataColumns": ["category"]
+}

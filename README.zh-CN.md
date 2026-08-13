@@ -100,10 +100,16 @@ CLI 会自动使用 `.venv/bin/python`，Windows 则使用对应的虚拟环境�
 
 ### 4. 配置并切换语言模型
 
-确定性 Agent 不需要 API Key 也能运行。可选语言模型层支持 MiniMax、OpenAI、DeepSeek、OpenRouter、本地 Ollama，以及任意 OpenAI-compatible 接口。创建本地环境文件，只需填写一个供应商的必需配置：
+确定性 Agent 不需要 API Key 也能运行。DeepSeek 是默认语言模型供应商；可选语言模型层还支持 MiniMax、OpenAI、OpenRouter、本地 Ollama，以及任意 OpenAI-compatible 接口。创建本地环境文件，只需填写一个供应商的必需配置：
 
 ```bash
 cp .env.example .env
+```
+
+如果同级 Hypha 工作副本已有 DeepSeek Key，可以在不显示密钥的情况下只导入 DeepSeek 配置：
+
+```bash
+npm run env:import:hypha
 ```
 
 `.env` 已被忽略，禁止提交到版本控制。
@@ -155,6 +161,8 @@ npm run start:api
 /brief
 /exit
 ```
+
+所有直接 CLI 和交互式指令的参数、审批行为、完整案例、退出码与排错方法，请查看 [CLI 中文完整手册](docs/CLI.zh-CN.md)；同时也提供 [English CLI reference](docs/CLI.md)。
 
 ## 更新上游依赖
 

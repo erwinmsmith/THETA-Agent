@@ -120,13 +120,21 @@ The CLI automatically uses `.venv/bin/python` (or the Windows equivalent).
 
 ### 4. Configure and select a language model
 
-The deterministic agent works without an API key. The optional language layer
-supports MiniMax, OpenAI, DeepSeek, OpenRouter, local Ollama, and any custom
+The deterministic agent works without an API key. DeepSeek is the default
+language provider; the optional language layer also supports MiniMax, OpenAI,
+OpenRouter, local Ollama, and any custom
 OpenAI-compatible endpoint. Create a local environment file and fill only one
 provider's required values:
 
 ```bash
 cp .env.example .env
+```
+
+If a sibling Hypha checkout already contains the DeepSeek key, import only its
+DeepSeek configuration without displaying the secret:
+
+```bash
+npm run env:import:hypha
 ```
 
 `.env` is ignored and must never be committed.
@@ -188,6 +196,11 @@ Example first session:
 /brief
 /exit
 ```
+
+Every direct CLI command and interactive command, including parameters,
+approval behavior, examples, exit codes, and troubleshooting, is documented in
+the [complete CLI reference](docs/CLI.md). A
+[Chinese CLI reference](docs/CLI.zh-CN.md) is also available.
 
 ## Updating upstream dependencies
 

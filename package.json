@@ -9,6 +9,7 @@
     "deps:ensure": "node scripts/upstreams.mjs ensure",
     "deps:sync": "node scripts/upstreams.mjs sync",
     "deps:update": "node scripts/upstreams.mjs update",
+    "env:import:hypha": "node scripts/import-hypha-env.mjs",
     "python:sync": "uv sync",
     "python:sync:training": "uv sync --extra training",
     "hypha:install": "npm --prefix third_party/Hypha ci --ignore-scripts",
@@ -23,14 +24,16 @@
     "test:python": "pnpm --filter @theta-agent/tools run test:python",
     "test:registries": "node scripts/check-registries.mjs",
     "test:providers": "node scripts/check-providers.mjs",
-    "model": "pnpm --filter @theta-agent/cli run cli -- model",
-    "rag:build": "pnpm --filter @theta-agent/cli run cli -- rag build --json",
+    "test:docs": "node scripts/check-cli-docs.mjs",
+    "cli": "node --disable-warning=ExperimentalWarning apps/cli/dist/cli.js",
+    "model": "npm run cli -- model",
+    "rag:build": "npm run cli -- rag build --json",
     "predoctor": "npm run deps:ensure",
-    "doctor": "pnpm --filter @theta-agent/cli run cli -- doctor",
+    "doctor": "npm run cli -- doctor",
     "prestart": "npm run deps:ensure",
-    "start": "pnpm --filter @theta-agent/cli run cli -- repl",
+    "start": "npm run cli -- repl",
     "start:api": "pnpm --filter @theta-agent/api run start",
-    "validate": "node scripts/validate-repository.mjs"
+    "validate": "node scripts/validate-repository.mjs && npm run test:docs"
   },
   "engines": {
     "node": ">=22.5.0"
