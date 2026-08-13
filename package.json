@@ -10,6 +10,12 @@
     "deps:update": "node scripts/upstreams.mjs update",
     "python:sync": "uv sync",
     "python:sync:training": "uv sync --extra training",
+    "hypha:install": "npm --prefix third_party/Hypha ci --ignore-scripts",
+    "hypha:build": "npm --prefix third_party/Hypha run build:packages",
+    "cli:install": "pnpm --dir apps/cli install --frozen-lockfile",
+    "build": "pnpm --dir apps/cli run build",
+    "doctor": "pnpm --dir apps/cli run cli -- doctor",
+    "start": "pnpm --dir apps/cli run cli -- repl",
     "validate": "node scripts/validate-repository.mjs"
   },
   "engines": {

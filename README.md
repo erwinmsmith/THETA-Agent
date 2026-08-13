@@ -34,10 +34,6 @@ scripts/                     Dependency and repository maintenance tools
 third_party/                 Ignored local THETA and Hypha checkouts
 ```
 
-The current implementation in `apps/cli` was imported from the `cli` branch of
-`passerby169/AGENT-THETA` and is now maintained as first-party project code.
-Its provenance is recorded in [NOTICE](NOTICE).
-
 ## Prerequisites
 
 - Git
@@ -45,18 +41,57 @@ Its provenance is recorded in [NOTICE](NOTICE).
 - pnpm through Corepack
 - uv 0.11 or newer; uv manages the pinned Python 3.12 environment
 
-## Bootstrap
+## Quick start
 
-Clone the repository and materialize the pinned upstream dependencies:
+### 1. Clone THETA Agent
+
+Use `main` for the release-ready product or switch to `dev` for active
+development:
+
+```bash
+git clone https://github.com/erwinmsmith/THETA-Agent.git
+cd THETA-Agent
+# Optional for contributors:
+git switch dev
+```
+
+### 2. Clone THETA and Hypha
+
+The recommended command reads `config/upstreams.lock.json`, clones both
+repositories into the ignored `third_party/` directory, and checks out the
+exact reviewed revisions:
 
 ```bash
 npm run deps:sync
+npm run deps:status
+```
+
+If you prefer to clone the upstream repositories yourself, use these paths and
+then run the synchronization command to apply the reviewed revisions:
+
+```bash
+mkdir -p third_party
+git clone --filter=blob:none --branch main \
+  https://github.com/CodeSoul-co/THETA.git third_party/THETA
+git clone --filter=blob:none --branch main \
+  https://github.com/CodeSoul-co/Hypha.git third_party/Hypha
+npm run deps:sync
+```
+
+`third_party/` is intentionally ignored. Never add THETA or Hypha source files
+to this repository.
+
+### 3. Install dependencies
+
+Install the default local runtime:
+
+```bash
 corepack enable
-npm --prefix third_party/Hypha ci --ignore-scripts
-npm --prefix third_party/Hypha run build:packages
-uv sync
-pnpm --dir apps/cli install --frozen-lockfile
-pnpm --dir apps/cli run build
+npm run python:sync
+npm run hypha:install
+npm run hypha:build
+npm run cli:install
+npm run build
 ```
 
 The default uv environment supports the bridge, data inspection, tests, and
@@ -64,24 +99,45 @@ model catalog. Install the full THETA training stack only when training is
 needed:
 
 ```bash
-uv sync --extra training
+npm run python:sync:training
 ```
 
 The CLI automatically uses `.venv/bin/python` (or the Windows equivalent).
-Then verify the complete local agent environment:
+
+### 4. Configure the optional language provider
+
+The deterministic agent works without an API key. To enable the optional
+MiniMax language layer, create a local environment file and fill only the
+required values:
 
 ```bash
-pnpm --dir apps/cli run cli -- doctor
+cp .env.example .env
 ```
 
-Start the conversational interface:
+`.env` is ignored and must never be committed.
+
+### 5. Verify and start the system
+
+Check the complete local agent environment:
 
 ```bash
-pnpm --dir apps/cli run cli -- repl
+npm run doctor
 ```
 
-Real credentials belong in `.env`, which is ignored. Start from `.env.example`
-and never commit API keys.
+Start the conversational research agent:
+
+```bash
+npm start
+```
+
+Example first session:
+
+```text
+/start fixtures/sample.jsonl
+/next
+/brief
+/exit
+```
 
 ## Updating upstream dependencies
 
