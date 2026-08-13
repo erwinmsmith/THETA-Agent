@@ -1,0 +1,8 @@
+packages:
+  - agent
+  - domain
+  - tools
+  - apps/*
+
+overrides:
+  "@hono/node-server": ^2.0.5

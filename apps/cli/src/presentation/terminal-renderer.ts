@@ -1,8 +1,8 @@
 import type {
   HumanFacingResponse,
   HumanOutputMode,
-} from './contracts.js';
-import { buildHumanResponse } from './human-response-builder.js';
+} from '@theta-agent/agent/presentation/contracts.js';
+import { buildHumanResponse } from '@theta-agent/agent/presentation/human-response-builder.js';
 
 export const renderValue = (
   value: unknown,

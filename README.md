@@ -26,13 +26,22 @@ runtime layers without being coupled to THETA-specific model code.
 ## Repository map
 
 ```text
-apps/cli/                    Conversational agent and operator CLI
-packages/THETA_tools        Governed Python tools for the THETA domain
+agent/                       Agent orchestration, runtime, memory, and services
+domain/                      Research contracts and workflow specification
+tools/                       Registered tools and the THETA Python adapter
+skills/                      Project-owned Agent skills
+knowledge/                   Evidence manifests and capability cards
+apps/cli/                    Terminal adapter only
+apps/api/                    HTTP adapter only
 config/                      Reviewed upstream dependency pins
-docs/                        Architecture and development policy
-scripts/                     Dependency and repository maintenance tools
 third_party/                 Ignored local THETA and Hypha checkouts
 ```
+
+Hypha is the single base framework. The Agent bootstrap loads Hypha's built-in
+skills directly from `third_party/Hypha`, loads project skills from `skills/`,
+registers governed tools from `tools/`, and validates all registrations against
+the domain workflow. THETA is invoked through those tools and is never copied
+into project source.
 
 ## Prerequisites
 
@@ -90,8 +99,9 @@ corepack enable
 npm run python:sync
 npm run hypha:install
 npm run hypha:build
-npm run cli:install
+pnpm install --frozen-lockfile
 npm run build
+npm run test:registries
 ```
 
 The default uv environment supports THETA tools, data inspection, tests, and
@@ -128,6 +138,12 @@ Start the conversational research agent:
 
 ```bash
 npm start
+```
+
+Start the optional local HTTP API with:
+
+```bash
+npm run start:api
 ```
 
 Example first session:

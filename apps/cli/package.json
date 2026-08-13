@@ -1,49 +1,24 @@
 {
   "name": "@theta-agent/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Conversational auto-research agent CLI with THETA as its first domain.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "Terminal adapter for the conversational research agent.",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": {
     "theta": "dist/cli.js",
     "theta-agent": "dist/cli.js"
   },
   "scripts": {
-    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "clean": "node scripts/clean-dist.mjs",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm run typecheck && pnpm run test:python-runtime",
-    "rag:build": "node dist/cli.js rag build --json",
     "cli": "node --disable-warning=ExperimentalWarning dist/cli.js",
-    "theta": "node --disable-warning=ExperimentalWarning dist/cli.js",
-    "web:api": "node --disable-warning=ExperimentalWarning dist/web-api/server.js",
-    "demo": "node dist/cli.js demo",
-    "hypha:check": "node ../../scripts/upstreams.mjs status hypha",
-    "hypha:build": "npm --prefix ../../third_party/Hypha run build:packages",
-    "test:python-runtime": "uv run --project ../.. python -m unittest discover ../../packages/THETA_tools/tests -p \"test_*.py\"",
-    "release:verify": "pnpm run test && pnpm run build && node dist/cli.js --help"
+    "start": "pnpm run cli -- repl"
   },
   "dependencies": {
-    "@hypha/adapters-local": "file:../../third_party/Hypha/packages/adapters-local",
-    "@hypha/core": "file:../../third_party/Hypha/packages/core",
-    "@hypha/domain": "file:../../third_party/Hypha/packages/domain",
-    "@hypha/fsm": "file:../../third_party/Hypha/packages/fsm",
-    "@hypha/harness": "file:../../third_party/Hypha/packages/harness",
-    "@hypha/inference": "file:../../third_party/Hypha/packages/inference",
-    "@hypha/kernel": "file:../../third_party/Hypha/packages/kernel",
-    "@hypha/mcp": "file:../../third_party/Hypha/packages/mcp",
-    "@hypha/memory": "file:../../third_party/Hypha/packages/memory",
-    "@hypha/skills": "file:../../third_party/Hypha/packages/skills",
-    "@hypha/storage": "file:../../third_party/Hypha/packages/storage",
-    "@hypha/tools": "file:../../third_party/Hypha/packages/tools",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
-    "fast-json-stable-stringify": "^2.1.0",
-    "pg": "8.22.0",
-    "yaml": "^2.9.0",
-    "zod": "^3.22.0"
+    "@theta-agent/agent": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

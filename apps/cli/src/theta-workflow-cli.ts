@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { THETA_APPROVAL_KEYS } from "./theta-domain.js";
+import { THETA_APPROVAL_KEYS } from "@theta-agent/agent";
 import {
   ThetaWorkflowService,
   type ThetaWorkflowInput,
-} from "./theta-workflow-service.js";
+} from "@theta-agent/agent";
 import {
   renderUserError,
   renderValue,

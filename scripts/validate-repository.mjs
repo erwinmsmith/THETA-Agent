@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,10 +24,51 @@ for (const [name, dependency] of Object.entries(lock.dependencies ?? {})) {
   }
 }
 
-const tracked = git(['ls-files']);
-for (const filename of tracked.split('\n').filter(Boolean)) {
+const repositoryFiles = git([
+  'ls-files',
+  '--cached',
+  '--others',
+  '--exclude-standard',
+]);
+for (const filename of repositoryFiles.split('\n').filter(Boolean)) {
+  if (!existsSync(path.join(repositoryRoot, filename))) continue;
   if (filename.startsWith('third_party/')) {
     failures.push(`Third-party source is tracked: ${filename}.`);
+  }
+  if (filename.startsWith('packages/')) {
+    failures.push(`Legacy packages/ layout remains: ${filename}.`);
+  }
+  if (filename.startsWith('apps/cli/knowledge/')) {
+    failures.push(`Knowledge must be repository-level: ${filename}.`);
+  }
+  if (filename.startsWith('apps/cli/fixtures/')) {
+    failures.push(`Fixtures must be repository-level: ${filename}.`);
+  }
+}
+
+for (const directory of ['agent', 'domain', 'tools', 'skills', 'knowledge']) {
+  const target = path.join(repositoryRoot, directory);
+  if (!existsSync(target) || !statSync(target).isDirectory()) {
+    failures.push(`Required architecture directory is missing: ${directory}/.`);
+  }
+}
+
+const allowedCliSources = new Set([
+  'apps/cli/src/agent-cli.ts',
+  'apps/cli/src/cli.ts',
+  'apps/cli/src/theta-workflow-cli.ts',
+  'apps/cli/src/presentation/terminal-renderer.ts',
+]);
+for (const filename of repositoryFiles.split('\n').filter((entry) =>
+  entry.startsWith('apps/cli/src/') && entry.endsWith('.ts')
+)) {
+  if (!existsSync(path.join(repositoryRoot, filename))) continue;
+  if (!allowedCliSources.has(filename)) {
+    failures.push(`CLI contains non-adapter implementation code: ${filename}.`);
+  }
+  const source = readFileSync(path.join(repositoryRoot, filename), 'utf8');
+  if (/from\s+['"](?:@theta-agent\/(?:domain|tools)|@hypha\/)/.test(source)) {
+    failures.push(`CLI bypasses the Agent API boundary: ${filename}.`);
   }
 }
 

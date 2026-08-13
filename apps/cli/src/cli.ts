@@ -21,29 +21,29 @@ import {
   runThetaPlanValidate,
   runThetaTrainingDryRun,
   runThetaTrainingStatus,
-} from "./tools/hypha-runner.js";
-import type { ThetaDatasetFileInput } from "./tools/dataset-inspect-tool.js";
-import type { ThetaDatasetExploreInput } from "./tools/dataset-explore-tool.js";
-import type { ThetaModelRecommendInput } from "./tools/model-recommend-tool.js";
-import type { ThetaPlanApproveInput } from "./tools/plan-approve-tool.js";
-import type { ThetaPlanCreateInput } from "./tools/plan-create-tool.js";
-import type { ThetaPlanValidateInput } from "./tools/plan-validate-tool.js";
-import type { ThetaTrainingCancelInput } from "./tools/training-cancel-tool.js";
-import type { ThetaTrainingDryRunInput } from "./tools/training-dry-run-tool.js";
-import type { ThetaTrainingStartInput } from "./tools/training-start-tool.js";
+} from "@theta-agent/agent";
+import type { ThetaDatasetFileInput } from "@theta-agent/agent";
+import type { ThetaDatasetExploreInput } from "@theta-agent/agent";
+import type { ThetaModelRecommendInput } from "@theta-agent/agent";
+import type { ThetaPlanApproveInput } from "@theta-agent/agent";
+import type { ThetaPlanCreateInput } from "@theta-agent/agent";
+import type { ThetaPlanValidateInput } from "@theta-agent/agent";
+import type { ThetaTrainingCancelInput } from "@theta-agent/agent";
+import type { ThetaTrainingDryRunInput } from "@theta-agent/agent";
+import type { ThetaTrainingStartInput } from "@theta-agent/agent";
 import { runThetaWorkflowCliCommand } from "./theta-workflow-cli.js";
 import {
   ThetaWorkflowService,
   type ThetaWorkflowConversationContext,
-} from "./theta-workflow-service.js";
-import { datasetConfirmationDraftSchema } from "./dataset-understanding/contracts.js";
+} from "@theta-agent/agent";
+import { datasetConfirmationDraftSchema } from "@theta-agent/agent";
 import {
   isThetaAgentCommand,
   runThetaAgentCliCommand,
 } from "./agent-cli.js";
-import { loadThetaProjectEnvironment } from "./environment.js";
+import { loadThetaProjectEnvironment } from "@theta-agent/agent";
 import { renderUserError } from "./presentation/terminal-renderer.js";
-import { SQLiteDatasetRegistry } from "./storage/dataset-registry.js";
+import { SQLiteDatasetRegistry } from "@theta-agent/agent";
 
 interface ParsedArguments {
   positionals: string[];

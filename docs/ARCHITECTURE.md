@@ -5,77 +5,88 @@
 THETA Agent is a conversational auto-research agent. Its durable product
 boundary is the research loop: understand intent and data, gather evidence,
 propose a plan, obtain approval, execute governed tools, monitor progress, and
-explain results. A statistical model repository is an execution dependency,
-not the center of the application.
+explain results. Topic modeling is the first capability, not the identity of
+the application.
 
 ## Layer model
 
 ```text
-CLI / future API surfaces
-          |
-Conversation and research orchestration
-          |
-Planning, evidence, policy, approvals, memory, and runtime
-          |
-Research-domain contracts and governed tools
-          |
-THETA adapter             Future domain adapters
-          |
-Local upstream engines and infrastructure
+CLI / API adapters
+        |
+Agent bootstrap, conversation, and research orchestration
+        |
+Skills, planning, policy, approvals, memory, and Hypha runtime
+        |
+Domain contracts <----> Governed tool registry
+                              |
+                         THETA tools
+                              |
+                    Ignored THETA checkout
 ```
 
-The current code has four concrete ownership areas:
+The repository has seven ownership areas:
 
-1. `apps/cli` owns terminal I/O, conversation, intent clarification, planning,
-   policy, approvals, evidence retrieval, orchestration, and presentation.
-2. `packages/THETA_tools` owns the narrow JSON protocol between the
-   TypeScript agent and the THETA Python engine.
-3. `third_party/Hypha` supplies the governed agent runtime and tool contracts.
-4. `third_party/THETA` supplies model training, evaluation, and visualization.
+1. `agent` owns conversation, orchestration, runtime composition, approvals,
+   memory, application services, and the central bootstrap.
+2. `domain` owns pure research contracts and the workflow specification. It
+   does not contain a nested THETA directory; THETA executes through tools.
+3. `tools` owns Hypha tool registration, capability implementations, and the
+   `THETA_tools` Python protocol.
+4. `skills` owns project skill definitions. The skill registry also loads
+   Hypha built-ins directly from the ignored checkout.
+5. `knowledge` owns evidence manifests and model capability cards.
+6. `apps/cli` and `apps/api` are thin input/output adapters.
+7. `third_party/Hypha` and `third_party/THETA` are the two standard upstream
+   checkouts and remain ignored.
 
-The last two directories are ignored local checkouts. The repository owns only
-their reviewed version pins and integration adapters.
+There is one Hypha checkout. File dependencies and the skill loader both refer
+to that same ignored directory; no Hypha source is duplicated in the project.
 
 ## Dependency direction
 
-Product surfaces may depend on reusable agent services. Agent services may
-depend on domain contracts. A domain adapter may depend on an upstream engine.
-The inverse dependencies are forbidden: upstream code must not import project
-code, and reusable agent services must not acquire THETA-specific behavior.
+Applications depend only on the public Agent API. Agent services compose the
+domain, skills, and tools. Tools depend on domain contracts and may call the
+ignored THETA checkout. Hypha provides framework contracts to these layers.
+Neither upstream checkout imports project code, and `domain` never depends on
+tool implementations.
 
-New generic behavior should be named for research concepts rather than THETA.
-New model-specific behavior belongs behind the THETA domain boundary. This
-rule enables another domain to reuse the agent without emulating THETA paths,
-commands, or data structures.
+New generic behavior is named for research concepts rather than THETA. A new
+execution backend is added through registered tools and skills instead of by
+expanding the CLI.
+
+## Registration lifecycle
+
+`agent/src/bootstrap.ts` is the composition root. Startup creates the Hypha
+`ToolRegistry`, loads the project and Hypha `SkillRegistry` entries, registers
+the domain pack, and fails if the domain references an unknown tool or skill.
+`npm run test:registries` provides a standalone registration smoke test.
 
 ## Upstream lifecycle
 
-`config/upstreams.lock.json` is the reproducibility contract. It records the
-repository, tracking branch, reviewed revision, local directory, and license
-for each standard upstream. `scripts/upstreams.mjs` provides four operations:
+`config/upstreams.lock.json` records the repository, tracking branch, reviewed
+revision, local directory, and license for each standard upstream.
+`scripts/upstreams.mjs` provides four operations:
 
 - `ensure` clones the latest tracking-branch revision only when a checkout is
-  missing and leaves existing checkouts untouched.
+  missing and leaves an existing checkout untouched.
 - `status` compares local checkouts with the reviewed pins.
 - `sync` materializes the exact reviewed revisions.
-- `update` advances local checkouts to the tracking branches and rewrites the
-  pins for review.
+- `update` advances clean local checkouts and rewrites the pins for review.
 
-An upstream update is complete only after agent contract tests, THETA tools tests,
-and an end-to-end dry run pass. Never commit `third_party/` content.
+An upstream update is complete only after the registry test, project build,
+Python tests, and an end-to-end dry run pass. Never commit `third_party/`
+content.
 
 ## Extension contract
 
-A future research domain should provide:
+A future research capability should provide:
 
-- a capability catalog and evidence sources;
+- capability cards and evidence sources;
+- Hypha skill definitions;
 - governed tool definitions and permission scopes;
-- deterministic plan validation and execution boundaries;
-- a tools adapter to its execution engine;
+- deterministic validation and execution boundaries;
 - result normalization for the common presentation layer;
-- domain-specific tests and fixtures.
+- focused tests and fixtures.
 
-It should reuse the shared conversation, approval, storage, audit, and runtime
-services. As the second domain is introduced, those reusable services should
-move from `apps/cli` into explicitly domain-neutral packages based on proven
-shared contracts rather than speculative abstractions.
+It should reuse the Agent conversation, approval, storage, audit, and runtime
+services.

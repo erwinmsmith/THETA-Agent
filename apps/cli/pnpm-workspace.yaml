@@ -1,5 +1,0 @@
-packages:
-  - .
-
-overrides:
-  "@hono/node-server": ^2.0.5

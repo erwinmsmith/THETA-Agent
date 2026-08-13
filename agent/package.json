@@ -1,0 +1,34 @@
+{
+  "name": "@theta-agent/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent core, orchestration, runtime composition, and application services.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./*.js": { "types": "./dist/*.d.ts", "default": "./dist/*.js" }
+  },
+  "scripts": {
+    "clean": "node ../scripts/clean-package.mjs agent/dist",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hypha/adapters-local": "file:../third_party/Hypha/packages/adapters-local",
+    "@hypha/core": "file:../third_party/Hypha/packages/core",
+    "@hypha/domain": "file:../third_party/Hypha/packages/domain",
+    "@hypha/harness": "file:../third_party/Hypha/packages/harness",
+    "@hypha/inference": "file:../third_party/Hypha/packages/inference",
+    "@hypha/skills": "file:../third_party/Hypha/packages/skills",
+    "@hypha/tools": "file:../third_party/Hypha/packages/tools",
+    "@theta-agent/domain": "workspace:*",
+    "@theta-agent/tools": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "^5.3.0"
+  }
+}

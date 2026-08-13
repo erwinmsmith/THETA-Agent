@@ -1,0 +1,26 @@
+{
+  "name": "@theta-agent/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP adapter for the conversational research agent.",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "clean": "node ../../scripts/clean-package.mjs apps/api/dist",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@theta-agent/agent": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

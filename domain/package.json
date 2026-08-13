@@ -1,0 +1,28 @@
+{
+  "name": "@theta-agent/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Research Agent domain contracts and workflow specification.",
+  "main": "dist/domain.js",
+  "types": "dist/domain.d.ts",
+  "exports": {
+    ".": { "types": "./dist/domain.d.ts", "default": "./dist/domain.js" },
+    "./*.js": { "types": "./dist/*.d.ts", "default": "./dist/*.js" }
+  },
+  "scripts": {
+    "clean": "node ../scripts/clean-package.mjs domain/dist",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hypha/core": "file:../third_party/Hypha/packages/core",
+    "@hypha/domain": "file:../third_party/Hypha/packages/domain",
+    "@hypha/tools": "file:../third_party/Hypha/packages/tools",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "^5.3.0"
+  }
+}

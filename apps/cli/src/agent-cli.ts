@@ -1,28 +1,28 @@
 import { createInterface } from 'node:readline';
-import { ConversationService } from './conversation/conversation-service.js';
+import { ConversationService } from '@theta-agent/agent';
 import {
   commandNeedsActiveRun,
   noActiveRunResult,
-} from './conversation/no-active-run.js';
-import { SQLiteConversationStore } from './storage/sqlite-conversation-store.js';
-import { ThetaTurnOrchestrator } from './conversation/turn-orchestrator.js';
-import { ThetaConversationWorkflowExecutor } from './conversation/workflow-executor.js';
-import { DoctorService, type DoctorReport } from './doctor-service.js';
+} from '@theta-agent/agent';
+import { SQLiteConversationStore } from '@theta-agent/agent';
+import { ThetaTurnOrchestrator } from '@theta-agent/agent';
+import { ThetaConversationWorkflowExecutor } from '@theta-agent/agent';
+import { DoctorService, type DoctorReport } from '@theta-agent/agent';
 import {
   ThetaOperatorCommandService,
   type OperatorCommandExecutor,
   type OperatorInvocation,
-} from './operator-command-service.js';
+} from '@theta-agent/agent';
 import { runThetaWorkflowCliCommand } from './theta-workflow-cli.js';
-import { ThetaWorkflowService } from './theta-workflow-service.js';
-import { defaultThetaWorkflowDb } from './theta-workflow-runtime.js';
+import { ThetaWorkflowService } from '@theta-agent/agent';
+import { defaultThetaWorkflowDb } from '@theta-agent/agent';
 import {
   renderUserError,
   renderValue,
 } from './presentation/terminal-renderer.js';
-import { TrainingFollowController } from './training/training-follow-controller.js';
-import { ResultService } from './results/result-service.js';
-import { listLocalRuns } from './storage/run-catalog.js';
+import { TrainingFollowController } from '@theta-agent/agent';
+import { ResultService } from '@theta-agent/agent';
+import { listLocalRuns } from '@theta-agent/agent';
 
 export interface AgentCliOutput {
   write(message: string): void;
