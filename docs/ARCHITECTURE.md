@@ -68,8 +68,8 @@ revision, local directory, and license for each standard upstream.
 `scripts/upstreams.mjs` provides four operations:
 
 - `ensure` clones the latest tracking-branch revision only when a checkout is
-  missing and leaves an existing checkout untouched.
-- `status` compares local checkouts with the reviewed pins.
+  missing, leaves an existing checkout untouched, and reports its status
+  against the reviewed pin.
 - `sync` materializes the exact reviewed revisions.
 - `update` advances clean local checkouts and rewrites the pins for review.
 

@@ -7,7 +7,6 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "deps:ensure": "node scripts/upstreams.mjs ensure",
-    "deps:status": "node scripts/upstreams.mjs status",
     "deps:sync": "node scripts/upstreams.mjs sync",
     "deps:update": "node scripts/upstreams.mjs update",
     "python:sync": "uv sync",

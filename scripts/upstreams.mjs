@@ -8,12 +8,12 @@ const repositoryRoot = path.resolve(
   '..',
 );
 const lockPath = path.join(repositoryRoot, 'config', 'upstreams.lock.json');
-const command = process.argv[2] ?? 'status';
+const command = process.argv[2] ?? 'ensure';
 const requestedNames = process.argv.slice(3);
-const supportedCommands = new Set(['ensure', 'status', 'sync', 'update']);
+const supportedCommands = new Set(['ensure', 'sync', 'update']);
 
 if (!supportedCommands.has(command)) {
-  fail(`Unsupported command: ${command}. Use ensure, status, sync, or update.`);
+  fail(`Unsupported command: ${command}. Use ensure, sync, or update.`);
 }
 
 const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
@@ -29,7 +29,6 @@ if (requestedNames.length && selected.length !== requestedNames.length) {
 
 for (const [name, dependency] of selected) {
   if (command === 'ensure') ensureDependency(name, dependency);
-  if (command === 'status') showStatus(name, dependency);
   if (command === 'sync') syncDependency(name, dependency);
   if (command === 'update') updateDependency(name, dependency);
 }
@@ -40,25 +39,17 @@ function ensureDependency(name, dependency) {
   const checkout = ensureCheckout(name, dependency);
   verifyRemote(name, checkout, dependency.repository);
   const revision = git(checkout, ['rev-parse', 'HEAD']);
+  const state = revision === dependency.revision ? 'pinned' : 'different';
+  const dirty = isDirty(checkout) ? ', dirty' : '';
   const action = existed ? 'available' : `cloned latest ${dependency.branch}`;
-  console.log(`${name}: ${action} at ${short(revision)}.`);
+  console.log(
+    `${name}: ${action}; ${state}${dirty}; local ${short(revision)}; pinned ${short(dependency.revision)}.`,
+  );
 }
 
 if (command === 'update') {
   writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`, 'utf8');
   console.log(`Updated ${path.relative(repositoryRoot, lockPath)}.`);
-}
-
-function showStatus(name, dependency) {
-  const directory = resolveDirectory(dependency);
-  if (!existsSync(path.join(directory, '.git'))) {
-    console.log(`${name}: missing; pinned ${short(dependency.revision)}`);
-    return;
-  }
-  const head = git(directory, ['rev-parse', 'HEAD']);
-  const state = head === dependency.revision ? 'pinned' : 'different';
-  const dirty = isDirty(directory) ? ', dirty' : '';
-  console.log(`${name}: ${state}${dirty}; local ${short(head)}; pinned ${short(dependency.revision)}`);
 }
 
 function syncDependency(name, dependency) {

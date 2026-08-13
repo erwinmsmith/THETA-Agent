@@ -64,12 +64,12 @@ cd THETA-Agent
 The repository automatically checks both upstream dependencies before
 `npm run doctor` and `npm start`. If either checkout is missing,
 `deps:ensure` clones the latest commit from its configured `main` branch into
-the ignored `third_party/` directory. Existing checkouts are never pulled or
-overwritten automatically:
+the ignored `third_party/` directory. The same command reports whether every
+local checkout matches its reviewed pin. Existing checkouts are never pulled
+or overwritten automatically:
 
 ```bash
 npm run deps:ensure
-npm run deps:status
 ```
 
 Use `npm run deps:sync` when you specifically need the exact reviewed
@@ -159,10 +159,10 @@ Example first session:
 
 ## Updating upstream dependencies
 
-Inspect the pinned and local states:
+Ensure both checkouts exist and inspect their pinned and local states:
 
 ```bash
-npm run deps:status
+npm run deps:ensure
 ```
 
 Fetch the current `main` branches, move the local checkouts to those commits,
