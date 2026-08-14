@@ -16,6 +16,7 @@ import {
 import { BrandWordmark, StateDot } from './ui/index.ts'
 import { ConversationPane } from './panels/ConversationPane.tsx'
 import { DetailPane } from './panels/DetailPane.tsx'
+import './styles/base.css'
 import css from './styles/app.module.css'
 
 export const AppRoot = (): React.ReactElement => {
