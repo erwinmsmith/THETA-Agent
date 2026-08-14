@@ -28,6 +28,7 @@ import {
   type WebRunSummary,
   type WebRuntimeProfile,
   type WebRunResults,
+  type WebTokenUsage,
   type WebWorkspaceSummary,
 } from './api/client.ts'
 import {
@@ -47,6 +48,13 @@ import './styles/base.css'
 import css from './styles/app.module.css'
 
 type StreamState = 'idle' | 'connecting' | 'live' | 'reconnecting'
+
+const EMPTY_TOKEN_USAGE: WebTokenUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0,
+  calls: 0,
+}
 
 const dotState = (value?: string): 'error' | 'warning' | 'done' | 'ongoing' =>
   value === 'failed'
@@ -94,6 +102,7 @@ export const AppRoot = (): React.ReactElement => {
   const [reasoning, setReasoning] = useState<WebReasoning>()
   const [results, setResults] = useState<WebRunResults>()
   const [memory, setMemory] = useState<WebConversationMemory>()
+  const [tokenUsage, setTokenUsage] = useState<WebTokenUsage>(EMPTY_TOKEN_USAGE)
   const [sending, setSending] = useState(false)
   const [queued, setQueued] = useState<Array<QueuedChatMessage & { runId?: string; workspaceSessionId?: string }>>([])
   const [attachments, setAttachments] = useState<WebAttachment[]>([])
@@ -187,6 +196,7 @@ export const AppRoot = (): React.ReactElement => {
       setReasoning(reasoningData)
       setResults(detail.results)
       setMemory(conversation.memory)
+      setTokenUsage(conversation.tokenUsage)
       setLoadError(undefined)
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error))
@@ -207,6 +217,7 @@ export const AppRoot = (): React.ReactElement => {
     setReasoning(undefined)
     setResults(undefined)
     setMemory(undefined)
+    setTokenUsage(EMPTY_TOKEN_USAGE)
     setStatus(undefined)
     setStreamState('connecting')
     knownMessageIds.current.clear()
@@ -226,6 +237,7 @@ export const AppRoot = (): React.ReactElement => {
         setReasoning(reasoningData)
         setResults(detail.results)
         setMemory(conversation.memory)
+        setTokenUsage(conversation.tokenUsage)
       } catch (error) {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error))
       }
@@ -295,6 +307,7 @@ export const AppRoot = (): React.ReactElement => {
             const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
             if (latest) setLiveAssistantMessageId(latest.messageId)
             mergeMessages(result.messages)
+            setTokenUsage(result.tokenUsage)
           }
           void refreshRuns()
         } else {
@@ -313,6 +326,7 @@ export const AppRoot = (): React.ReactElement => {
             setWorkspaceInteraction(result.interaction)
             setWorkspaceActivity(result.activity)
             setMemory(result.memory)
+            setTokenUsage(result.tokenUsage)
           }
           void refreshWorkspaceSessions()
         }
@@ -333,6 +347,7 @@ export const AppRoot = (): React.ReactElement => {
     setReasoning(undefined)
     setResults(undefined)
     setMemory(undefined)
+    setTokenUsage(EMPTY_TOKEN_USAGE)
     setStatus(undefined)
     setWorkspaceActivity(undefined)
     setWorkspaceInteraction(undefined)
@@ -352,12 +367,14 @@ export const AppRoot = (): React.ReactElement => {
     setWorkspaceActivity(undefined)
     setWorkspaceInteraction(undefined)
     setAttachments([])
+    setTokenUsage(EMPTY_TOKEN_USAGE)
     knownMessageIds.current.clear()
     try {
       const conversation = await getWorkspaceConversation(sessionId)
       setWorkspaceSessionId(sessionId)
       setWorkspaceInteraction(conversation.interaction)
       setMemory(conversation.memory)
+      setTokenUsage(conversation.tokenUsage)
       mergeMessages(conversation.messages)
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error))
@@ -567,6 +584,7 @@ export const AppRoot = (): React.ReactElement => {
                   setSelectedRunId(runId)
                   setWorkspaceSessionId(undefined)
                   setWorkspaceActivity(undefined)
+                  setTokenUsage(EMPTY_TOKEN_USAGE)
                   void refreshRuns()
                 }}
                 workspaceSessionId={workspaceSessionId}
@@ -579,6 +597,7 @@ export const AppRoot = (): React.ReactElement => {
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
                 liveAssistantMessageId={liveAssistantMessageId}
+                tokenUsage={tokenUsage}
               />
             )}
         </main>

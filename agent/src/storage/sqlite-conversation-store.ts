@@ -7,6 +7,7 @@ import type {
   ConversationSession,
   ConversationSessionSummary,
   ConversationStore,
+  ConversationTokenUsage,
   ConversationTurn,
   ConversationTurnStatus,
   LanguageInterpretationRecord,
@@ -209,6 +210,30 @@ export class SQLiteConversationStore implements ConversationStore {
         record.fallbackReason ?? null,
         record.createdAt,
       );
+  }
+
+  getTokenUsage(sessionId: string): ConversationTokenUsage {
+    const rows = this.database
+      .prepare(
+        `SELECT structured_output_json
+           FROM theta_language_interpretations
+          WHERE session_id = ?
+          ORDER BY created_at ASC, rowid ASC`,
+      )
+      .all(sessionId) as Row[];
+    return rows.reduce<ConversationTokenUsage>((usage, row) => {
+      const telemetry = telemetryFromStructuredOutput(row.structured_output_json);
+      if (!telemetry) return usage;
+      const inputTokens = tokenCount(telemetry.inputTokens);
+      const outputTokens = tokenCount(telemetry.outputTokens);
+      const totalTokens = tokenCount(telemetry.totalTokens) || inputTokens + outputTokens;
+      return {
+        inputTokens: usage.inputTokens + inputTokens,
+        outputTokens: usage.outputTokens + outputTokens,
+        totalTokens: usage.totalTokens + totalTokens,
+        calls: usage.calls + (inputTokens > 0 || outputTokens > 0 || totalTokens > 0 ? 1 : 0),
+      };
+    }, { inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 });
   }
 
   createTurn(turn: ConversationTurn): void {
@@ -558,6 +583,23 @@ const sessionSummary = (row: Row): ConversationSessionSummary => ({
   updatedAt: string(row.updated_at),
   pinned: number(row.pinned) === 1,
 });
+
+const telemetryFromStructuredOutput = (value: unknown): Record<string, unknown> | undefined => {
+  if (typeof value !== 'string') return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+    const telemetry = (parsed as Record<string, unknown>).telemetry;
+    return telemetry && typeof telemetry === 'object' && !Array.isArray(telemetry)
+      ? telemetry as Record<string, unknown>
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const tokenCount = (value: unknown): number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
 
 const string = (value: unknown): string => {
   if (typeof value !== 'string') throw new Error('Expected SQLite text value.');

@@ -30,8 +30,9 @@ origins explicitly with `THETA_WEB_ALLOWED_ORIGINS`; do not use a wildcard.
   SQLite session is created lazily on the first message, and upload is shown
   only after the Agent's schema-validated semantic decision requests data.
 - **Composer:** keeps grouped provider, model, and reasoning-type selection
-  beside the message field. New messages can queue while the active turn is
-  being processed.
+  beside the message field. Its footer reports cumulative provider-reported
+  input/output tokens for the current conversation. New messages can queue
+  while the active turn is being processed.
 - **History:** draft conversations and research Runs persist in SQLite and can
   be reopened, pinned, renamed, or deleted. These actions use in-app dialogs;
   deleting any history item returns the workspace to the start page.

@@ -11,6 +11,11 @@ export interface ResultAnalysisResponse {
   answer: string;
   provider: string;
   model: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
   selected: {
     topics: number;
     metrics: number;
@@ -117,6 +122,7 @@ export class ResultAnalysisService {
       answer,
       provider: String(response.metadata?.providerId ?? this.provider.id),
       model: String(response.metadata?.model ?? 'configured-model'),
+      ...(response.usage ? { usage: response.usage } : {}),
       selected: context.selected,
     };
   }

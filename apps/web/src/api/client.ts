@@ -159,10 +159,18 @@ export interface WebConversationMemory {
   updatedAt: string;
 }
 
+export interface WebTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  calls: number;
+}
+
 export interface WebWorkspaceTurn {
   sessionId: string;
   messages: WebMessage[];
   memory?: WebConversationMemory;
+  tokenUsage: WebTokenUsage;
   interaction: WebAgentInteraction;
   activity?: {
     proposal?: unknown;
@@ -185,6 +193,7 @@ export interface WebPostMessageResult {
   activeRunId: string;
   messages: WebMessage[];
   status: WebRunStatus;
+  tokenUsage: WebTokenUsage;
 }
 
 export interface WebDataset {
@@ -404,7 +413,7 @@ export const getRun = (runId: string): Promise<WebRunDetail> =>
 export const getStatus = (runId: string): Promise<WebRunStatus & Record<string, unknown>> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}/status`);
 
-export const getConversation = (runId: string): Promise<{ runId: string; messages: WebMessage[]; memory?: WebConversationMemory }> =>
+export const getConversation = (runId: string): Promise<{ runId: string; messages: WebMessage[]; memory?: WebConversationMemory; tokenUsage: WebTokenUsage }> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}/conversation?limit=200`);
 
 export const postMessage = (

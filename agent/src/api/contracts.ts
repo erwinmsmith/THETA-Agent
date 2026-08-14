@@ -265,6 +265,13 @@ export interface ThetaWebConversationMessage {
   createdAt: string;
 }
 
+export interface ThetaWebTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  calls: number;
+}
+
 export interface ThetaWebRunEvent {
   id: string;
   source: 'orchestration' | 'tool';

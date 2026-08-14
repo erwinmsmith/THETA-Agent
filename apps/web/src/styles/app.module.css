@@ -1404,14 +1404,19 @@ textarea:focus-visible {
   gap: 5px;
   width: min(850px, 100%);
   margin: 0 auto;
-  padding: 10px 0 5px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 10px 12px 7px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.1);
 }
-:global(html[data-theme='dark']) .composer { box-shadow: none; }
+.composer:focus-within {
+  border-color: color-mix(in srgb, var(--theta-accent) 38%, var(--dsw-alias-border-l2));
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.13), 0 0 0 3px var(--theta-accent-soft);
+}
+:global(html[data-theme='dark']) .composer { box-shadow: 0 15px 42px rgba(0, 0, 0, 0.24); }
 .composerInput { min-height: 34px; padding: 3px 2px 5px; font-size: 14px; }
+.composerInput:focus-visible { outline: 0; }
 .composerBar { display: flex; min-height: 30px; align-items: center; gap: 8px; }
 .composerBar .sendButton { margin-left: auto; }
 .addButton {
@@ -1484,6 +1489,10 @@ textarea:focus-visible {
 .modelPickerLoading { color: var(--dsw-alias-label-caption); font-size: 10px; }
 .quickModelPicker { position: relative; display: flex; min-width: 0; align-items: center; gap: 1px; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .quickModelPicker select { min-width: 0; max-width: 132px; height: 25px; padding: 0 19px 0 5px; overflow: hidden; border: 0; border-radius: 0; outline: 0; color: var(--dsw-alias-label-secondary); background: transparent; font-size: 10px; text-overflow: ellipsis; }
+.composerMeta { display: flex; align-items: center; gap: 14px; }
+.tokenUsage { display: inline-flex; align-items: center; gap: 5px; color: var(--dsw-alias-label-tertiary); }
+.tokenUsage b { color: var(--dsw-alias-label-secondary); font-weight: 500; }
+.tokenUsage i { color: var(--dsw-alias-border-l2); font-style: normal; }
 .quickModelPicker select:nth-of-type(2) { max-width: 160px; font-family: var(--ds-font-family-code); }
 .quickModelPicker select:hover, .quickModelPicker select:focus { color: var(--dsw-alias-label-primary); background: transparent; }
 .quickModelBusy { width: 6px; height: 6px; margin: 0 4px; border-radius: 50%; background: var(--dsw-alias-state-business-primary); animation: pulse 1s ease-in-out infinite; }

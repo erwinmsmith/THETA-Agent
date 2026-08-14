@@ -14,7 +14,7 @@ const numberOr = (value: string, fallback: number): number => {
 
 export const SettingsDialog = ({ open, onClose }: SettingsDialogProps): React.ReactElement => {
   const { locale } = usePreferences()
-  const { catalog, settings, loading, error: loadError, update } = useInferenceSettings()
+  const { catalog, settings, loading, error: loadError, refresh, update } = useInferenceSettings()
   const [tab, setTab] = useState<'llm' | 'embedding'>('llm')
   const [draft, setDraft] = useState<WebInferenceSettings>()
   const [llmKey, setLlmKey] = useState('')
@@ -23,6 +23,10 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps): React.Re
   const [clearEmbeddingKey, setClearEmbeddingKey] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+
+  useEffect(() => {
+    if (open) void refresh()
+  }, [open, refresh])
 
   useEffect(() => {
     if (open && settings) {

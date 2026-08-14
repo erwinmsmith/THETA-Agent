@@ -87,6 +87,13 @@ export interface ConversationMemory {
   updatedAt: string;
 }
 
+export interface ConversationTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  calls: number;
+}
+
 export interface ConversationSessionSummary {
   sessionId: string;
   title: string;
@@ -118,6 +125,7 @@ export interface ConversationStore {
   getLatestBrief(runId: string): ResearchBriefRevision | undefined;
   listBriefRevisions(runId: string): ResearchBriefRevision[];
   recordLanguageInterpretation(record: LanguageInterpretationRecord): void;
+  getTokenUsage(sessionId: string): ConversationTokenUsage;
   createTurn(turn: ConversationTurn): void;
   updateTurn(
     turnId: string,

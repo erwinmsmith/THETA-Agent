@@ -35,19 +35,17 @@ export const InferenceSettingsProvider = ({ children }: { children: ReactNode })
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
-    try {
-      const [nextCatalog, nextSettings] = await Promise.all([
-        getInferenceCatalog(),
-        getInferenceSettings(),
-      ])
-      setCatalog(nextCatalog)
-      setSettings(nextSettings)
-      setError(undefined)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setLoading(false)
-    }
+    const [catalogResult, settingsResult] = await Promise.allSettled([
+      getInferenceCatalog(),
+      getInferenceSettings(),
+    ])
+    if (catalogResult.status === 'fulfilled') setCatalog(catalogResult.value)
+    if (settingsResult.status === 'fulfilled') setSettings(settingsResult.value)
+    const failures = [catalogResult, settingsResult]
+      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .map((result) => result.reason instanceof Error ? result.reason.message : String(result.reason))
+    setError(failures.length > 0 ? [...new Set(failures)].join(' · ') : undefined)
+    setLoading(false)
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])

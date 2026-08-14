@@ -5,6 +5,7 @@ import type {
   WebMessage,
   WebReasoning,
   WebRunStatus,
+  WebTokenUsage,
 } from '../api/client.ts'
 import { Button, JsonTree, StateDot, ThetaMark } from '../ui/index.ts'
 import { usePreferences } from '../preferences.tsx'
@@ -44,7 +45,15 @@ interface ConversationPaneProps {
   attachments: WebAttachment[]
   onAttachmentsChange: (attachments: WebAttachment[]) => void
   liveAssistantMessageId?: string
+  tokenUsage: WebTokenUsage
 }
+
+const formatTokenCount = (value: number): string =>
+  value >= 1_000_000
+    ? `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`
+    : value >= 1_000
+      ? `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`
+      : String(value)
 
 const messageTime = (value: string, locale: string): string => {
   const date = new Date(value)
@@ -106,6 +115,7 @@ export const ConversationPane = ({
   attachments,
   onAttachmentsChange,
   liveAssistantMessageId,
+  tokenUsage,
 }: ConversationPaneProps): React.ReactElement => {
   const { locale, t } = usePreferences()
   const { settings } = useInferenceSettings()
@@ -329,7 +339,17 @@ export const ConversationPane = ({
         </div>
         <div className={css.composerHint}>
           <span>Enter · Shift + Enter</span>
-          <span>{locale === 'zh-CN' ? '消息可在 Agent 处理时继续排队' : 'Messages queue while the Agent is working'}</span>
+          <div className={css.composerMeta}>
+            <span
+              className={css.tokenUsage}
+              title={locale === 'zh-CN' ? '当前对话的累计语言模型 Token 用量' : 'Cumulative language-model token usage for this conversation'}
+            >
+              <b>Input</b> {formatTokenCount(tokenUsage.inputTokens)}
+              <i aria-hidden="true">·</i>
+              <b>Output</b> {formatTokenCount(tokenUsage.outputTokens)}
+            </span>
+            <span className={css.queueHint}>{locale === 'zh-CN' ? '消息可在 Agent 处理时继续排队' : 'Messages queue while the Agent is working'}</span>
+          </div>
         </div>
       </div>
     </div>

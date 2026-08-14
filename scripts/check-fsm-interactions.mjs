@@ -79,6 +79,25 @@ try {
   assert.equal(memory.sourceMessageCount, 1);
   assert.deepEqual(memory.recentUserGoals, ['Compare themes in customer feedback.']);
   assert.equal(store.getMemory('memory-test')?.summary, memory.summary);
+  store.recordLanguageInterpretation({
+    interpretationId: 'interpretation.usage.1',
+    sessionId: 'memory-test',
+    task: 'compose_grounded_response',
+    provider: 'provider',
+    requestHash: 'request-hash',
+    responseHash: 'response-hash',
+    structuredOutput: {
+      telemetry: { inputTokens: 120, outputTokens: 35, totalTokens: 155 },
+    },
+    status: 'completed',
+    createdAt: new Date().toISOString(),
+  });
+  assert.deepEqual(store.getTokenUsage('memory-test'), {
+    inputTokens: 120,
+    outputTokens: 35,
+    totalTokens: 155,
+    calls: 1,
+  });
 
   const workspaceSessionId = 'theta-web-workspace-history-test';
   store.getOrCreateSession(workspaceSessionId);

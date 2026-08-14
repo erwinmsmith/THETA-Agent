@@ -221,6 +221,7 @@ const routeRequest = async (
           sessionId,
           messages,
           memory: store.getMemory(sessionId) ?? store.refreshMemory(sessionId),
+          tokenUsage: store.getTokenUsage(sessionId),
           interaction: buildThetaWorkspaceInteraction(),
         },
       });
@@ -267,6 +268,7 @@ const routeRequest = async (
           sessionId,
           messages,
           memory: store.getMemory(sessionId),
+          tokenUsage: store.getTokenUsage(sessionId),
           activity: {
             proposal: value.proposal,
             result: value.result,
@@ -553,6 +555,7 @@ const routeRequest = async (
           runId,
           messages,
           memory: store.getMemory(`theta-web-${runId}`) ?? store.refreshMemory(`theta-web-${runId}`),
+          tokenUsage: store.getTokenUsage(`theta-web-${runId}`),
         },
       });
     } finally {
@@ -611,6 +614,27 @@ const routeRequest = async (
               .map((message) => ({ role: message.role, content: message.content })),
           },
         );
+        store.recordLanguageInterpretation({
+          interpretationId: `interpretation.${randomUUID()}`,
+          sessionId,
+          runId,
+          task: 'explain_selected_results',
+          provider: 'provider',
+          requestHash: createHash('sha256')
+            .update(JSON.stringify({ question: input.text, attachments: input.attachments }))
+            .digest('hex'),
+          responseHash: createHash('sha256').update(analysis.answer).digest('hex'),
+          structuredOutput: {
+            telemetry: {
+              providerId: analysis.provider,
+              model: analysis.model,
+              ...(analysis.usage ?? {}),
+            },
+            output: { answer: analysis.answer },
+          },
+          status: 'completed',
+          createdAt: new Date().toISOString(),
+        });
         appendRunMessage(
           options.runtimeDb,
           runId,
@@ -626,7 +650,13 @@ const routeRequest = async (
         const status = await workflow.status(runId, options.runtimeDb);
         writeJson(response, 200, {
           ok: true,
-          data: { runId, activeRunId: runId, messages, status: presentRun(status) },
+          data: {
+            runId,
+            activeRunId: runId,
+            messages,
+            status: presentRun(status),
+            tokenUsage: store.getTokenUsage(sessionId),
+          },
         });
         return;
       }
@@ -646,7 +676,13 @@ const routeRequest = async (
       const status = await workflow.status(activeRunId, options.runtimeDb);
       writeJson(response, 200, {
         ok: true,
-        data: { runId, activeRunId, messages, status: presentRun(status) },
+        data: {
+          runId,
+          activeRunId,
+          messages,
+          status: presentRun(status),
+          tokenUsage: store.getTokenUsage(sessionId),
+        },
       });
     } finally {
       store.close();
