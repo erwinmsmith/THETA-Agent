@@ -199,6 +199,17 @@ export const DetailPane = ({
 
         {tab === 'reasoning' && (
           <>
+            {status?.interaction != null && (
+              <div className={css.section}>
+                <span className={css.sectionTitle}>FSM 决策 · {status.interaction.state}</span>
+                <span className={css.sectionLine}>观察：{status.interaction.reasoning.observation}</span>
+                <span className={css.sectionLine}>目标：{status.interaction.reasoning.goal}</span>
+                <span className={css.sectionLine}>动作：{status.interaction.reasoning.decision}</span>
+                <span className={css.sectionLine}>
+                  Tool allowlist：{status.interaction.reasoning.allowedTools.join('、') || '无'}
+                </span>
+              </div>
+            )}
             {reasoning?.currentDecisionGap != null && (
               <div className={css.banner}>待回答的研究问题：{reasoning.currentDecisionGap}</div>
             )}

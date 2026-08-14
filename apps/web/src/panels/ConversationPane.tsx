@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import type { WebMessage, WebRunStatus } from '../api/client.ts'
-import { Button, FishLogo, StateDot } from '../ui/index.ts'
+import type { WebAgentInteraction, WebMessage, WebReasoning, WebRunStatus } from '../api/client.ts'
+import { Button, StateDot } from '../ui/index.ts'
 import { ApprovalPanel } from './ApprovalPanel.tsx'
+import { DatasetIntakeCard } from './DatasetIntakeCard.tsx'
+import { FsmReasoningTrace } from './FsmReasoningTrace.tsx'
 import css from '../styles/app.module.css'
 
 const MarkdownText = lazy(async () => {
@@ -23,6 +25,9 @@ interface ConversationPaneProps {
   sending: boolean
   onSend: (text: string) => void
   onCreate: () => void
+  onCreated: (runId: string) => void
+  entryInteraction?: WebAgentInteraction
+  reasoning?: WebReasoning
   runId?: string
   status?: WebRunStatus
   onApproved?: () => void
@@ -40,6 +45,9 @@ export const ConversationPane = ({
   sending,
   onSend,
   onCreate,
+  onCreated,
+  entryInteraction,
+  reasoning,
   runId,
   status,
   onApproved,
@@ -69,17 +77,20 @@ export const ConversationPane = ({
   }
 
   if (runId == null) {
+    if (entryInteraction == null) {
+      return <div className={css.catalogLoading}><span /><strong>正在读取 FSM 入口状态</strong></div>
+    }
     return (
-      <div className={css.welcome}>
-        <div className={css.welcomeMark}><FishLogo size={54} /></div>
-        <span className={css.eyebrow}>AUTONOMOUS TOPIC RESEARCH</span>
-        <h1>把原始文本变成<br />可解释的研究结论。</h1>
-        <p>上传数据集，THETA Agent 会检查数据、澄清研究意图、选择主题模型，并在每个关键决策前等待你的确认。</p>
-        <Button variant="primary" onClick={onCreate}>开始新的研究</Button>
-        <div className={css.capabilityGrid}>
-          <div><span>01</span><strong>理解数据</strong><small>自动识别正文、时间与分组字段</small></div>
-          <div><span>02</span><strong>制定方案</strong><small>比较 LDA、STM、DTM、BERTopic 等模型</small></div>
-          <div><span>03</span><strong>受控执行</strong><small>审批、工具轨迹和结果都可追溯</small></div>
+      <div className={css.intakeWorkspace}>
+        <div className={css.intakeIntro}>
+          <span className={css.eyebrow}>AUTONOMOUS TOPIC RESEARCH</span>
+          <h1>数据进入之后，<br />让 Agent 决定下一步。</h1>
+          <p>卡片来自 FSM 状态，不由按钮关键词触发。每次 Tool 选择都会被状态 allowlist 和 Hypha 策略再次约束。</p>
+          <Button variant="ghost" onClick={onCreate}>在弹窗中创建</Button>
+        </div>
+        <div className={css.intakeFlow}>
+          <FsmReasoningTrace interaction={entryInteraction} />
+          <DatasetIntakeCard interaction={entryInteraction} onCreated={onCreated} />
         </div>
       </div>
     )
@@ -149,9 +160,15 @@ export const ConversationPane = ({
         <div ref={bottomRef} />
       </div>
 
-      {status != null && onApproved != null && (
+      {status?.interaction != null && onApproved != null && (
         <div className={css.approvalDock}>
-          <ApprovalPanel runId={runId} status={status} onApproved={onApproved} />
+          <FsmReasoningTrace interaction={status.interaction} events={reasoning?.reasoningEvents} />
+          <ApprovalPanel
+            runId={runId}
+            interaction={status.interaction}
+            reasoning={reasoning}
+            onApproved={onApproved}
+          />
         </div>
       )}
 

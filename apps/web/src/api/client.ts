@@ -21,6 +21,35 @@ export interface WebRunStatus {
   statePath?: string[];
   lastEventAt?: string;
   presentation?: WebPresentation;
+  interaction?: WebAgentInteraction;
+}
+
+export interface WebAgentInteraction {
+  source: 'fsm';
+  state: string;
+  status: string;
+  reasoning: {
+    goal: string;
+    observation: string;
+    decision: string;
+    nextStates: string[];
+    allowedTools: string[];
+    policyRefs: string[];
+  };
+  card?: {
+    kind:
+      | 'dataset_upload'
+      | 'research_question'
+      | 'dataset_review'
+      | 'column_review'
+      | 'research_intent_review'
+      | 'plan_review'
+      | 'training_review';
+    title: string;
+    description: string;
+    actionRef: string;
+    requiresHumanAction: true;
+  };
 }
 
 export interface WebPresentation {
@@ -137,6 +166,7 @@ export interface WebRuntimeProfile {
     tools: number;
     skills: number;
   };
+  entryInteraction: WebAgentInteraction;
 }
 
 export interface WebEnvelope<T> {

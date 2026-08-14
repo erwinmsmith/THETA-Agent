@@ -168,7 +168,12 @@ const shape = (request: NaturalLanguageRequest): string => {
         'A short uncertainty answer such as 不知道 or 不确定 is still research_answer when it responds to currentQuestion.',
       ].join(' ');
     case 'propose_readonly_tool':
-      return 'Shape: {"task":"propose_readonly_tool","intent":"...","toolId":"one supplied allowedToolIds or null","arguments":{},"reason":"...","confidence":0.0,"requiresConfirmation":false}. Never propose a write or training tool.';
+      return [
+        'Shape: {"task":"propose_readonly_tool","intent":"...","toolId":"one supplied allowedToolIds or null","arguments":{},"reason":"...","confidence":0.0,"requiresConfirmation":false}.',
+        'Select a Tool by semantic reasoning over the complete request and current FSM state, never by keyword or substring matching.',
+        'Use only a supplied allowedToolId, and return toolId null when the allowlist is empty, the request can be answered from supplied context, or confidence is below 0.75.',
+        'For theta.rag.search include a concise semantic search query in arguments.query. Never propose a write, approval, or training Tool.',
+      ].join(' ');
     case 'compose_grounded_response':
       return 'Shape: {"task":"compose_grounded_response","text":"...","evidenceIds":[]}. Act as the THETA research-training assistant. Answer directly about THETA capabilities, the active research workflow, datasets, models, evidence, and safe next steps. Use only supplied facts and evidence; never claim an action was executed unless facts prove it. End with the current research question when one is supplied and still needs an answer.';
   }
@@ -854,37 +859,15 @@ const deterministicToolProposal = (
   text: string,
   allowed: readonly string[],
 ): NaturalLanguageProviderOutput => {
-  const classified = deterministicIntent(text);
-  const intent =
-    classified.task === 'classify_conversation_intent'
-      ? classified.intent
-      : 'unknown';
-  const preferred: Partial<Record<typeof intent, string>> = {
-    read_status: 'theta.status.read',
-    read_evidence: 'theta.evidence.read',
-    search_evidence: 'theta.rag.search',
-    list_models: 'theta.model.catalog',
-  };
-  const candidate = preferred[intent];
-  const toolId =
-    candidate && allowed.includes(candidate as never)
-      ? (candidate as (typeof allowed)[number])
-      : null;
+  void text;
+  void allowed;
   return {
     task: 'propose_readonly_tool',
-    intent,
-    toolId: toolId as
-      | 'theta.status.read'
-      | 'theta.evidence.read'
-      | 'theta.rag.search'
-      | 'theta.model.catalog'
-      | null,
-    arguments:
-      toolId === 'theta.rag.search' ? { query: sanitizeLanguageText(text) } : {},
-    reason: toolId
-      ? '该只读工具与用户意图匹配。'
-      : '没有允许的工具与当前意图安全匹配。',
-    confidence: toolId ? 0.8 : 0.3,
+    intent: 'unknown',
+    toolId: null,
+    arguments: {},
+    reason: '模型推理不可用，因此不会基于本地关键词猜测并执行工具。',
+    confidence: 0,
     requiresConfirmation: false,
   };
 };

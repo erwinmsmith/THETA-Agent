@@ -497,6 +497,20 @@ const forwardTransitions = [
   [THETA_WORKFLOW_STATES.monitorTraining, THETA_WORKFLOW_STATES.quarantined],
 ] as const;
 
+/** Return the authoritative FSM state definition used by adapters and agents. */
+export const resolveThetaWorkflowStateDefinition = (
+  stateId: string,
+): WorkflowStateSpec | undefined => workflowStates.find((item) => item.id === stateId);
+
+/** Return the declared forward transition targets for one FSM state. */
+export const resolveThetaWorkflowTransitionTargets = (
+  stateId: string,
+): string[] => [...new Set(
+  forwardTransitions
+    .filter(([from]) => from === stateId)
+    .map(([, to]) => to),
+)];
+
 const failureTransitions = workflowStates
   .map((item) => item.id)
   .filter(

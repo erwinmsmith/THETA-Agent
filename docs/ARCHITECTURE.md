@@ -75,6 +75,23 @@ expanding the CLI.
 the domain pack, and fails if the domain references an unknown tool or skill.
 `npm run test:registries` provides a standalone registration smoke test.
 
+## FSM-driven interaction contract
+
+The backend derives every interactive card from the authoritative FSM state,
+pending action reference, state goal, allowed Tool list, and declared
+transitions. `agent/src/interaction-service.ts` exposes that decision as an
+`interaction` object; API and Web adapters only render it. Before a Run exists,
+the same contract represents `Intake` and requests dataset registration. After
+creation it drives dataset review, research-intent review, plan review, and
+training review cards without UI keyword routing.
+
+Natural conversation may ask the configured model for a schema-validated,
+read-only Tool proposal. The proposal is intersected with the current FSM
+state allowlist and can reference only registered Hypha Tools. If model
+reasoning is unavailable, the deterministic fallback selects no Tool; it never
+guesses a Tool from keywords. Every selected Tool still passes through the
+Hypha registry, permission policy, audit events, and output validation.
+
 ## Upstream lifecycle
 
 `config/upstreams.lock.json` records the repository, tracking branch, reviewed

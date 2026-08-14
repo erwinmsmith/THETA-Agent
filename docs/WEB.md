@@ -32,10 +32,15 @@ pnpm --filter @theta-agent/web run typecheck
   state, relative update time, create, and delete actions.
 - **Center** — conversational thread: user messages and assistant responses
   rendered as markdown (GFM + TeX math + code highlighting). The pending
-  human gate renders inline above the composer as a structured form:
+  human gate renders inline above the composer as a structured card selected
+  by the backend FSM interaction contract:
   dataset understanding confirmation (per-column roles), research intent
   confirmation, plan approval with degradation opt-in, training start
   approval. Natural-language correction works alongside the forms.
+- **FSM trace** — the thread shows the current state goal, observation,
+  selected decision, allowed Tools, candidate transitions, and recent governed
+  reasoning events. This is a concise decision record, not hidden model
+  chain-of-thought.
 - **Right** — detail panel with four synced tabs:
   - `状态` status presentation, progress, state path, next actions
   - `工具` governed tool-call trace (phase, tool id, payload inspector)
@@ -47,6 +52,8 @@ pnpm --filter @theta-agent/web run typecheck
 JSONL, TXT, Excel, or Parquet. The creation dialog accepts a research goal and
 can opt into deterministic planning. On narrow screens the catalog and run
 inspector become mutually exclusive drawers so the agent thread stays usable.
+When no Run is active, the FSM `Intake` interaction automatically renders the
+same dataset-upload capability as the primary Agent card.
 
 Live updates arrive through the SSE stream
 (`GET /api/v2/runs/:id/stream`); the client falls back to polling after

@@ -13,7 +13,7 @@ Keep orchestration in `agent/src/`, research contracts in `domain/src/`, and gov
 - `npm start`: launch the conversational CLI; `npm run start:api` launches the API.
 - `pnpm --filter @theta-agent/web run dev`: run the Vite frontend locally.
 - `npm run validate`: check dependency boundaries and CLI documentation coverage.
-- `npm run test:python`, `test:providers`, and `test:registries`: run targeted checks.
+- `npm run test:python`, `test:providers`, `test:registries`, and `test:interactions`: run targeted checks.
 
 ## Coding Style & Naming Conventions
 

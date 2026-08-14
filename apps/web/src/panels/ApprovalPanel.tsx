@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getStatus,
   postAction,
+  type WebAgentInteraction,
+  type WebReasoning,
   type WebRunStatus,
 } from '../api/client.ts'
 import { Button, Input } from '../ui/index.ts'
@@ -55,28 +57,30 @@ const ROLE_OPTIONS: Array<{ value: string; label: string }> = [
 
 interface ApprovalPanelProps {
   runId?: string
-  status?: WebRunStatus
+  interaction: WebAgentInteraction
+  reasoning?: WebReasoning
   onApproved: () => void
 }
 
 export const ApprovalPanel = ({
   runId,
-  status,
+  interaction,
+  reasoning,
   onApproved,
 }: ApprovalPanelProps): React.ReactElement | null => {
-  const pendingActionRef = status?.pendingActionRef
-  if (pendingActionRef == null || runId == null) return null
+  const cardKind = interaction.card?.kind
+  if (cardKind == null || runId == null) return null
 
-  if (pendingActionRef === 'theta.dataset-understanding.confirm') {
+  if (cardKind === 'dataset_review' || cardKind === 'column_review') {
     return <DatasetConfirmForm runId={runId} onApproved={onApproved} />
   }
-  if (pendingActionRef === 'theta.research-intent.review') {
+  if (cardKind === 'research_intent_review') {
     return <SimpleApproval runId={runId} onApproved={onApproved} />
   }
-  if (pendingActionRef === 'theta.plan.review') {
-    return <PlanApproval runId={runId} onApproved={onApproved} />
+  if (cardKind === 'plan_review') {
+    return <PlanApproval runId={runId} reasoning={reasoning} onApproved={onApproved} />
   }
-  if (pendingActionRef === 'theta.training.review') {
+  if (cardKind === 'training_review') {
     return <TrainingApproval runId={runId} onApproved={onApproved} />
   }
   return null
@@ -276,20 +280,36 @@ const SimpleApproval = ({
 
 const PlanApproval = ({
   runId,
+  reasoning,
   onApproved,
 }: {
   runId: string
+  reasoning?: WebReasoning
   onApproved: () => void
 }): React.ReactElement => {
   const [acceptDegradation, setAcceptDegradation] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   return (
-    <div className={css.banner}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>训练方案审批</div>
-      <div style={{ marginBottom: 8 }}>
-        请查看方案详情与证据；批准方案只会固化方案，不会直接启动训练。需要调整可直接在对话中说明。
+    <section className={css.agentCard}>
+      <div className={css.agentCardHead}>
+        <span>PLAN · HUMAN REVIEW</span>
+        <strong>确认 Agent 生成的训练方案</strong>
+        <p>方案由 Planner、模型能力卡和 RAG 证据共同生成；批准只固化方案，不启动训练。</p>
       </div>
+      <div className={css.agentCardBody}>
+        {reasoning?.plan?.presentation != null && (
+          <div className={css.planReviewSummary}>
+            <strong>{reasoning.plan.presentation.title}</strong>
+            <p>{reasoning.plan.presentation.summary}</p>
+            {reasoning.plan.presentation.sections?.slice(0, 4).map((section) => (
+              <div key={section.title}>
+                <span>{section.title}</span>
+                {section.lines.slice(0, 4).map((line) => <small key={line}>{line}</small>)}
+              </div>
+            ))}
+          </div>
+        )}
       <label className={css.runMeta} style={{ display: 'block', marginBottom: 8 }}>
         <input
           type="checkbox"
@@ -315,7 +335,8 @@ const PlanApproval = ({
       >
         {busy ? '提交中…' : '批准训练方案'}
       </Button>
-    </div>
+      </div>
+    </section>
   )
 }
 

@@ -310,15 +310,17 @@ export const AppRoot = (): React.ReactElement => {
               <IconTrashOutline16 />
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className={`${css.iconButton} ${detailOpen ? css.detailToggleActive : ''}`}
-            aria-label={detailOpen ? '收起运行详情' : '展开运行详情'}
-            onClick={toggleDetail}
-          >
-            <IconPanelLeftOutline16 className={css.flipIcon} />
-          </Button>
+          {selectedRunId != null && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={`${css.iconButton} ${detailOpen ? css.detailToggleActive : ''}`}
+              aria-label={detailOpen ? '收起运行详情' : '展开运行详情'}
+              onClick={toggleDetail}
+            >
+              <IconPanelLeftOutline16 className={css.flipIcon} />
+            </Button>
+          )}
         </div>
       </header>
 
@@ -336,7 +338,13 @@ export const AppRoot = (): React.ReactElement => {
               variant="primary"
               className={css.newRunButton}
               icon={<IconNewChatOutline16 />}
-              onClick={() => setNewRunOpen(true)}
+              onClick={() => {
+                setSelectedRunId(undefined)
+                setMessages([])
+                setEvents([])
+                setReasoning(undefined)
+                setStatus(undefined)
+              }}
             >
               新建研究任务
             </Button>
@@ -388,14 +396,20 @@ export const AppRoot = (): React.ReactElement => {
                 sending={sending}
                 onSend={send}
                 onCreate={() => setNewRunOpen(true)}
+                onCreated={(runId) => {
+                  setSelectedRunId(runId)
+                  void refreshRuns()
+                }}
+                entryInteraction={runtimeProfile?.entryInteraction}
                 runId={selectedRunId}
                 status={status}
+                reasoning={reasoning}
                 onApproved={() => void refreshRun()}
               />
             )}
         </main>
 
-        {detailOpen && (
+        {detailOpen && selectedRunId != null && (
           <DetailPane
             runId={selectedRunId}
             status={status}

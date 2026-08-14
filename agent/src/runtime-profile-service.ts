@@ -3,6 +3,10 @@ import {
   type ThetaComputeProfile,
 } from '@theta-agent/tools/compute-policy.js';
 import { bootstrapResearchAgent } from './bootstrap.js';
+import {
+  buildThetaWorkspaceInteraction,
+  type ThetaAgentInteraction,
+} from './interaction-service.js';
 
 export interface ThetaRuntimeProfile {
   service: 'theta-agent-runtime';
@@ -13,6 +17,7 @@ export interface ThetaRuntimeProfile {
     tools: number;
     skills: number;
   };
+  entryInteraction: ThetaAgentInteraction;
 }
 
 /** Return safe, credential-free runtime capabilities for adapters and UIs. */
@@ -27,5 +32,6 @@ export const getThetaRuntimeProfile = async (): Promise<ThetaRuntimeProfile> => 
       tools: registries.tools.list().length,
       skills: registries.skills.list().length,
     },
+    entryInteraction: buildThetaWorkspaceInteraction(),
   };
 };

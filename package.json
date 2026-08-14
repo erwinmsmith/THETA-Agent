@@ -22,6 +22,7 @@
     "test:python": "pnpm --filter @theta-agent/tools run test:python",
     "test:registries": "node scripts/check-registries.mjs",
     "test:providers": "node scripts/check-providers.mjs",
+    "test:interactions": "node scripts/check-fsm-interactions.mjs",
     "test:docs": "node scripts/check-cli-docs.mjs",
     "cli": "node --disable-warning=ExperimentalWarning apps/cli/dist/cli.js",
     "model": "npm run cli -- model",

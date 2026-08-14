@@ -115,6 +115,34 @@ export interface ThetaWebApiHealth {
   }>;
 }
 
+export interface ThetaWebAgentInteraction {
+  source: 'fsm';
+  state: string;
+  status: string;
+  reasoning: {
+    goal: string;
+    observation: string;
+    decision: string;
+    nextStates: string[];
+    allowedTools: string[];
+    policyRefs: string[];
+  };
+  card?: {
+    kind:
+      | 'dataset_upload'
+      | 'research_question'
+      | 'dataset_review'
+      | 'column_review'
+      | 'research_intent_review'
+      | 'plan_review'
+      | 'training_review';
+    title: string;
+    description: string;
+    actionRef: string;
+    requiresHumanAction: true;
+  };
+}
+
 export interface ThetaWebRuntimeProfile {
   service: 'theta-agent-runtime';
   version: 'v2';
@@ -128,6 +156,7 @@ export interface ThetaWebRuntimeProfile {
     tools: number;
     skills: number;
   };
+  entryInteraction: ThetaWebAgentInteraction;
 }
 
 export interface ThetaWebRunSummary {

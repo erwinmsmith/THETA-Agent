@@ -51,3 +51,4 @@ export * from "./registries/skill-registry.js";
 export * from "./bootstrap.js";
 export * from "./inference/model-selection-service.js";
 export * from "./runtime-profile-service.js";
+export * from "./interaction-service.js";

@@ -105,8 +105,6 @@ export const naturalLanguageRequestSchema = z.discriminatedUnion('task', [
       allowedToolIds: z
         .array(
           z.enum([
-            'theta.status.read',
-            'theta.evidence.read',
             'theta.rag.search',
             'theta.model.catalog',
           ]),
@@ -226,8 +224,6 @@ export const readonlyToolProposalSchema = z
     intent: conversationIntentSchema,
     toolId: z
       .enum([
-        'theta.status.read',
-        'theta.evidence.read',
         'theta.rag.search',
         'theta.model.catalog',
       ])

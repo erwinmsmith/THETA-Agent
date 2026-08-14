@@ -30,6 +30,7 @@ import { resolveDatasetFile } from '@theta-agent/agent';
 import { runThetaModelCatalog } from '@theta-agent/agent';
 import { runThetaTrainingStatus } from '@theta-agent/agent';
 import { getThetaRuntimeProfile } from '@theta-agent/agent';
+import { buildThetaAgentInteraction } from '@theta-agent/agent';
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
@@ -296,6 +297,7 @@ const routeRequest = async (
         ...status,
         runtimeDb: undefined,
         presentation: buildHumanResponse(status),
+        interaction: buildThetaAgentInteraction(status),
         ...(context.datasetProfile ? { datasetProfile: context.datasetProfile } : {}),
         ...(context.researchBrief ? { researchBrief: context.researchBrief } : {}),
         ...(context.datasetFacts ? { datasetFacts: context.datasetFacts } : {}),
@@ -681,6 +683,7 @@ const presentRun = (value: unknown): Record<string, unknown> => {
     ...record,
     runtimeDb: undefined,
     presentation: buildHumanResponse(value),
+    interaction: buildThetaAgentInteraction(value),
   };
 };
 
