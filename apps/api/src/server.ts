@@ -530,6 +530,11 @@ const routeRequest = async (
 
   if (method !== 'GET') return methodNotAllowed(response);
 
+  if (!url.pathname.startsWith('/api/')) {
+    await serveWebAsset(response, url.pathname, options.agentRoot);
+    return;
+  }
+
   writeJson(response, 404, {
     ok: false,
     error: {
@@ -587,6 +592,62 @@ const writeCors = (response: ServerResponse): void => {
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   response.setHeader('Cache-Control', 'no-store');
+};
+
+const WEB_CONTENT_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
+  '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+};
+
+/** Serves the built @theta-agent/web application (SPA with index fallback). */
+const serveWebAsset = async (
+  response: ServerResponse,
+  requestPath: string,
+  agentRoot: string,
+): Promise<void> => {
+  const webRoot = path.join(agentRoot, 'apps', 'web', 'dist');
+  const relativePath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
+  const candidate = path.resolve(webRoot, relativePath);
+  const boundary = path.relative(webRoot, candidate);
+  if (boundary.startsWith('..') || path.isAbsolute(boundary)) {
+    writeJson(response, 404, {
+      ok: false,
+      error: { code: 'THETA_WEB_API_NOT_FOUND', message: 'The requested THETA 2.0 API route does not exist.' },
+    });
+    return;
+  }
+  let filePath = candidate;
+  try {
+    const metadata = await stat(candidate);
+    if (!metadata.isFile()) filePath = path.join(webRoot, 'index.html');
+  } catch {
+    filePath = path.join(webRoot, 'index.html');
+  }
+  try {
+    const content = await readFile(filePath);
+    writeCors(response);
+    response.writeHead(200, {
+      'Content-Type': WEB_CONTENT_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+      'Content-Length': String(content.byteLength),
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.end(content);
+  } catch {
+    writeJson(response, 404, {
+      ok: false,
+      error: { code: 'THETA_WEB_API_NOT_FOUND', message: 'Web 前端尚未构建。请先运行 npm run build:web。' },
+    });
+  }
 };
 
 const presentRun = (value: unknown): Record<string, unknown> => {
