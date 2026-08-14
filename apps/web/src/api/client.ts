@@ -76,6 +76,7 @@ export interface WebRunSummary {
   pendingReason?: string;
   identity?: { displayName?: string; datasetName?: string; researchQuestion?: string };
   presentation?: WebPresentation;
+  pinned?: boolean;
 }
 
 export interface WebRunEvent {
@@ -176,6 +177,7 @@ export interface WebWorkspaceSummary {
   messageCount: number;
   createdAt: string;
   updatedAt: string;
+  pinned: boolean;
 }
 
 export interface WebPostMessageResult {
@@ -325,6 +327,12 @@ export const renameRun = (runId: string, displayName: string): Promise<{ runId: 
     body: JSON.stringify({ displayName }),
   });
 
+export const pinRun = (runId: string, pinned: boolean): Promise<{ runId: string; pinned: boolean }> =>
+  request(`/api/v2/runs/${encodeURIComponent(runId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ pinned }),
+  });
+
 export const createWorkspaceSession = (): Promise<{ sessionId: string; interaction: WebAgentInteraction }> =>
   request('/api/v2/workspace/sessions', { method: 'POST', body: JSON.stringify({}) });
 
@@ -335,6 +343,12 @@ export const renameWorkspaceSession = (sessionId: string, displayName: string): 
   request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ displayName }),
+  });
+
+export const pinWorkspaceSession = (sessionId: string, pinned: boolean): Promise<WebWorkspaceSummary> =>
+  request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ pinned }),
   });
 
 export const deleteWorkspaceSession = (sessionId: string): Promise<{ sessionId: string }> =>

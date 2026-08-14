@@ -1,0 +1,10 @@
+.dialog { width: min(420px, 100%); }
+.body { display: flex; flex-direction: column; gap: 12px; }
+.itemName { overflow: hidden; margin: 0; padding: 10px 12px; border-left: 2px solid var(--theta-accent); color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-1); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.field { display: flex; flex-direction: column; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.field input { height: 38px; box-sizing: border-box; padding: 0 11px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; outline: 0; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); font-size: 13px; }
+.field input:focus { border-color: var(--theta-accent); box-shadow: 0 0 0 3px var(--theta-accent-soft); }
+.warning { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 1.65; }
+.error { margin: 0; color: var(--dsw-alias-state-error-primary); font-size: 11px; }
+.danger { color: white !important; background: var(--dsw-alias-state-error-primary) !important; }
+.danger:hover:not(:disabled) { filter: brightness(.92); }

@@ -99,12 +99,7 @@ export const DatasetIntakeCard = ({
   }
 
   return (
-    <section className={`${css.contextCard} ${dragging ? css.contextCardDragging : ''}`} aria-label={interaction.card?.title}>
-      <div className={css.contextCardCopy}>
-        <span>DATA REQUEST</span>
-        <strong>{interaction.card?.title ?? t('addData')}</strong>
-        <p>{interaction.card?.description}</p>
-      </div>
+    <section className={`${css.datasetIntakePanel} ${dragging ? css.contextCardDragging : ''}`} aria-label={interaction.card?.title ?? t('addData')}>
       <div
         className={css.contextDropzone}
         onDragEnter={(event) => { event.preventDefault(); setDragging(true) }}

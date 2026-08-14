@@ -8,7 +8,7 @@ import {
   buildThetaWorkspaceInteraction,
 } from '../agent/dist/interaction-service.js';
 import { SQLiteConversationStore } from '../agent/dist/storage/sqlite-conversation-store.js';
-import { listLocalRuns, renameLocalRun } from '../agent/dist/storage/run-catalog.js';
+import { listLocalRuns, pinLocalRun, renameLocalRun } from '../agent/dist/storage/run-catalog.js';
 import { ThetaNaturalLanguageService } from '../tools/dist/support/language/natural-service.js';
 import { runThetaModelCatalog } from '../tools/dist/hypha-runner.js';
 
@@ -93,6 +93,8 @@ try {
   store.refreshMemory(workspaceSessionId);
   assert.equal(store.listWorkspaceSessions()[0]?.sessionId, workspaceSessionId);
   assert.equal(store.renameSession(workspaceSessionId, 'Capability discussion').title, 'Capability discussion');
+  assert.equal(store.pinSession(workspaceSessionId, true).pinned, true);
+  assert.equal(store.listWorkspaceSessions()[0]?.pinned, true);
   assert.equal(store.deleteSession(workspaceSessionId), true);
   assert.equal(store.listWorkspaceSessions().length, 0);
   store.close();
@@ -114,7 +116,9 @@ try {
   );
   database.close();
   renameLocalRun('run.test', 'Renamed research', runtimeDb);
+  pinLocalRun('run.test', true, runtimeDb);
   assert.equal(listLocalRuns(runtimeDb)[0]?.displayName, 'Renamed research');
+  assert.equal(listLocalRuns(runtimeDb)[0]?.pinned, true);
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });
 }

@@ -330,6 +330,7 @@
 }
 
 .conversation {
+  position: relative;
   display: flex;
   min-height: 0;
   flex: 1;
@@ -1276,7 +1277,7 @@ textarea:focus-visible {
 .preferenceButton svg { width: 14px; height: 14px; }
 
 .runRow { position: relative; }
-.runRow .runItem { width: 100%; padding-right: 52px; }
+.runRow .runItem { width: 100%; padding-right: 78px; }
 .runActions {
   position: absolute;
   top: 8px;
@@ -1303,6 +1304,9 @@ textarea:focus-visible {
   font-size: 12px;
 }
 .runActions button:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover-solid); }
+.runActions button svg { width: 14px; height: 14px; }
+.runActions button[aria-pressed='true'] { color: var(--theta-accent); }
+.runPinned .runItem::before { background: var(--theta-accent); }
 
 .startThread {
   position: relative;
@@ -1389,7 +1393,7 @@ textarea:focus-visible {
   left: 0;
 }
 
-.composerWrap { z-index: 12; }
+.composerWrap { z-index: 12; width: 100%; box-sizing: border-box; }
 .composer {
   position: relative;
   display: flex;
@@ -1398,11 +1402,15 @@ textarea:focus-visible {
   flex-direction: column;
   align-items: stretch;
   gap: 5px;
-  padding: 12px 12px 8px;
-  border-radius: 18px;
-  box-shadow: 0 18px 56px rgba(18, 20, 24, 0.12), 0 1px 2px rgba(18, 20, 24, 0.05);
+  width: min(850px, 100%);
+  margin: 0 auto;
+  padding: 10px 0 5px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
-:global(html[data-theme='dark']) .composer { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34); }
+:global(html[data-theme='dark']) .composer { box-shadow: none; }
 .composerInput { min-height: 34px; padding: 3px 2px 5px; font-size: 14px; }
 .composerBar { display: flex; min-height: 30px; align-items: center; gap: 8px; }
 .composerBar .sendButton { margin-left: auto; }
@@ -1474,10 +1482,10 @@ textarea:focus-visible {
 }
 
 .modelPickerLoading { color: var(--dsw-alias-label-caption); font-size: 10px; }
-.quickModelPicker { position: relative; display: flex; min-width: 0; align-items: center; gap: 3px; padding: 2px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 9px; background: var(--dsw-alias-bg-layer-1); }
-.quickModelPicker select { min-width: 0; max-width: 132px; height: 25px; padding: 0 20px 0 6px; overflow: hidden; border: 0; border-radius: 6px; outline: 0; color: var(--dsw-alias-label-secondary); background: transparent; font-size: 10px; text-overflow: ellipsis; }
+.quickModelPicker { position: relative; display: flex; min-width: 0; align-items: center; gap: 1px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.quickModelPicker select { min-width: 0; max-width: 132px; height: 25px; padding: 0 19px 0 5px; overflow: hidden; border: 0; border-radius: 0; outline: 0; color: var(--dsw-alias-label-secondary); background: transparent; font-size: 10px; text-overflow: ellipsis; }
 .quickModelPicker select:nth-of-type(2) { max-width: 160px; font-family: var(--ds-font-family-code); }
-.quickModelPicker select:hover, .quickModelPicker select:focus { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }
+.quickModelPicker select:hover, .quickModelPicker select:focus { color: var(--dsw-alias-label-primary); background: transparent; }
 .quickModelBusy { width: 6px; height: 6px; margin: 0 4px; border-radius: 50%; background: var(--dsw-alias-state-business-primary); animation: pulse 1s ease-in-out infinite; }
 .typewriterLive::after { display: inline-block; width: 1px; height: 1em; margin-left: 2px; content: ''; vertical-align: -0.12em; background: currentColor; animation: pulse 700ms ease-in-out infinite; }
 
@@ -1660,7 +1668,7 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.contextCard,
+.datasetIntakePanel,
 .approvalBar {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(240px, 1.15fr);
@@ -1671,6 +1679,17 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 96%, var(--theta-accent-soft));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
 }
+.datasetIntakePanel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border: 0;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .contextCardCopy > span,
 .approvalBarCopy > span { color: var(--theta-accent); font-family: var(--ds-font-family-code); font-size: 8px; letter-spacing: .12em; }
 .contextCardCopy strong,
@@ -1679,23 +1698,23 @@ textarea:focus-visible {
 .approvalBarCopy p { margin: 5px 0 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; line-height: 1.55; }
 .contextDropzone {
   display: flex;
-  flex-direction: column;
+  flex: 1;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 84px;
-  padding: 8px;
-  border: 1px dashed var(--dsw-alias-border-l3);
-  border-radius: 10px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-bg-base);
+  background: transparent;
   font-size: 10px;
   text-align: center;
 }
 .contextDropzone > div { display: flex; gap: 5px; }
-.contextCardDragging .contextDropzone { border-color: var(--theta-accent); background: var(--theta-accent-soft); }
+.contextCardDragging { background: var(--theta-accent-soft); }
 .contextCardActions {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1704,10 +1723,10 @@ textarea:focus-visible {
   min-width: 0;
   height: 30px;
   flex: 1;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
   color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-bg-base);
+  background: transparent;
   font-size: 10px;
 }
 .contextCardActions small { color: var(--dsw-alias-label-caption); font-size: 9px; }
@@ -1774,8 +1793,9 @@ textarea:focus-visible {
 @media (max-width: 760px) {
   .promptGrid { grid-template-columns: 1fr; }
   .startSurface > p { margin-bottom: 20px; }
-  .contextCard,
+  .datasetIntakePanel,
   .approvalBar { grid-template-columns: 1fr; }
+  .datasetIntakePanel { align-items: stretch; flex-direction: column; }
   .contextCardActions { flex-wrap: wrap; }
   .approvalBarActions { justify-content: flex-end; }
   .activityTrace { width: 100%; margin-left: 0; }

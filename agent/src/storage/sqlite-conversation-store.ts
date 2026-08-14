@@ -313,13 +313,14 @@ export class SQLiteConversationStore implements ConversationStore {
     const rows = this.database
       .prepare(
         `SELECT s.session_id, COALESCE(s.title, 'New conversation') AS title,
+                COALESCE(s.pinned, 0) AS pinned,
                 s.created_at, s.updated_at, COUNT(m.message_id) AS message_count
            FROM theta_conversation_sessions s
            LEFT JOIN theta_conversation_messages m ON m.session_id = s.session_id
           WHERE s.session_id LIKE 'theta-web-workspace-%'
           GROUP BY s.session_id
          HAVING COUNT(m.message_id) > 0
-          ORDER BY s.updated_at DESC
+          ORDER BY COALESCE(s.pinned, 0) DESC, s.updated_at DESC
           LIMIT ?`,
       )
       .all(Math.max(1, Math.min(100, Math.trunc(limit)))) as Row[];
@@ -335,7 +336,18 @@ export class SQLiteConversationStore implements ConversationStore {
       .run(normalized, updatedAt, sessionId);
     if (Number(result.changes) === 0) throw new Error(`Conversation session not found: ${sessionId}`);
     const summary = this.listWorkspaceSessions(100).find((item) => item.sessionId === sessionId);
-    return summary ?? { sessionId, title: normalized, messageCount: 0, createdAt: updatedAt, updatedAt };
+    return summary ?? { sessionId, title: normalized, messageCount: 0, createdAt: updatedAt, updatedAt, pinned: false };
+  }
+
+  pinSession(sessionId: string, pinned: boolean): ConversationSessionSummary {
+    const updatedAt = new Date().toISOString();
+    const result = this.database
+      .prepare('UPDATE theta_conversation_sessions SET pinned = ?, updated_at = ? WHERE session_id = ?')
+      .run(pinned ? 1 : 0, updatedAt, sessionId);
+    if (Number(result.changes) === 0) throw new Error(`Conversation session not found: ${sessionId}`);
+    const summary = this.listWorkspaceSessions(100).find((item) => item.sessionId === sessionId);
+    if (!summary) throw new Error(`Conversation session not found: ${sessionId}`);
+    return summary;
   }
 
   deleteSession(sessionId: string): boolean {
@@ -377,6 +389,7 @@ export class SQLiteConversationStore implements ConversationStore {
         session_id TEXT PRIMARY KEY,
         active_run_id TEXT,
         title TEXT,
+        pinned INTEGER NOT NULL DEFAULT 0,
         provider_mode TEXT NOT NULL,
         language_consent INTEGER NOT NULL,
         created_at TEXT NOT NULL,
@@ -462,6 +475,9 @@ export class SQLiteConversationStore implements ConversationStore {
     if (!sessionColumns.some((column) => column.name === 'title')) {
       this.database.exec('ALTER TABLE theta_conversation_sessions ADD COLUMN title TEXT');
     }
+    if (!sessionColumns.some((column) => column.name === 'pinned')) {
+      this.database.exec('ALTER TABLE theta_conversation_sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0');
+    }
     this.database
       .prepare(
         `INSERT OR IGNORE INTO theta_conversation_migrations(version, applied_at)
@@ -540,6 +556,7 @@ const sessionSummary = (row: Row): ConversationSessionSummary => ({
   messageCount: number(row.message_count),
   createdAt: string(row.created_at),
   updatedAt: string(row.updated_at),
+  pinned: number(row.pinned) === 1,
 });
 
 const string = (value: unknown): string => {

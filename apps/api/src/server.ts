@@ -19,7 +19,7 @@ import { loadThetaProjectEnvironment } from '@theta-agent/agent';
 import { buildHumanResponse } from '@theta-agent/agent';
 import { ResultAnalysisService } from '@theta-agent/agent';
 import { ResultService } from '@theta-agent/agent';
-import { deleteLocalRun, listLocalRuns, renameLocalRun } from '@theta-agent/agent';
+import { deleteLocalRun, listLocalRuns, pinLocalRun, renameLocalRun } from '@theta-agent/agent';
 import { SQLiteConversationStore } from '@theta-agent/agent';
 import { SQLiteDatasetRegistry, type DatasetRecord } from '@theta-agent/agent';
 import { THETA_APPROVAL_KEYS } from '@theta-agent/agent';
@@ -38,7 +38,7 @@ import {
   thetaWebInferenceSelectionSchema,
   thetaWebInferenceSettingsSchema,
   thetaWebPostMessageSchema,
-  thetaWebRenameRunSchema,
+  thetaWebHistoryUpdateSchema,
   thetaWebRunActionSchema,
   type ThetaWebApiEnvelope,
   type ThetaWebApiHealth,
@@ -179,8 +179,13 @@ const routeRequest = async (
     const store = new SQLiteConversationStore(options.runtimeDb);
     try {
       if (method === 'PATCH') {
-        const input = thetaWebRenameRunSchema.parse(await readJsonBody(request));
-        writeJson(response, 200, { ok: true, data: store.renameSession(sessionId, input.displayName) });
+        const input = thetaWebHistoryUpdateSchema.parse(await readJsonBody(request));
+        writeJson(response, 200, {
+          ok: true,
+          data: 'displayName' in input
+            ? store.renameSession(sessionId, input.displayName)
+            : store.pinSession(sessionId, input.pinned),
+        });
         return;
       }
       if (method === 'DELETE') {
@@ -366,10 +371,12 @@ const routeRequest = async (
   const runMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)$/);
   if (runMatch && method === 'PATCH') {
     const runId = decodeURIComponent(runMatch[1]);
-    const input = thetaWebRenameRunSchema.parse(await readJsonBody(request));
+    const input = thetaWebHistoryUpdateSchema.parse(await readJsonBody(request));
     writeJson(response, 200, {
       ok: true,
-      data: renameLocalRun(runId, input.displayName, options.runtimeDb),
+      data: 'displayName' in input
+        ? renameLocalRun(runId, input.displayName, options.runtimeDb)
+        : pinLocalRun(runId, input.pinned, options.runtimeDb),
     });
     return;
   }

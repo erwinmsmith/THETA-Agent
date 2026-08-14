@@ -14,6 +14,8 @@ import {
   openRunStream,
   postMessage,
   postWorkspaceMessage,
+  pinRun,
+  pinWorkspaceSession,
   renameRun,
   renameWorkspaceSession,
   type WebAgentInteraction,
@@ -39,6 +41,7 @@ import {
 import { ConversationPane, type QueuedChatMessage } from './panels/ConversationPane.tsx'
 import { DetailPane } from './panels/DetailPane.tsx'
 import { SettingsDialog } from './panels/SettingsDialog.tsx'
+import { HistoryActionDialog, type HistoryActionTarget } from './panels/HistoryActionDialog.tsx'
 import { usePreferences } from './preferences.tsx'
 import './styles/base.css'
 import css from './styles/app.module.css'
@@ -104,6 +107,9 @@ export const AppRoot = (): React.ReactElement => {
   const [detailOpen, setDetailOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [liveAssistantMessageId, setLiveAssistantMessageId] = useState<string>()
+  const [historyAction, setHistoryAction] = useState<HistoryActionTarget>()
+  const [historyActionBusy, setHistoryActionBusy] = useState(false)
+  const [historyActionError, setHistoryActionError] = useState<string>()
   const knownMessageIds = useRef(new Set<string>())
 
   const refreshRuns = useCallback(async () => {
@@ -341,33 +347,6 @@ export const AppRoot = (): React.ReactElement => {
     }
   }, [])
 
-  const removeRun = async (runId: string): Promise<void> => {
-    if (!window.confirm(locale === 'zh-CN' ? '删除该研究任务及其本地运行记录？此操作无法撤销。' : 'Delete this research task and its local records? This cannot be undone.')) return
-    try {
-      await deleteRun(runId)
-      if (selectedRunId === runId) {
-        setSelectedRunId(undefined)
-        setMessages([])
-        setStatus(undefined)
-      }
-      await refreshRuns()
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error))
-    }
-  }
-
-  const renameHistory = async (run: WebRunSummary): Promise<void> => {
-    const current = run.identity?.displayName ?? run.presentation?.title ?? run.runId
-    const displayName = window.prompt(locale === 'zh-CN' ? '修改对话名称' : 'Rename conversation', current)?.trim()
-    if (!displayName || displayName === current) return
-    try {
-      await renameRun(run.runId, displayName)
-      await refreshRuns()
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error))
-    }
-  }
-
   const selectWorkspaceHistory = async (sessionId: string): Promise<void> => {
     setSelectedRunId(undefined)
     setMessages([])
@@ -390,25 +369,35 @@ export const AppRoot = (): React.ReactElement => {
     }
   }
 
-  const renameWorkspaceHistory = async (session: WebWorkspaceSummary): Promise<void> => {
-    const displayName = window.prompt(locale === 'zh-CN' ? '修改对话名称' : 'Rename conversation', session.title)?.trim()
-    if (!displayName || displayName === session.title) return
-    try {
-      await renameWorkspaceSession(session.sessionId, displayName)
-      await refreshWorkspaceSessions()
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error))
-    }
+  const openHistoryAction = (action: HistoryActionTarget): void => {
+    setHistoryActionError(undefined)
+    setHistoryAction(action)
   }
 
-  const removeWorkspaceHistory = async (session: WebWorkspaceSummary): Promise<void> => {
-    if (!window.confirm(locale === 'zh-CN' ? '删除这个对话？' : 'Delete this conversation?')) return
+  const performHistoryAction = async (value?: string): Promise<void> => {
+    const action = historyAction
+    if (!action || historyActionBusy) return
+    setHistoryActionBusy(true)
+    setHistoryActionError(undefined)
     try {
-      await deleteWorkspaceSession(session.sessionId)
-      if (workspaceSessionId === session.sessionId) await startNewConversation()
-      await refreshWorkspaceSessions()
+      if (action.kind === 'rename' && value) {
+        if (action.target === 'run') await renameRun(action.id, value)
+        else await renameWorkspaceSession(action.id, value)
+      } else if (action.kind === 'pin') {
+        if (action.target === 'run') await pinRun(action.id, !action.pinned)
+        else await pinWorkspaceSession(action.id, !action.pinned)
+      } else if (action.kind === 'delete') {
+        if (action.target === 'run') await deleteRun(action.id)
+        else await deleteWorkspaceSession(action.id)
+        await startNewConversation()
+      }
+      setHistoryAction(undefined)
+      if (action.target === 'run') await refreshRuns()
+      else await refreshWorkspaceSessions()
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error))
+      setHistoryActionError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setHistoryActionBusy(false)
     }
   }
 
@@ -505,7 +494,7 @@ export const AppRoot = (): React.ReactElement => {
                 <div className={css.sidebarEmpty}>{t('emptyHistory')}</div>
               )}
               {workspaceSessions.map((session) => (
-                <div key={session.sessionId} className={css.runRow}>
+                <div key={session.sessionId} className={`${css.runRow} ${session.pinned ? css.runPinned : ''}`}>
                   <button
                     type="button"
                     className={`${css.runItem} ${session.sessionId === workspaceSessionId && selectedRunId == null ? css.runItemActive : ''}`}
@@ -520,36 +509,42 @@ export const AppRoot = (): React.ReactElement => {
                     </span>
                   </button>
                   <div className={css.runActions}>
-                    <button type="button" title={t('rename')} onClick={() => void renameWorkspaceHistory(session)}>✎</button>
-                    <button type="button" title={t('delete')} onClick={() => void removeWorkspaceHistory(session)}><IconTrashOutline16 /></button>
+                    <button type="button" title={session.pinned ? (locale === 'zh-CN' ? '取消置顶' : 'Unpin') : (locale === 'zh-CN' ? '置顶' : 'Pin')} aria-pressed={session.pinned} onClick={() => openHistoryAction({ kind: 'pin', target: 'workspace', id: session.sessionId, title: session.title, pinned: session.pinned })}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 6 0-.8 4 2 2v1H8.7L8 14 7.3 9H3.8V8l2-2L5 2Z" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" /></svg></button>
+                    <button type="button" title={t('rename')} onClick={() => openHistoryAction({ kind: 'rename', target: 'workspace', id: session.sessionId, title: session.title, pinned: session.pinned })}>✎</button>
+                    <button type="button" title={t('delete')} onClick={() => openHistoryAction({ kind: 'delete', target: 'workspace', id: session.sessionId, title: session.title, pinned: session.pinned })}><IconTrashOutline16 /></button>
                   </div>
                 </div>
               ))}
-              {runs.map((run) => (
-                <div key={run.runId} className={css.runRow}>
-                  <button
-                    type="button"
-                    className={`${css.runItem} ${run.runId === selectedRunId ? css.runItemActive : ''}`}
-                    onClick={() => {
-                      setWorkspaceSessionId(undefined)
-                      setWorkspaceActivity(undefined)
-                      setSelectedRunId(run.runId)
-                    }}
-                  >
-                    <span className={css.runName}>{run.identity?.displayName ?? run.presentation?.title ?? run.runId}</span>
-                    <span className={css.runDataset}>{run.identity?.datasetName ?? run.identity?.researchQuestion ?? 'Local research run'}</span>
-                    <span className={css.runMeta}>
-                      <StateDot size={7} state={dotState(run.status)} />
-                      <span>{runStateLabel(run.currentState, run.status, locale)}</span>
-                      <time dateTime={run.updatedAt}>{relativeTime(run.updatedAt, locale)}</time>
-                    </span>
-                  </button>
-                  <div className={css.runActions}>
-                    <button type="button" title={t('rename')} onClick={() => void renameHistory(run)}>✎</button>
-                    <button type="button" title={t('delete')} onClick={() => void removeRun(run.runId)}><IconTrashOutline16 /></button>
+              {runs.map((run) => {
+                const title = run.identity?.displayName ?? run.presentation?.title ?? run.runId
+                const pinned = run.pinned === true
+                return (
+                  <div key={run.runId} className={`${css.runRow} ${pinned ? css.runPinned : ''}`}>
+                    <button
+                      type="button"
+                      className={`${css.runItem} ${run.runId === selectedRunId ? css.runItemActive : ''}`}
+                      onClick={() => {
+                        setWorkspaceSessionId(undefined)
+                        setWorkspaceActivity(undefined)
+                        setSelectedRunId(run.runId)
+                      }}
+                    >
+                      <span className={css.runName}>{run.identity?.displayName ?? run.presentation?.title ?? run.runId}</span>
+                      <span className={css.runDataset}>{run.identity?.datasetName ?? run.identity?.researchQuestion ?? 'Local research run'}</span>
+                      <span className={css.runMeta}>
+                        <StateDot size={7} state={dotState(run.status)} />
+                        <span>{runStateLabel(run.currentState, run.status, locale)}</span>
+                        <time dateTime={run.updatedAt}>{relativeTime(run.updatedAt, locale)}</time>
+                      </span>
+                    </button>
+                    <div className={css.runActions}>
+                      <button type="button" title={pinned ? (locale === 'zh-CN' ? '取消置顶' : 'Unpin') : (locale === 'zh-CN' ? '置顶' : 'Pin')} aria-pressed={pinned} onClick={() => openHistoryAction({ kind: 'pin', target: 'run', id: run.runId, title, pinned })}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 2 6 0-.8 4 2 2v1H8.7L8 14 7.3 9H3.8V8l2-2L5 2Z" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" /></svg></button>
+                      <button type="button" title={t('rename')} onClick={() => openHistoryAction({ kind: 'rename', target: 'run', id: run.runId, title, pinned })}>✎</button>
+                      <button type="button" title={t('delete')} onClick={() => openHistoryAction({ kind: 'delete', target: 'run', id: run.runId, title, pinned })}><IconTrashOutline16 /></button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </nav>
             <div className={css.sidebarFooter}>
               <span>LOCAL WORKSPACE</span>
@@ -609,6 +604,13 @@ export const AppRoot = (): React.ReactElement => {
         )}
       </div>
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <HistoryActionDialog
+        action={historyAction}
+        busy={historyActionBusy}
+        error={historyActionError}
+        onClose={() => { if (!historyActionBusy) setHistoryAction(undefined) }}
+        onConfirm={(value) => void performHistoryAction(value)}
+      />
     </div>
   )
 }

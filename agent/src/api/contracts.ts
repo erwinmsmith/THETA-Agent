@@ -92,6 +92,15 @@ export const thetaWebRenameRunSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
 }).strict();
 
+export const thetaWebPinHistorySchema = z.object({
+  pinned: z.boolean(),
+}).strict();
+
+export const thetaWebHistoryUpdateSchema = z.union([
+  thetaWebRenameRunSchema,
+  thetaWebPinHistorySchema,
+]);
+
 export const thetaWebInferenceSelectionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('use'), providerId: z.string().trim().min(1), model: z.string().trim().min(1) }).strict(),
   z.object({ action: z.literal('reset') }).strict(),
@@ -140,6 +149,7 @@ export type ThetaWebPostMessage = z.infer<typeof thetaWebPostMessageSchema>;
 export type ThetaWebInferenceSelection = z.infer<typeof thetaWebInferenceSelectionSchema>;
 export type ThetaWebInferenceSettings = z.infer<typeof thetaWebInferenceSettingsSchema>;
 export type ThetaWebRenameRun = z.infer<typeof thetaWebRenameRunSchema>;
+export type ThetaWebHistoryUpdate = z.infer<typeof thetaWebHistoryUpdateSchema>;
 
 export const thetaWebApiEnvelopeSchema = z.object({
   ok: z.boolean(),
@@ -222,6 +232,7 @@ export interface ThetaWebRunSummary {
   lastEventAt?: string;
   recoveryOfRunId?: string;
   successorRunId?: string;
+  pinned?: boolean;
   presentation?: {
     title: string;
     summary: string;

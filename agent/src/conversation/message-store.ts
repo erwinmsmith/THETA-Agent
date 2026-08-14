@@ -93,6 +93,7 @@ export interface ConversationSessionSummary {
   messageCount: number;
   createdAt: string;
   updatedAt: string;
+  pinned: boolean;
 }
 
 export interface ConversationStore {
@@ -128,6 +129,7 @@ export interface ConversationStore {
   getMemory(sessionId: string): ConversationMemory | undefined;
   listWorkspaceSessions(limit?: number): ConversationSessionSummary[];
   renameSession(sessionId: string, title: string): ConversationSessionSummary;
+  pinSession(sessionId: string, pinned: boolean): ConversationSessionSummary;
   deleteSession(sessionId: string): boolean;
   close(): void;
 }

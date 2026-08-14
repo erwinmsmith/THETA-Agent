@@ -32,7 +32,8 @@ origins explicitly with `THETA_WEB_ALLOWED_ORIGINS`; do not use a wildcard.
   beside the message field. New messages can queue while the active turn is
   being processed.
 - **History:** draft conversations and research Runs persist in SQLite and can
-  be reopened, renamed, or deleted.
+  be reopened, pinned, renamed, or deleted. These actions use in-app dialogs;
+  deleting any history item returns the workspace to the start page.
 - **Human checks:** dataset, intent, plan, and training approvals appear as a
   compact accept/reject bar. Rejections may include a reason.
 - **Activity:** the thread shows FSM decisions, semantic routing, search,
