@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   WebAgentInteraction,
   WebAttachment,
@@ -127,6 +127,31 @@ const storedPhaseTitle = (type: string, locale: string): string => {
   return label ? (locale === 'zh-CN' ? label[0] : label[1]) : type
 }
 
+const orderCompletedActivityAfterReply = (messages: WebMessage[]): WebMessage[] => {
+  const ordered: WebMessage[] = []
+  let pendingToolActivity: WebMessage[] = []
+  for (const message of messages) {
+    if (message.messageKind === 'activity.tool.trace') {
+      pendingToolActivity.push(message)
+      continue
+    }
+    if (message.role === 'user' && pendingToolActivity.length > 0) {
+      ordered.push(...pendingToolActivity)
+      pendingToolActivity = []
+    }
+    ordered.push(message)
+    if (
+      message.role === 'assistant' &&
+      !message.messageKind.startsWith('activity.') &&
+      pendingToolActivity.length > 0
+    ) {
+      ordered.push(...pendingToolActivity)
+      pendingToolActivity = []
+    }
+  }
+  return [...ordered, ...pendingToolActivity]
+}
+
 export const ConversationPane = ({
   messages,
   sending,
@@ -221,6 +246,7 @@ export const ConversationPane = ({
   const latestUserGoal = [...messages].reverse().find((message) => message.role === 'user')?.content
   const suggestions = [t('howStart'), t('capabilities'), t('modelAdvice'), t('analyzeData')]
   const currentProgress = [...messages].reverse().map(agentProgress).find(Boolean)
+  const orderedMessages = useMemo(() => orderCompletedActivityAfterReply(messages), [messages])
 
   return (
     <div className={css.conversation}>
@@ -259,7 +285,7 @@ export const ConversationPane = ({
           </div>
         )}
 
-        {messages.map((message) => {
+        {orderedMessages.map((message) => {
           if (message.messageKind === 'activity.agent.progress') return null
           const viewedArtifacts = artifactActivity(message)
           if (viewedArtifacts) {
@@ -279,7 +305,7 @@ export const ConversationPane = ({
             const search = /search|rag|retriev/i.test(toolActivity.toolId)
             const failed = toolActivity.phases.some((phase) => phase.type === 'tool.call.failed')
             return (
-              <div key={message.messageId} className={css.activityTrace}>
+              <div key={message.messageId} className={`${css.activityTrace} ${css.activityTraceCompleted}`}>
                 <details className={css.activityDisclosure}>
                   <summary>
                     <StateDot size={7} state={failed ? 'error' : 'done'} />
@@ -327,7 +353,7 @@ export const ConversationPane = ({
           )
         })}
 
-        {(messages.length > 0 || runId != null) && (
+        {(sending || runId != null) && (
           <AgentActivityTrace
             interaction={activeInteraction}
             reasoning={reasoning}

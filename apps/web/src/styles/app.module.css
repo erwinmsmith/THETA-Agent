@@ -1527,6 +1527,19 @@ textarea:focus-visible {
   color: var(--dsw-alias-label-tertiary);
   font-size: 11px;
 }
+.activityTraceCompleted {
+  margin-top: -3px;
+  margin-bottom: 5px;
+  padding-left: 1px;
+  opacity: 0.86;
+}
+.activityTraceCompleted .activityDisclosure > summary {
+  min-height: 25px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.activityTraceCompleted .activityToolText strong { font-size: 11px; font-weight: 500; }
+.activityTraceCompleted .activityToolIcon { font-size: 15px; }
 .activityRow,
 .activityDisclosure > summary,
 .activityDisclosure > button {
