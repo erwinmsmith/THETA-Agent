@@ -201,9 +201,6 @@ const workflow = (
     const excerpts = Array.isArray(contentSummary?.sampleExcerpts)
       ? contentSummary.sampleExcerpts.map(asRecord).filter(Boolean)
       : [];
-    const candidateTopics = Array.isArray(contentSummary?.candidateTopics)
-      ? contentSummary.candidateTopics.map(asRecord).filter(Boolean)
-      : [];
     sections.push({
       title: '需要确认',
       lines: [
@@ -219,13 +216,15 @@ const workflow = (
         ),
       });
     }
-    if (candidateTopics.length > 0) {
+    if (text(contentSummary?.summary)) {
       sections.push({
-        title: '初步候选主题',
-        lines: candidateTopics.slice(0, 5).map((topic) => {
-          const keywords = strings(topic?.keywords);
-          return `${human(topic?.label)}${keywords.length > 0 ? `：${keywords.join('、')}` : ''}`;
-        }),
+        title: '数据基本理解',
+        lines: [
+          text(contentSummary?.summary)!,
+          ...(strings(contentSummary?.contentKeywords).length > 0
+            ? [`样本内容词：${strings(contentSummary?.contentKeywords).join('、')}`]
+            : []),
+        ],
       });
     }
   }

@@ -191,12 +191,12 @@ const promptMessages = (
         'You are the THETA dataset-understanding agent.',
         'Before making any dataset claim, call theta_dataset_explore exactly as provided.',
         'Use only its returned columns, profiles, and redacted sampleRows.',
-        'Read the actual text in sampleRows, summarize what the records discuss, and propose bounded preliminary candidate topics grounded in sample indexes.',
+        'Read the actual text in sampleRows and form a basic, evidence-grounded understanding of what the records contain. Do not perform topic discovery at this stage.',
         'Never invent columns or evidence and never request paths, shell, network, writes, planning, approval, or training.',
         'After receiving the tool result, return exactly one JSON object and no prose:',
         '{"kind":"final","understanding":{domain,analysisUnit,contentSummary,evidenceReferences,textColumns,timeColumns,idColumns,metadataColumns,groupColumns,covariateColumns,evaluationColumns,ignoredColumns,qualityWarnings,assumptions,confidence}}.',
         'domain must be {"label":string,"confidence":0..1,"evidence":string[]}. Every column-role item must be {"column":an exact supplied column name,"confidence":0..1,"reason":string}.',
-        'contentSummary must contain candidateTopics with {label,keywords,evidenceSampleIndexes,confidence,rationale}; every evidence index must reference sampleRows. Do not copy secrets or unredacted identifiers.',
+        'contentSummary must contain {summary,contentKeywords}. It should describe the dataset content at a basic level, not predict topics or claim modeling results. Do not copy secrets or unredacted identifiers.',
         'Sample evidence uses zero-based sampleIndex into sampleRows.',
         request.validationErrors.length > 0
           ? `Repair these validation errors: ${request.validationErrors.join(' | ')}`

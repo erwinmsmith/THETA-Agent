@@ -124,14 +124,12 @@ export const deriveDecisionGaps = (
   const gaps: DecisionGap[] = [];
   const hasUnknown = (id: string): boolean => intent.unknowns.includes(id);
   if (hasUnknown('research_goal')) {
-    const topicHints = understanding.contentSummary.candidateTopics
-      .slice(0, 3)
-      .map((topic) => topic.label);
+    const contentUnderstanding = understanding.contentSummary.summary;
     gaps.push(gap('research_goal', 'research_goal',
-      `我已确认主要分析 ${confirmation.textColumns.join('、')}。${topicHints.length > 0 ? `原始样本初步出现了 ${topicHints.join('、')} 等内容方向；` : ''}你最希望从这些记录中得到什么结论？`,
+      `我已确认主要分析 ${confirmation.textColumns.join('、')}，并读取了原始样本。当前对数据的基本理解是：${contentUnderstanding} 这是否符合你的项目背景？你最希望从这些记录中得到什么结论？`,
       '研究目标决定模型、评价方式和最终结果结构。',
       '影响模型候选、指标和图表。', true,
-      '识别主要主题、关键词与代表文本。', [understanding.domain.label, ...topicHints]));
+      '识别主要主题、关键词与代表文本。', [understanding.domain.label, ...understanding.contentSummary.contentKeywords.slice(0, 5)]));
   }
   if (hasUnknown('comparison')) {
     const candidates = confirmation.metadataColumns.join('、');

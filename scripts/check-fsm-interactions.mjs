@@ -95,7 +95,8 @@ const contentFacts = buildDatasetFacts(exploredDataset);
 const contentUnderstanding = buildDeterministicUnderstanding(contentFacts, exploredDataset);
 assert.equal(contentUnderstanding.contentSummary.sampledDocumentCount, 3);
 assert.equal(contentUnderstanding.contentSummary.sampleExcerpts[0]?.text, exploredDataset.sampleRows[0].text);
-assert.ok(contentUnderstanding.contentSummary.candidateTopics.length >= 2);
+assert.match(contentUnderstanding.contentSummary.summary, /已实际读取 3 条脱敏样本/);
+assert.ok(contentUnderstanding.contentSummary.contentKeywords.includes('renewable'));
 assert.ok(contentUnderstanding.evidenceReferences.some((entry) => entry.kind === 'sample_row'));
 
 let capturedToolTrace = [];

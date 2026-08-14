@@ -106,13 +106,11 @@ export const buildDeterministicUnderstanding = (
         column: entry.column,
         claim: entry.reason,
       })),
-      ...contentSummary.candidateTopics.flatMap((topic) =>
-        topic.evidenceSampleIndexes.slice(0, 1).map((sampleIndex) => ({
-          kind: 'sample_row' as const,
-          sampleIndex,
-          claim: `原始文本样本支持候选主题“${topic.label}”。`,
-        })),
-      ).slice(0, 5),
+      ...contentSummary.sampleExcerpts.slice(0, 5).map((sample) => ({
+        kind: 'sample_row' as const,
+        sampleIndex: sample.sampleIndex,
+        claim: '已读取该脱敏原始文本，用于形成数据内容的基本理解。',
+      })),
     ],
     textColumns,
     timeColumns,
@@ -125,7 +123,7 @@ export const buildDeterministicUnderstanding = (
     qualityWarnings: output.qualityWarnings,
     assumptions: [
       '列角色来自字段名、数据类型、长度与唯一性统计，尚未替代用户的领域确认。',
-      '候选主题来自本地脱敏样本的初步内容分析，只用于理解确认，不是训练结果。',
+      '内容摘要来自本地脱敏样本，只用于确认数据与项目理解，不是主题发现或训练结果。',
     ],
     confidence: textColumns[0]?.confidence ?? 0.35,
     provenance: {
@@ -144,6 +142,7 @@ const CONTENT_STOP_WORDS = new Set([
   'should', 'than', 'that', 'their', 'there', 'these', 'they', 'this', 'through',
   'very', 'what', 'when', 'where', 'which', 'while', 'with', 'would', 'your', 'for',
   'in', 'not', 'can', 'will', 'use', 'using', 'ask', 'asks', 'mention', 'mentions',
+  'several',
   '一个', '一些', '以及', '他们', '但是', '你们', '关于', '其中', '可以', '因为',
   '对于', '就是', '已经', '我们', '或者', '没有', '这个', '这些', '进行', '通过',
 ]);
@@ -156,9 +155,10 @@ const buildLocalContentSummary = (
     return {
       sampledDocumentCount: 0,
       sampleExcerpts: [],
-      candidateTopics: [],
+      summary: '尚未识别正文列，因此还不能形成数据内容的基本理解。',
+      contentKeywords: [],
       method: 'local_lexical',
-      caveat: '尚未识别正文列，因此无法从原始文本形成候选主题。',
+      caveat: '这是对受控样本和项目输入的基本理解，不是主题发现或正式研究结论。',
     };
   }
   const sampleExcerpts = output.sampleRows.flatMap((row, sampleIndex) => {
@@ -170,47 +170,25 @@ const buildLocalContentSummary = (
       text: value.length > 280 ? `${value.slice(0, 277)}…` : value,
     }];
   }).slice(0, 10);
-  const documents = sampleExcerpts.map((sample) => ({
-    sampleIndex: sample.sampleIndex,
-    tokens: contentTokens(sample.text),
-  }));
-  const documentFrequency = new Map<string, number>();
-  for (const document of documents) {
-    for (const token of new Set(document.tokens)) {
-      documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
+  const tokenFrequency = new Map<string, number>();
+  for (const sample of sampleExcerpts) {
+    for (const token of contentTokens(sample.text)) {
+      tokenFrequency.set(token, (tokenFrequency.get(token) ?? 0) + 1);
     }
   }
-  const candidates = documents.flatMap((document) => {
-    const termFrequency = new Map<string, number>();
-    for (const token of document.tokens) {
-      termFrequency.set(token, (termFrequency.get(token) ?? 0) + 1);
-    }
-    const keywords = [...termFrequency.entries()]
-      .map(([token, count]) => ({
-        token,
-        score: count * (Math.log((documents.length + 1) / ((documentFrequency.get(token) ?? 0) + 1)) + 0.35) + Math.min(token.length, 16) * 0.01,
-      }))
-      .sort((left, right) => right.score - left.score || left.token.localeCompare(right.token))
-      .slice(0, 4)
-      .map((entry) => entry.token);
-    if (keywords.length === 0) return [];
-    return [{
-      label: keywords.slice(0, 3).join(' / '),
-      keywords,
-      evidenceSampleIndexes: [document.sampleIndex],
-      confidence: Math.min(0.68, 0.38 + keywords.length * 0.06),
-      rationale: '由该脱敏原始样本中具有区分度的高权重词形成。',
-    }];
-  });
-  const deduplicated = candidates.filter((candidate, index, all) =>
-    all.findIndex((other) => topicSimilarity(candidate.keywords, other.keywords) >= 0.75) === index,
-  ).slice(0, 5);
+  const contentKeywords = [...tokenFrequency.entries()]
+    .sort((left, right) => right[1] - left[1] || right[0].length - left[0].length || left[0].localeCompare(right[0]))
+    .slice(0, 12)
+    .map(([token]) => token);
   return {
     sampledDocumentCount: sampleExcerpts.length,
     sampleExcerpts,
-    candidateTopics: deduplicated,
+    summary: contentKeywords.length > 0
+      ? `这是一组以 ${textColumn} 为正文的独立文本记录。已实际读取 ${sampleExcerpts.length} 条脱敏样本，当前可观察到的内容线索包括 ${contentKeywords.slice(0, 8).join('、')}。`
+      : `已实际读取 ${sampleExcerpts.length} 条脱敏正文样本，但可用于概括内容的信息仍然有限。`,
+    contentKeywords,
     method: 'local_lexical',
-    caveat: '候选主题仅基于受控脱敏样本，用于确认数据理解，不代表正式主题模型结果。',
+    caveat: '这是对受控样本和项目输入的基本理解，不是主题发现或正式研究结论。',
   };
 };
 
@@ -225,11 +203,4 @@ const contentTokens = (text: string): string[] => {
     .map((token) => token.replace(/^[_-]+|[_-]+$/gu, ''))
     .filter((token) => token.length >= 2 && !CONTENT_STOP_WORDS.has(token) && !/^\d+$/u.test(token))
     .slice(0, 120);
-};
-
-const topicSimilarity = (left: string[], right: string[]): number => {
-  const leftSet = new Set(left);
-  const rightSet = new Set(right);
-  const overlap = [...leftSet].filter((value) => rightSet.has(value)).length;
-  return overlap / Math.max(1, new Set([...leftSet, ...rightSet]).size);
 };

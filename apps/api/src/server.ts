@@ -1790,6 +1790,12 @@ const persistInitialDatasetConversation = (
       store.refreshMemory(sessionId);
       return;
     }
+    const primaryTextColumns = new Set(understanding.textColumns.map((item) => item.column));
+    const identifierColumns = new Set(understanding.idColumns.map((item) => item.column));
+    const contextualColumns = facts.columns
+      .filter((column) => !primaryTextColumns.has(column.name) && !identifierColumns.has(column.name))
+      .filter((column) => column.sampleValues.length > 0)
+      .slice(0, 6);
     store.appendMessage({
       messageId: `message.assistant.${randomUUID()}`,
       sessionId,
@@ -1801,18 +1807,19 @@ const persistInitialDatasetConversation = (
         `列名：${facts.columns.map((column) => column.name).join('、')}。`,
         `初步判断这是${understanding.domain.label}数据；分析单位是${understanding.analysisUnit.replace(/[。.!?]+$/u, '')}。`,
         `建议正文列为 ${understanding.textColumns.map((item) => item.column).join('、') || '尚未确定'}。`,
+        `数据基本理解：${understanding.contentSummary.summary}`,
+        contextualColumns.length > 0
+          ? `辅助字段理解：${contextualColumns
+              .map((column) => `${column.name} 的示例值包括 ${column.sampleValues.slice(0, 4).join('、')}`)
+              .join('；')}。`
+          : '当前没有足够的辅助字段示例可供解释。',
         understanding.contentSummary.sampleExcerpts.length > 0
           ? `已读取的脱敏原始内容样本：${understanding.contentSummary.sampleExcerpts
               .slice(0, 5)
               .map((sample, index) => `${index + 1}. “${sample.text}”`)
               .join('；')}。`
           : '当前样本中没有可展示的正文内容。',
-        understanding.contentSummary.candidateTopics.length > 0
-          ? `基于原始样本初步识别的候选主题：${understanding.contentSummary.candidateTopics
-              .slice(0, 5)
-              .map((topic) => `${topic.label}（${topic.keywords.join('、')}）`)
-              .join('；')}。`
-          : '当前样本不足以形成可靠的候选主题。',
+        `项目基本理解：当前目标是“${researchGoal}”。结合原始样本，我理解本项目将以这批${understanding.domain.label}记录为研究材料，围绕该目标开展后续研究；现在先确认数据内容、分析单位、字段角色与项目目标是否一致，之后才进入研究问题细化、模型建议、计划审批与训练。`,
         understanding.contentSummary.caveat,
         '请确认以上理解；如有错误，可以直接用自然语言指出。',
       ].join(' '),

@@ -78,26 +78,20 @@ export const datasetContentSampleSchema = z.object({
   text: z.string().min(1).max(500),
 });
 
-export const datasetCandidateTopicSchema = z.object({
-  label: z.string().min(1).max(120),
-  keywords: z.array(z.string().min(1).max(60)).min(1).max(8),
-  evidenceSampleIndexes: z.array(z.number().int().nonnegative()).min(1).max(10),
-  confidence: z.number().min(0).max(1),
-  rationale: z.string().min(1).max(300),
-});
-
 export const datasetContentSummarySchema = z.object({
   sampledDocumentCount: z.number().int().nonnegative(),
   sampleExcerpts: z.array(datasetContentSampleSchema).max(10),
-  candidateTopics: z.array(datasetCandidateTopicSchema).max(8),
+  summary: z.string().min(1),
+  contentKeywords: z.array(z.string().min(1).max(60)).max(16).default([]),
   method: z.enum(['local_lexical', 'provider_semantic', 'hybrid']),
   caveat: z.string().min(1),
 }).default({
   sampledDocumentCount: 0,
   sampleExcerpts: [],
-  candidateTopics: [],
+  summary: '尚未读取到可用于内容理解的正文样本。',
+  contentKeywords: [],
   method: 'local_lexical',
-  caveat: '候选主题仅基于受控样本，用于确认数据理解，不代表正式主题模型结果。',
+  caveat: '这是对受控样本和项目输入的基本理解，不是主题发现或正式研究结论。',
 });
 
 const roleColumnsSchema = {

@@ -218,10 +218,8 @@ const normalizeLanguageUnderstanding = (
       }).slice(0, 24)
     : fallback.evidenceReferences;
   const rawContentSummary = record(value.contentSummary);
-  const candidateTopics = normalizeCandidateTopics(
-    rawContentSummary.candidateTopics,
-    output.sampleRows.length,
-  );
+  const providerSummary = firstText(rawContentSummary.summary);
+  const providerKeywords = stringArray(rawContentSummary.contentKeywords).slice(0, 16);
   return {
     domain: {
       label: domainLabel,
@@ -231,10 +229,11 @@ const normalizeLanguageUnderstanding = (
     analysisUnit: firstText(value.analysisUnit, fallback.analysisUnit),
     contentSummary: {
       ...fallback.contentSummary,
-      candidateTopics: candidateTopics.length > 0
-        ? candidateTopics
-        : fallback.contentSummary.candidateTopics,
-      method: candidateTopics.length > 0 ? 'hybrid' : fallback.contentSummary.method,
+      summary: providerSummary || fallback.contentSummary.summary,
+      contentKeywords: providerKeywords.length > 0
+        ? providerKeywords
+        : fallback.contentSummary.contentKeywords,
+      method: providerSummary ? 'hybrid' : fallback.contentSummary.method,
       caveat: firstText(rawContentSummary.caveat, fallback.contentSummary.caveat),
     },
     evidenceReferences,
@@ -250,36 +249,6 @@ const normalizeLanguageUnderstanding = (
     assumptions: stringArray(value.assumptions),
     confidence: boundedConfidence(value.confidence, fallback.confidence),
   };
-};
-
-const normalizeCandidateTopics = (
-  value: unknown,
-  sampleCount: number,
-): DatasetUnderstandingDraft['contentSummary']['candidateTopics'] => {
-  if (!Array.isArray(value)) return [];
-  const seen = new Set<string>();
-  return value.flatMap((entry) => {
-    const item = record(entry);
-    const label = firstText(item.label, item.name);
-    const key = label.toLocaleLowerCase();
-    const keywords = stringArray(item.keywords).slice(0, 8);
-    const evidenceSampleIndexes = Array.isArray(item.evidenceSampleIndexes)
-      ? [...new Set(item.evidenceSampleIndexes.flatMap((index) =>
-          Number.isInteger(index) && Number(index) >= 0 && Number(index) < sampleCount
-            ? [Number(index)]
-            : [],
-        ))].slice(0, 10)
-      : [];
-    if (!label || seen.has(key) || keywords.length === 0 || evidenceSampleIndexes.length === 0) return [];
-    seen.add(key);
-    return [{
-      label: label.slice(0, 120),
-      keywords: keywords.map((keyword) => keyword.slice(0, 60)),
-      evidenceSampleIndexes,
-      confidence: boundedConfidence(item.confidence, 0.55),
-      rationale: firstText(item.rationale, 'The provider grouped semantically related terms in the governed samples.').slice(0, 300),
-    }];
-  }).slice(0, 8);
 };
 
 const normalizeRoleEntries = (
