@@ -6,7 +6,7 @@ the repository-level `agent/` package.
 
 THETA execution is delegated to `tools/THETA_tools` and the ignored
 `third_party/THETA` checkout. Agent governance and runtime contracts come from
-the single ignored `third_party/Hypha` checkout.
+the published `@codesoul-co/hypha-*` npm release line.
 
 ## Setup
 
@@ -15,8 +15,6 @@ From the repository root:
 ```bash
 npm run deps:ensure
 npm run python:sync
-npm run hypha:install
-npm run hypha:build
 pnpm install --frozen-lockfile
 npm run build
 ```

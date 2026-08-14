@@ -1,7 +1,7 @@
 # THETA CLI Agent Tool Contracts
 
 This folder defines the local Tool layer for the Hypha-based THETA CLI Agent.
-It does not modify the checked-out `Hypha` framework source.
+It does not modify the published `@codesoul-co/hypha-*` framework packages.
 
 ## Boundary
 

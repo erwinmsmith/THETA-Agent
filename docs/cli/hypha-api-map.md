@@ -1,32 +1,33 @@
 # Hypha API Map
 
-Hypha checkout: `CodeSoul-co/Hypha`, branch `dev-domain-merge`,
-commit `1da723167d2b6dda3fa553cac524969884507785`.
+Hypha is consumed as the published npm release line `@codesoul-co/hypha-*`
+(one version for every package; the installed release is reported by
+`npm run doctor`). Upstream repository: `CodeSoul-co/Hypha`.
 
 This map records the current APIs that THETA CLI Agent must use. Do not assume names from planning
-documents when they differ from this checkout.
+documents when they differ from the installed release.
 
 ## Packages Used By The CLI Agent
 
 Runtime imports currently require:
 
-- `@hypha/adapters-local`
-- `@hypha/core`
-- `@hypha/domain`
-- `@hypha/fsm`
-- `@hypha/harness`
-- `@hypha/inference`
-- `@hypha/kernel`
-- `@hypha/mcp`
-- `@hypha/memory`
-- `@hypha/skills`
-- `@hypha/storage`
-- `@hypha/tools`
+- `@codesoul-co/hypha-adapters-local`
+- `@codesoul-co/hypha-core`
+- `@codesoul-co/hypha-domain`
+- `@codesoul-co/hypha-fsm`
+- `@codesoul-co/hypha-harness`
+- `@codesoul-co/hypha-inference`
+- `@codesoul-co/hypha-kernel`
+- `@codesoul-co/hypha-mcp`
+- `@codesoul-co/hypha-memory`
+- `@codesoul-co/hypha-skills`
+- `@codesoul-co/hypha-storage`
+- `@codesoul-co/hypha-tools`
 - runtime dependencies: `zod`, `ajv`, `ajv-formats`
 
-The CLI package imports each Hypha package through a sibling
-`file:../../third_party/Hypha/packages/<package>` dependency. `../../config/upstreams.lock.json` is the
-authority for the expected branch and commit.
+Each package is installed from the npm registry on one release version; the
+published release line is the authority. `config/upstreams.lock.json` pins only
+the THETA checkout.
 
 ## Core
 
@@ -234,7 +235,7 @@ The current `domain.theta.training@3.0.0` workflow includes:
 - CLI must not call `callThetaTools` directly after the governed adapter exists.
 - WorkflowExecutor must not spawn Python.
 - Python THETA tools must not decide FSM state, policy, approval, or recommendation authority.
-- Formal contracts should import `JsonSchema` from `@hypha/core`.
+- Formal contracts should import `JsonSchema` from `@codesoul-co/hypha-core`.
 - Python interpreter discovery, module probing, THETA tools calls, and local process
   execution remain inside `tools/theta-tools.ts`; diagnostic callers receive
   structured results rather than owning process execution.

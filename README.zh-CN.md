@@ -26,10 +26,10 @@ knowledge/                   证据清单和模型能力卡
 apps/cli/                    仅包含终端适配层
 apps/api/                    仅包含 HTTP 适配层
 config/                      经审查的上游依赖版本
-third_party/                 被忽略的本地 THETA 和 Hypha 检出
+third_party/                 被忽略的本地 THETA 检出
 ```
 
-Hypha 是系统唯一的基础框架。Agent 启动器直接从 `third_party/Hypha` 加载 Hypha 内置 Skills，从 `skills/` 加载项目 Skills，从 `tools/` 注册受控工具，并验证这些注册是否满足领域工作流。THETA 只通过这些工具调用，其源码不会复制到项目代码中。
+Hypha 是系统唯一的基础框架，以已发布的 `@codesoul-co/hypha-*` npm 发行线方式引入。Agent 启动器从 `@codesoul-co/hypha-skills` 包中加载 Hypha 内置 Skills，从 `skills/` 加载项目 Skills，从 `tools/` 注册受控工具，并验证这些注册是否满足领域工作流。THETA 只通过这些工具调用，其源码不会复制到项目代码中。
 
 ## 环境要求
 
@@ -47,9 +47,9 @@ git clone https://github.com/erwinmsmith/THETA-Agent.git
 cd THETA-Agent
 ```
 
-### 2. 准备 THETA 和 Hypha
+### 2. 准备 THETA
 
-仓库会在执行 `npm run doctor` 和 `npm start` 前自动检查两个上游依赖。如果缺少任意检出，`deps:ensure` 会把其配置的 `main` 分支最新提交克隆到被忽略的 `third_party/` 目录中。同一个命令还会报告本地提交是否与已审查的固定版本一致。已有检出不会被自动拉取或覆盖：
+Hypha 以已发布的 `@codesoul-co/hypha-*` npm 发行线方式安装，不再是本地检出。THETA 仍然是唯一的上游仓库；`deps:ensure` 会在执行 `npm run doctor` 和 `npm start` 前自动克隆或报告其状态。已有检出不会被自动拉取或覆盖：
 
 ```bash
 npm run deps:ensure
@@ -67,12 +67,10 @@ npm run deps:sync
 mkdir -p third_party
 git clone --filter=blob:none --branch main \
   https://github.com/CodeSoul-co/THETA.git third_party/THETA
-git clone --filter=blob:none --branch main \
-  https://github.com/CodeSoul-co/Hypha.git third_party/Hypha
 npm run deps:ensure
 ```
 
-`third_party/` 已被刻意忽略。不要把 THETA 或 Hypha 源码添加到本仓库。
+`third_party/` 已被刻意忽略。不要把 THETA 源码添加到本仓库。
 
 ### 3. 安装依赖
 
@@ -81,8 +79,6 @@ npm run deps:ensure
 ```bash
 corepack enable
 npm run python:sync
-npm run hypha:install
-npm run hypha:build
 pnpm install --frozen-lockfile
 npm run build
 npm run test:registries

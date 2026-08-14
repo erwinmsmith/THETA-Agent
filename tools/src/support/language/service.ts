@@ -1,7 +1,7 @@
 import type {
   InferenceProvider,
   PromptMessage,
-} from '@hypha/inference';
+} from '@codesoul-co/hypha-inference';
 import { ZodError } from 'zod';
 import {
   LANGUAGE_CONTRACT_VERSION,

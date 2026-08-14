@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
-import { createRuntimeOrchestrationProjectionDefinition } from "@hypha/core";
+import { createRuntimeOrchestrationProjectionDefinition } from "@codesoul-co/hypha-core";
 import type {
   EventCreateInput,
   FrameworkEvent,
@@ -8,13 +8,13 @@ import type {
   RuntimeJsonValue,
   RuntimeOrchestrationProjection,
   RuntimeScope,
-} from "@hypha/core";
+} from "@codesoul-co/hypha-core";
 import type {
   BoundedFSMDriverResult,
   BoundedStateExecutionDecision,
   BoundedStateExecutorInput,
-} from "@hypha/harness";
-import type { ToolCallResult } from "@hypha/tools";
+} from "@codesoul-co/hypha-harness";
+import type { ToolCallResult } from "@codesoul-co/hypha-tools";
 import { decideResearchGrilling } from "./research/grilling-engine.js";
 import {
   RESEARCH_CONTRACT_VERSION,

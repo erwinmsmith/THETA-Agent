@@ -36,14 +36,15 @@ knowledge/                   Evidence manifests and capability cards
 apps/cli/                    Terminal adapter only
 apps/api/                    HTTP adapter only
 config/                      Reviewed upstream dependency pins
-third_party/                 Ignored local THETA and Hypha checkouts
+third_party/                 Ignored local THETA checkout
 ```
 
-Hypha is the single base framework. The Agent bootstrap loads Hypha's built-in
-skills directly from `third_party/Hypha`, loads project skills from `skills/`,
-registers governed tools from `tools/`, and validates all registrations against
-the domain workflow. THETA is invoked through those tools and is never copied
-into project source.
+Hypha is the single base framework, consumed as the published
+`@codesoul-co/hypha-*` npm release line. The Agent bootstrap loads Hypha's
+built-in skills from the `@codesoul-co/hypha-skills` package, loads project
+skills from `skills/`, registers governed tools from `tools/`, and validates
+all registrations against the domain workflow. THETA is invoked through those
+tools and is never copied into project source.
 
 ## Prerequisites
 
@@ -61,36 +62,31 @@ git clone https://github.com/erwinmsmith/THETA-Agent.git
 cd THETA-Agent
 ```
 
-### 2. Clone THETA and Hypha
+### 2. Clone THETA
 
-The repository automatically checks both upstream dependencies before
-`npm run doctor` and `npm start`. If either checkout is missing,
-`deps:ensure` clones the latest commit from its configured `main` branch into
-the ignored `third_party/` directory. The same command reports whether every
-local checkout matches its reviewed pin. Existing checkouts are never pulled
-or overwritten automatically:
+Hypha ships as the published `@codesoul-co/hypha-*` npm release line and is
+installed by the package manager; it is not a local checkout. THETA remains the
+single upstream repository, and `deps:ensure` clones or reports it before
+`npm run doctor` and `npm start`. Existing checkouts are never pulled or
+overwritten automatically:
 
 ```bash
 npm run deps:ensure
 ```
 
 Use `npm run deps:sync` when you specifically need the exact reviewed
-revisions recorded in `config/upstreams.lock.json`.
-
-If you prefer to clone the upstream repositories yourself, use these paths and
-then run the dependency check:
+revision recorded in `config/upstreams.lock.json`. If you prefer to clone the
+upstream repository yourself, use this path and then run the dependency check:
 
 ```bash
 mkdir -p third_party
 git clone --filter=blob:none --branch main \
   https://github.com/CodeSoul-co/THETA.git third_party/THETA
-git clone --filter=blob:none --branch main \
-  https://github.com/CodeSoul-co/Hypha.git third_party/Hypha
 npm run deps:ensure
 ```
 
-`third_party/` is intentionally ignored. Never add THETA or Hypha source files
-to this repository.
+`third_party/` is intentionally ignored. Never add THETA source files to this
+repository.
 
 ### 3. Install dependencies
 
@@ -99,8 +95,6 @@ Install the default local runtime:
 ```bash
 corepack enable
 npm run python:sync
-npm run hypha:install
-npm run hypha:build
 pnpm install --frozen-lockfile
 npm run build
 npm run test:registries
@@ -204,7 +198,7 @@ the [complete CLI reference](docs/CLI.md). A
 
 ## Updating upstream dependencies
 
-Ensure both checkouts exist and inspect their pinned and local states:
+Ensure the THETA checkout exists and inspect its pinned and local states:
 
 ```bash
 npm run deps:ensure

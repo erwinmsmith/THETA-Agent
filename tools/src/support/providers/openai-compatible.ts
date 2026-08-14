@@ -3,7 +3,7 @@ import type {
   InferenceRequest,
   InferenceResponse,
   PromptMessage,
-} from '@hypha/inference';
+} from '@codesoul-co/hypha-inference';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TIMEOUT_MS = 180_000;

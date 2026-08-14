@@ -1,5 +1,5 @@
-import type { JsonSchema } from '@hypha/core';
-import type { ToolHandler, ToolSpec } from '@hypha/tools';
+import type { JsonSchema } from '@codesoul-co/hypha-core';
+import type { ToolHandler, ToolSpec } from '@codesoul-co/hypha-tools';
 import { evidenceBundleSchema, type EvidenceBundle } from './support/rag/evidence-bundle.js';
 import { NativePlannerV2Service } from './support/planner/native-service.js';
 import {

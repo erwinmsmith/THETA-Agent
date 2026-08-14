@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { ToolCallResult } from '@hypha/tools';
+import type { ToolCallResult } from '@codesoul-co/hypha-tools';
 import type { AgentInvocation } from './conversation/contracts.js';
 import type { LanguageRequest, LanguageResult } from '@theta-agent/domain/language/contracts.js';
 import { deterministicLanguageResult } from '@theta-agent/tools/support/language/fallback.js';

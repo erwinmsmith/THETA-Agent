@@ -2,9 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   LocalSkillLoader,
+  resolveBuiltinSkillsDirectory,
   SkillRegistry,
   type SkillSpec,
-} from "@hypha/skills";
+} from "@codesoul-co/hypha-skills";
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,17 +26,7 @@ export const createAgentSkillRegistry = async (
 ): Promise<AgentSkillRegistryResult> => {
   const directories = [
     path.join(repositoryRoot, "skills"),
-    path.join(
-      repositoryRoot,
-      "third_party",
-      "Hypha",
-      "apps",
-      "server",
-      "src",
-      "core",
-      "skills",
-      "builtins",
-    ),
+    resolveBuiltinSkillsDirectory(),
   ];
   const registry = new SkillRegistry();
   const loader = new LocalSkillLoader({ directories, recursive: true });

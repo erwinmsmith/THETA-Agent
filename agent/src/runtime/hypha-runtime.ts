@@ -6,7 +6,7 @@ import {
   SQLiteProjectionStore,
   SQLiteRunLeaseStore,
   SQLiteStateExecutionClaimStore,
-} from '@hypha/adapters-local';
+} from '@codesoul-co/hypha-adapters-local';
 import {
   DurableEventRuntime,
   DurableRuntimeTimerWorker,
@@ -23,11 +23,11 @@ import {
   type RuntimeOrchestrationProjection,
   type StateExecutionClaimStore,
   type TraceRecorder,
-} from '@hypha/core';
+} from '@codesoul-co/hypha-core';
 import {
   FencedBoundedFSMDriver,
   type FencedBoundedFSMDriverOptions,
-} from '@hypha/harness';
+} from '@codesoul-co/hypha-harness';
 import { repositoryRoot } from '@theta-agent/tools/support/repository-paths.js';
 
 export interface ThetaWorkflowRuntimeOptions {

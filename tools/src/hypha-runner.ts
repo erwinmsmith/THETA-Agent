@@ -3,12 +3,12 @@ import {
   InMemoryEventStore,
   type PolicyEngine,
   type TraceRecorder,
-} from "@hypha/core";
+} from "@codesoul-co/hypha-core";
 import {
   GovernedToolRunner,
   type ToolCallContext,
   type ToolCallResult,
-} from "@hypha/tools";
+} from "@codesoul-co/hypha-tools";
 import { createThetaHyphaToolRegistry } from "./registry/tool-registry.js";
 import type { ThetaDatasetDetectColumnsOutput } from "./dataset-detect-columns-tool.js";
 import type {

@@ -1,5 +1,5 @@
-import type { JsonSchema } from "@hypha/core";
-import type { ToolCallContext, ToolHandler, ToolSpec } from "@hypha/tools";
+import type { JsonSchema } from "@codesoul-co/hypha-core";
+import type { ToolCallContext, ToolHandler, ToolSpec } from "@codesoul-co/hypha-tools";
 import { callThetaTools } from "./theta-tools.js";
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from "./tool-ids.js";
 import {

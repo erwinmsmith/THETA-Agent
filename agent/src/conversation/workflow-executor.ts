@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { FrameworkEvent } from '@hypha/core';
+import type { FrameworkEvent } from '@codesoul-co/hypha-core';
 import { THETA_APPROVAL_KEYS } from '@theta-agent/domain/domain.js';
 import {
   ThetaWorkflowService,

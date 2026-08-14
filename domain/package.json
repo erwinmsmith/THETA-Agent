@@ -7,8 +7,14 @@
   "main": "dist/domain.js",
   "types": "dist/domain.d.ts",
   "exports": {
-    ".": { "types": "./dist/domain.d.ts", "default": "./dist/domain.js" },
-    "./*.js": { "types": "./dist/*.d.ts", "default": "./dist/*.js" }
+    ".": {
+      "types": "./dist/domain.d.ts",
+      "default": "./dist/domain.js"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
   },
   "scripts": {
     "clean": "node ../scripts/clean-package.mjs domain/dist",
@@ -16,9 +22,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hypha/core": "file:../third_party/Hypha/packages/core",
-    "@hypha/domain": "file:../third_party/Hypha/packages/domain",
-    "@hypha/tools": "file:../third_party/Hypha/packages/tools",
+    "@codesoul-co/hypha-core": "1.0.1",
+    "@codesoul-co/hypha-domain": "1.0.1",
+    "@codesoul-co/hypha-tools": "1.0.1",
     "zod": "^3.22.0"
   },
   "devDependencies": {

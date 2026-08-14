@@ -17,8 +17,8 @@ import {
 import { probeThetaPythonModules } from '@theta-agent/tools/theta-tools.js';
 import { CapabilityRegistry } from '@theta-agent/tools/support/capabilities/registry.js';
 import { getKnowledgeIndexStatus } from '@theta-agent/tools/support/rag/service.js';
+import { resolveBuiltinSkillsDirectory } from '@codesoul-co/hypha-skills';
 import {
-  hyphaUpstreamRoot,
   repositoryRoot,
   thetaUpstreamRoot,
   upstreamLockPath,
@@ -59,8 +59,7 @@ export class DoctorService {
     const checks: DoctorCheck[] = [];
     checks.push(nodeCheck());
     checks.push(await this.pnpmCheck());
-    checks.push(await this.hyphaLockCheck());
-    checks.push(await this.hyphaBuildCheck());
+    checks.push(await this.hyphaPackagesCheck());
     checks.push(this.domainPackCheck());
     checks.push(await this.runtimeCheck());
     checks.push(await this.artifactRootCheck());
@@ -96,52 +95,64 @@ export class DoctorService {
         );
   }
 
-  private async hyphaLockCheck(): Promise<DoctorCheck> {
-    try {
-      const lock = JSON.parse(await readFile(upstreamLockPath, 'utf8')) as {
-        dependencies?: {
-          hypha?: { branch?: unknown; revision?: unknown };
-        };
-      };
-      const hypha = lock.dependencies?.hypha;
-      if (
-        typeof hypha?.branch !== 'string' ||
-        typeof hypha.revision !== 'string' ||
-        !/^[0-9a-f]{40}$/i.test(hypha.revision)
-      ) {
-        throw new Error('branch or 40-character commit is missing');
-      }
-      return pass(
-        'hypha.lock',
-        `Hypha is pinned to ${hypha.branch}@${hypha.revision.slice(0, 12)}.`,
-      );
-    } catch (error) {
-      return fail(
-        'hypha.lock',
-        `Hypha lock is invalid: ${message(error)}`,
-        'Restore config/upstreams.lock.json from the approved integration baseline.',
-      );
-    }
-  }
-
-  private async hyphaBuildCheck(): Promise<DoctorCheck> {
-    const required = ['core', 'domain', 'fsm', 'tools', 'adapters-local', 'harness'];
+  private async hyphaPackagesCheck(): Promise<DoctorCheck> {
+    const required = [
+      'core',
+      'domain',
+      'fsm',
+      'tools',
+      'adapters-local',
+      'harness',
+      'skills',
+      'inference',
+    ];
+    const root = path.join(this.agentRoot, 'node_modules', '@codesoul-co');
+    const versions = new Set<string>();
     const missing: string[] = [];
     for (const name of required) {
-      if (
-        !(await exists(
-          path.join(hyphaUpstreamRoot, 'packages', name, 'dist', 'index.js'),
-        ))
-      ) {
-        missing.push(name);
+      const directory = path.join(root, `hypha-${name}`);
+      const manifestPath = path.join(directory, 'package.json');
+      const entryPath = path.join(directory, 'dist', 'index.js');
+      const manifestExists = await exists(manifestPath);
+      const entryExists = await exists(entryPath);
+      if (!manifestExists || !entryExists) {
+        missing.push(`hypha-${name}`);
+        continue;
+      }
+      const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+        version?: unknown;
+      };
+      if (typeof manifest.version === 'string' && manifest.version) {
+        versions.add(manifest.version);
       }
     }
-    return missing.length === 0
-      ? pass('hypha.build', 'All pinned Hypha package builds are available.')
+    if (missing.length > 0) {
+      return fail(
+        'hypha.packages',
+        `Missing Hypha release packages: ${missing.join(', ')}.`,
+        'Run pnpm install --frozen-lockfile at the repository root.',
+      );
+    }
+    if (versions.size !== 1) {
+      return fail(
+        'hypha.packages',
+        `Hypha packages are not on one release line: ${[...versions].sort().join(', ')}.`,
+        'Align every @codesoul-co/hypha-* dependency on a single published release.',
+      );
+    }
+    const release = [...versions][0];
+    const builtins = await exists(
+      path.join(resolveBuiltinSkillsDirectory(), 'context-enrichment.md'),
+    );
+    return builtins
+      ? pass(
+          'hypha.packages',
+          `Hypha npm release ${release} installed: ${required.length} packages aligned; built-in skills shipped.`,
+        )
       : fail(
-          'hypha.build',
-          `Missing built Hypha packages: ${missing.join(', ')}.`,
-          'Run npm run hypha:build at the repository root.',
+          'hypha.packages',
+          'The Hypha skills package is missing its shipped built-in skills.',
+          'Reinstall @codesoul-co/hypha-skills from the published release tarball.',
         );
   }
 

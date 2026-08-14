@@ -7,8 +7,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./*.js": { "types": "./dist/*.d.ts", "default": "./dist/*.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
   },
   "scripts": {
     "clean": "node ../scripts/clean-package.mjs tools/dist",
@@ -17,11 +23,11 @@
     "test:python": "uv run --project .. python -m unittest discover THETA_tools/tests -p \"test_*.py\""
   },
   "dependencies": {
-    "@hypha/adapters-local": "file:../third_party/Hypha/packages/adapters-local",
-    "@hypha/core": "file:../third_party/Hypha/packages/core",
-    "@hypha/harness": "file:../third_party/Hypha/packages/harness",
-    "@hypha/inference": "file:../third_party/Hypha/packages/inference",
-    "@hypha/tools": "file:../third_party/Hypha/packages/tools",
+    "@codesoul-co/hypha-adapters-local": "1.0.1",
+    "@codesoul-co/hypha-core": "1.0.1",
+    "@codesoul-co/hypha-harness": "1.0.1",
+    "@codesoul-co/hypha-inference": "1.0.1",
+    "@codesoul-co/hypha-tools": "1.0.1",
     "@theta-agent/domain": "workspace:*",
     "yaml": "^2.9.0",
     "zod": "^3.22.0"

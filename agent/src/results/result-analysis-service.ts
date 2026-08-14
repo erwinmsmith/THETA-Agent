@@ -1,4 +1,4 @@
-import type { InferenceProvider, PromptMessage } from '@hypha/inference';
+import type { InferenceProvider, PromptMessage } from '@codesoul-co/hypha-inference';
 import type { ResearchBrief } from '@theta-agent/domain/research/contracts.js';
 import type { ConversationMessage } from '../conversation/message-store.js';
 import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';

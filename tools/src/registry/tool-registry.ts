@@ -1,4 +1,4 @@
-import { ToolRegistry, type ToolSpec } from "@hypha/tools";
+import { ToolRegistry, type ToolSpec } from "@codesoul-co/hypha-tools";
 import {
   thetaConversationLanguageHandler,
   thetaConversationLanguageToolSpec,

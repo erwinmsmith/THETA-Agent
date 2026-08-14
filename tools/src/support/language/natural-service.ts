@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type {
   InferenceProvider,
   PromptMessage,
-} from '@hypha/inference';
+} from '@codesoul-co/hypha-inference';
 import {
   NATURAL_LANGUAGE_CONTRACT_VERSION,
   naturalLanguageProviderOutputSchema,

@@ -1,4 +1,4 @@
-import type { InferenceProvider, PromptMessage } from "@hypha/inference";
+import type { InferenceProvider, PromptMessage } from "@codesoul-co/hypha-inference";
 import { ZodError } from "zod";
 import { CapabilityRegistry } from "@theta-agent/tools/support/capabilities/registry.js";
 import {

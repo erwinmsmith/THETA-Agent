@@ -33,14 +33,12 @@ The repository has seven ownership areas:
 3. `tools` owns Hypha tool registration, capability implementations, and the
    `THETA_tools` Python protocol.
 4. `skills` owns project skill definitions. The skill registry also loads
-   Hypha built-ins directly from the ignored checkout.
+   Hypha built-ins from the shipped `@codesoul-co/hypha-skills` package data.
 5. `knowledge` owns evidence manifests and model capability cards.
 6. `apps/cli` and `apps/api` are thin input/output adapters.
-7. `third_party/Hypha` and `third_party/THETA` are the two standard upstream
-   checkouts and remain ignored.
-
-There is one Hypha checkout. File dependencies and the skill loader both refer
-to that same ignored directory; no Hypha source is duplicated in the project.
+7. `third_party/THETA` is the single standard upstream checkout and remains
+   ignored. Hypha is consumed through the published `@codesoul-co/hypha-*` npm
+   release line; no Hypha source is copied into the project.
 
 ## Dependency direction
 

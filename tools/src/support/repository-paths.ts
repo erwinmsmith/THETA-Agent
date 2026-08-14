@@ -15,11 +15,6 @@ export const thetaUpstreamRoot = path.resolve(
     path.join(repositoryRoot, 'third_party', 'THETA'),
 );
 
-export const hyphaUpstreamRoot = path.resolve(
-  process.env.HYPHA_UPSTREAM_ROOT ??
-    path.join(repositoryRoot, 'third_party', 'Hypha'),
-);
-
 export const thetaToolsPackageRoot = path.join(
   repositoryRoot,
   'tools',

@@ -1,4 +1,4 @@
-import type { SpecRef } from "@hypha/core";
+import type { SpecRef } from "@codesoul-co/hypha-core";
 import {
   compileDomainPackToHarnessedSystem,
   resolveWorkflowToolExecutionScope,
@@ -6,8 +6,8 @@ import {
   type DomainCompilationResult,
   type DomainPackSpec,
   type WorkflowStateSpec,
-} from "@hypha/domain";
-import type { ToolExecutionScope, ToolSpec } from "@hypha/tools";
+} from "@codesoul-co/hypha-domain";
+import type { ToolExecutionScope, ToolSpec } from "@codesoul-co/hypha-tools";
 
 export const THETA_TOOL_IDS = {
   datasetInspect: "theta.dataset.inspect",

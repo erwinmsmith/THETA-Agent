@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import type { JsonSchema } from '@hypha/core';
-import type { PromptMessage } from '@hypha/inference';
-import type { ToolHandler, ToolSpec } from '@hypha/tools';
+import type { JsonSchema } from '@codesoul-co/hypha-core';
+import type { PromptMessage } from '@codesoul-co/hypha-inference';
+import type { ToolHandler, ToolSpec } from '@codesoul-co/hypha-tools';
 import { z } from 'zod';
 import {
   datasetFactsSchema,

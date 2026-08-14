@@ -1,4 +1,4 @@
-import type { InferenceProvider, PromptMessage } from '@hypha/inference';
+import type { InferenceProvider, PromptMessage } from '@codesoul-co/hypha-inference';
 import { z } from 'zod';
 import type { EvidenceBundle } from '../rag/evidence-bundle.js';
 import {

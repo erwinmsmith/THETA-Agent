@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import type { JsonSchema } from '@hypha/core';
-import type { ToolCallContext, ToolHandler, ToolSpec } from '@hypha/tools';
+import type { JsonSchema } from '@codesoul-co/hypha-core';
+import type { ToolCallContext, ToolHandler, ToolSpec } from '@codesoul-co/hypha-tools';
 import { callThetaTools } from './theta-tools.js';
 import { resolveDatasetFile } from './dataset-path-policy.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';

@@ -30,3 +30,8 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Local tool caches (sandbox-friendly npm/pnpm state)
+.cache/
+.npm-cache/
+.dsh-env.sh

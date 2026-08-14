@@ -4,11 +4,12 @@ Run releases from a clean checkout of the THETA Agent repository.
 
 ## Dependency baseline
 
-- `config/upstreams.lock.json` identifies the reviewed THETA and Hypha
-  repositories, branches, and exact revisions.
-- `npm run deps:sync` reports both dependencies at their pinned revisions.
-- Both ignored upstream checkouts have clean working trees.
-- Hypha packages build successfully from their own lock file.
+- `config/upstreams.lock.json` identifies the reviewed THETA repository,
+  branch, and exact revision.
+- `npm run deps:sync` reports THETA at its pinned revision.
+- The ignored THETA checkout has a clean working tree.
+- Every `@codesoul-co/hypha-*` dependency resolves from the npm registry on
+  one release version; `npm run doctor` reports the aligned release line.
 
 ## Agent validation
 

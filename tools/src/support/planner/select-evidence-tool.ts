@@ -1,4 +1,4 @@
-import type { InferenceToolDescriptor } from "@hypha/inference";
+import type { InferenceToolDescriptor } from "@codesoul-co/hypha-inference";
 
 export const SELECT_EVIDENCE_TOOL_NAME = "select_evidence";
 

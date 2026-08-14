@@ -1,5 +1,5 @@
-import type { JsonSchema } from '@hypha/core';
-import type { ToolHandler, ToolSpec } from '@hypha/tools';
+import type { JsonSchema } from '@codesoul-co/hypha-core';
+import type { ToolHandler, ToolSpec } from '@codesoul-co/hypha-tools';
 import {
   getKnowledgeIndexStatus,
   type KnowledgeIndexStatus,

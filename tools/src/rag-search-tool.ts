@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { JsonSchema } from "@hypha/core";
-import type { ToolHandler, ToolSpec } from "@hypha/tools";
+import type { JsonSchema } from "@codesoul-co/hypha-core";
+import type { ToolHandler, ToolSpec } from "@codesoul-co/hypha-tools";
 import { evidenceRefSchema, type EvidenceRef } from "@theta-agent/domain/rag/contracts.js";
 import { FtsEvidenceIndex } from "./support/rag/fts-index.js";
 import type { RetrievalTrace } from "./support/rag/fts-index.js";
