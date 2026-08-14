@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   InMemoryEventStore,
+  type FrameworkEvent,
   type PolicyEngine,
   type TraceRecorder,
 } from "@codesoul-co/hypha-core";
@@ -82,6 +83,7 @@ export interface ThetaHyphaRunnerOptions {
   permissionScopes?: string[];
   idempotencyKey?: string;
   invocationId?: string;
+  onTrace?: (events: FrameworkEvent[]) => void;
 }
 
 export interface ThetaHyphaRuntime {
@@ -248,16 +250,19 @@ export const runThetaModelCatalog = async (
   input: ThetaModelCatalogInput = {},
   options: ThetaHyphaRunnerOptions = {},
 ): Promise<ToolCallResult<ThetaModelCatalogOutput>> => {
-  const { runner } = createThetaHyphaRuntime();
-  return runner.run({
+  const runtime = createThetaHyphaRuntime();
+  const runId = "theta-model-catalog-smoke";
+  const result = await runtime.runner.run({
     toolId: THETA_TOOL_IDS.modelCatalog,
     input,
     context: createThetaToolCallContext(
-      "theta-model-catalog-smoke",
+      runId,
       "model_catalog",
       options,
     ),
-  }) as Promise<ToolCallResult<ThetaModelCatalogOutput>>;
+  }) as ToolCallResult<ThetaModelCatalogOutput>;
+  options.onTrace?.(await runtime.trace.list({ runId }));
+  return result;
 };
 
 export const runThetaModelRecommend = async (
@@ -286,17 +291,20 @@ export const runThetaRagSearch = async (
   input: ThetaRagSearchInput,
   options: ThetaHyphaRunnerOptions = {},
 ): Promise<ToolCallResult<ThetaRagSearchOutput>> => {
-  const { runner } = createThetaHyphaRuntime();
-  return runner.run({
+  const runtime = createThetaHyphaRuntime();
+  const runId = "theta-rag-search";
+  const result = await runtime.runner.run({
     toolId: THETA_TOOL_IDS.ragSearch,
     input,
-    context: createThetaToolCallContext("theta-rag-search", "rag_search", {
+    context: createThetaToolCallContext(runId, "rag_search", {
       ...options,
       permissionScopes: options.permissionScopes ?? [
         THETA_PERMISSION_SCOPES.ragRead,
       ],
     }),
-  }) as Promise<ToolCallResult<ThetaRagSearchOutput>>;
+  }) as ToolCallResult<ThetaRagSearchOutput>;
+  options.onTrace?.(await runtime.trace.list({ runId }));
+  return result;
 };
 
 export const runThetaRagBuild = async (

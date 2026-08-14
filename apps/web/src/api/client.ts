@@ -90,6 +90,7 @@ export interface WebRunEvent {
 
 export interface WebReasoningToolCall {
   eventId: string;
+  invocationId?: string;
   toolId: string;
   phase: 'requested' | 'started' | 'policy' | 'completed' | 'failed' | 'validated';
   label: string;
@@ -118,7 +119,63 @@ export interface WebRunDetail {
   status: WebRunStatus;
   identity?: Record<string, unknown>;
   plan?: Record<string, unknown>;
-  results?: Record<string, unknown>;
+  results?: WebRunResults;
+}
+
+export interface WebResultVisualization {
+  id: string;
+  label: string;
+  relativePath: string;
+  format: 'image' | 'interactive';
+  scope: 'global' | 'topic';
+  topicId?: string;
+  sizeBytes: number;
+}
+
+export interface WebRunResults {
+  status: string;
+  progress: number;
+  message: string;
+  visualizations: WebResultVisualization[];
+  metrics: Record<string, unknown>;
+  topics: Array<{ id: string; name: string; strength?: number; keywords: string[] }>;
+  warnings: string[];
+  topicTable?: string;
+  researchStatus?: string;
+}
+
+export interface WebAttachment {
+  kind: 'visualization' | 'topic' | 'metric' | 'table';
+  id: string;
+  label: string;
+}
+
+export interface WebConversationMemory {
+  sessionId: string;
+  summary: string;
+  recentUserGoals: string[];
+  sourceMessageCount: number;
+  updatedAt: string;
+}
+
+export interface WebWorkspaceTurn {
+  sessionId: string;
+  messages: WebMessage[];
+  memory?: WebConversationMemory;
+  interaction: WebAgentInteraction;
+  activity?: {
+    proposal?: unknown;
+    result?: unknown;
+    evidenceRefs?: unknown;
+  };
+}
+
+export interface WebWorkspaceSummary {
+  sessionId: string;
+  title: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WebPostMessageResult {
@@ -204,6 +261,7 @@ export const createRun = (input: {
   datasetRef: string;
   researchGoal?: string;
   useLanguageProvider?: boolean;
+  sourceSessionId?: string;
 }): Promise<{ runId: string }> => request('/api/v2/runs', {
   method: 'POST',
   body: JSON.stringify(input),
@@ -211,6 +269,40 @@ export const createRun = (input: {
 
 export const deleteRun = (runId: string): Promise<{ runId: string }> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}`, { method: 'DELETE' });
+
+export const renameRun = (runId: string, displayName: string): Promise<{ runId: string; displayName: string }> =>
+  request(`/api/v2/runs/${encodeURIComponent(runId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName }),
+  });
+
+export const createWorkspaceSession = (): Promise<{ sessionId: string; interaction: WebAgentInteraction }> =>
+  request('/api/v2/workspace/sessions', { method: 'POST', body: JSON.stringify({}) });
+
+export const listWorkspaceSessions = (): Promise<{ sessions: WebWorkspaceSummary[] }> =>
+  request('/api/v2/workspace/sessions?limit=30');
+
+export const renameWorkspaceSession = (sessionId: string, displayName: string): Promise<WebWorkspaceSummary> =>
+  request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName }),
+  });
+
+export const deleteWorkspaceSession = (sessionId: string): Promise<{ sessionId: string }> =>
+  request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+
+export const getWorkspaceConversation = (sessionId: string): Promise<WebWorkspaceTurn> =>
+  request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}/conversation?limit=100`);
+
+export const postWorkspaceMessage = (
+  sessionId: string,
+  text: string,
+  useLanguageProvider = true,
+): Promise<WebWorkspaceTurn> =>
+  request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ text, useLanguageProvider, attachments: [] }),
+  });
 
 export const listDatasets = (): Promise<{ datasets: WebDataset[] }> =>
   request('/api/v2/datasets');
@@ -239,18 +331,25 @@ export const getRun = (runId: string): Promise<WebRunDetail> =>
 export const getStatus = (runId: string): Promise<WebRunStatus & Record<string, unknown>> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}/status`);
 
-export const getConversation = (runId: string): Promise<{ runId: string; messages: WebMessage[] }> =>
+export const getConversation = (runId: string): Promise<{ runId: string; messages: WebMessage[]; memory?: WebConversationMemory }> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}/conversation?limit=200`);
 
 export const postMessage = (
   runId: string,
   text: string,
   useLanguageProvider = true,
+  attachments: WebAttachment[] = [],
 ): Promise<WebPostMessageResult> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ text, useLanguageProvider }),
+    body: JSON.stringify({ text, useLanguageProvider, attachments }),
   });
+
+export const resultAssetUrl = (runId: string, relativePath: string): string =>
+  `${BASE_URL}/api/v2/runs/${encodeURIComponent(runId)}/results/assets/${encodeURIComponent(relativePath)}`;
+
+export const resultArchiveUrl = (runId: string): string =>
+  `${BASE_URL}/api/v2/runs/${encodeURIComponent(runId)}/results/archive`;
 
 export const getEvents = (
   runId: string,

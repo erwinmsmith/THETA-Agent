@@ -81,9 +81,11 @@ The backend derives every interactive card from the authoritative FSM state,
 pending action reference, state goal, allowed Tool list, and declared
 transitions. `agent/src/interaction-service.ts` exposes that decision as an
 `interaction` object; API and Web adapters only render it. Before a Run exists,
-the same contract represents `Intake` and requests dataset registration. After
-creation it drives dataset review, research-intent review, plan review, and
-training review cards without UI keyword routing.
+the same contract represents `Intake` without forcing an upload. A
+schema-validated semantic decision may request the contextual dataset card when
+the user's goal actually requires their data. After Run creation the contract
+drives dataset review, research-intent review, plan review, and training review
+cards without UI keyword routing.
 
 Natural conversation may ask the configured model for a schema-validated,
 read-only Tool proposal. The proposal is intersected with the current FSM
@@ -91,6 +93,21 @@ state allowlist and can reference only registered Hypha Tools. If model
 reasoning is unavailable, the deterministic fallback selects no Tool; it never
 guesses a Tool from keywords. Every selected Tool still passes through the
 Hypha registry, permission policy, audit events, and output validation.
+
+## Conversation memory and activity
+
+The SQLite conversation store persists draft workspace sessions and Run
+messages, user-defined titles, research brief revisions, and a compact working
+memory projection. The projection keeps recent goals and a bounded summary;
+structured research stores retain confirmed facts, intent, and evidence
+revisions. Memory is refreshed after assistant turns and promoted with a draft
+conversation when it becomes a Run.
+
+The API converts runtime and Hypha Tool audit events into a sanitized activity
+contract. Web adapters may display FSM observations, decisions, allowed Tools,
+search queries, lifecycle phases, validated outputs, and result references.
+They must not expose provider prompts, credentials, internal scratchpads, or
+hidden chain-of-thought.
 
 ## Upstream lifecycle
 

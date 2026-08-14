@@ -887,12 +887,16 @@ export class ThetaTurnOrchestrator {
           requiresConfirmation: false,
         };
     let toolResult: unknown;
+    let conversationalToolEvents: Array<{ id: string; type: string; timestamp: string }> = [];
+    const captureTrace = (events: Array<{ id: string; type: string; timestamp: string }>): void => {
+      conversationalToolEvents = events.map(({ id, type, timestamp }) => ({ id, type, timestamp }));
+    };
     switch (proposal.toolId) {
       case 'theta.rag.search': {
         const query = typeof proposal.arguments.query === 'string'
           ? proposal.arguments.query
           : text;
-        const result = await runThetaRagSearch({ query, limit: 5 });
+        const result = await runThetaRagSearch({ query, limit: 5 }, { onTrace: captureTrace });
         toolResult =
           result.status === 'completed'
             ? result.output
@@ -900,7 +904,7 @@ export class ThetaTurnOrchestrator {
         break;
       }
       case 'theta.model.catalog': {
-        const result = await runThetaModelCatalog({});
+        const result = await runThetaModelCatalog({}, { onTrace: captureTrace });
         toolResult =
           result.status === 'completed'
             ? result.output
@@ -935,9 +939,23 @@ export class ThetaTurnOrchestrator {
             reason: proposal.reason,
             confidence: proposal.confidence,
           },
+          memory: this.store.getMemory(context.sessionId),
+          requestDataset: !runId && proposal.intent === 'needs_dataset',
         };
     }
     const grounding = safeGrounding(proposal.toolId, toolResult);
+    if (proposal.toolId && conversationalToolEvents.length > 0) {
+      this.assistantMessage(
+        context,
+        runId,
+        'activity.tool.trace',
+        JSON.stringify({
+          toolId: proposal.toolId,
+          phases: conversationalToolEvents,
+          result: grounding,
+        }),
+      );
+    }
     const composed = await this.language(
       {
         schemaVersion: NATURAL_LANGUAGE_CONTRACT_VERSION,
@@ -1147,7 +1165,7 @@ export class ThetaTurnOrchestrator {
     messageKind: string,
     content: string,
   ): ConversationMessage {
-    return this.store.appendMessage({
+    const message = this.store.appendMessage({
       messageId: `message.${randomUUID()}`,
       sessionId: context.sessionId,
       ...(runId ? { runId } : {}),
@@ -1156,6 +1174,8 @@ export class ThetaTurnOrchestrator {
       content: sanitizeLanguageText(content, 4000),
       createdAt: new Date().toISOString(),
     });
+    this.store.refreshMemory(context.sessionId);
+    return message;
   }
 
   private startTurn(
@@ -1374,7 +1394,7 @@ const currentPlanAdjustmentValues = (
 const conversationalToolAllowlist = (
   stateId: string | undefined,
 ): Array<'theta.rag.search' | 'theta.model.catalog'> => {
-  if (!stateId) return [];
+  if (!stateId) return ['theta.rag.search', 'theta.model.catalog'];
   const allowed = new Set(
     resolveThetaWorkflowStateDefinition(stateId)?.allowedTools ?? [],
   );

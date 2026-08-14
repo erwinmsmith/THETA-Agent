@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -18,7 +19,7 @@ import { loadThetaProjectEnvironment } from '@theta-agent/agent';
 import { buildHumanResponse } from '@theta-agent/agent';
 import { ResultAnalysisService } from '@theta-agent/agent';
 import { ResultService } from '@theta-agent/agent';
-import { deleteLocalRun, listLocalRuns } from '@theta-agent/agent';
+import { deleteLocalRun, listLocalRuns, renameLocalRun } from '@theta-agent/agent';
 import { SQLiteConversationStore } from '@theta-agent/agent';
 import { SQLiteDatasetRegistry, type DatasetRecord } from '@theta-agent/agent';
 import { THETA_APPROVAL_KEYS } from '@theta-agent/agent';
@@ -30,12 +31,13 @@ import { resolveDatasetFile } from '@theta-agent/agent';
 import { runThetaModelCatalog } from '@theta-agent/agent';
 import { runThetaTrainingStatus } from '@theta-agent/agent';
 import { getThetaRuntimeProfile } from '@theta-agent/agent';
-import { buildThetaAgentInteraction } from '@theta-agent/agent';
+import { buildThetaAgentInteraction, buildThetaWorkspaceInteraction } from '@theta-agent/agent';
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
   thetaWebInferenceSelectionSchema,
   thetaWebPostMessageSchema,
+  thetaWebRenameRunSchema,
   thetaWebRunActionSchema,
   type ThetaWebApiEnvelope,
   type ThetaWebApiHealth,
@@ -88,6 +90,11 @@ export const createThetaWebApiServer = (options: ThetaWebApiOptions = {}) => {
     try {
       await routeRequest(request, response, resolved, workflow);
     } catch (error) {
+      if (response.headersSent) {
+        if (!response.writableEnded) response.destroy(error instanceof Error ? error : undefined);
+        return;
+      }
+      writeCors(response, request.headers.origin);
       const clientError = error instanceof ZodError || error instanceof SyntaxError;
       writeJson(response, clientError ? 400 : 500, {
         ok: false,
@@ -110,9 +117,9 @@ const routeRequest = async (
 ): Promise<void> => {
   const method = request.method ?? 'GET';
   const url = new URL(request.url ?? '/', `http://${options.host}:${options.port}`);
+  writeCors(response, request.headers.origin);
 
   if (method === 'OPTIONS') {
-    writeCors(response);
     response.writeHead(204);
     response.end();
     return;
@@ -133,6 +140,143 @@ const routeRequest = async (
   if (url.pathname === '/api/v2/runtime') {
     if (method !== 'GET') return methodNotAllowed(response);
     writeJson(response, 200, { ok: true, data: await getThetaRuntimeProfile() });
+    return;
+  }
+
+  if (url.pathname === '/api/v2/workspace/sessions') {
+    if (method === 'GET') {
+      const store = new SQLiteConversationStore(options.runtimeDb);
+      try {
+        writeJson(response, 200, {
+          ok: true,
+          data: { sessions: store.listWorkspaceSessions(boundedLimit(url.searchParams.get('limit'))) },
+        });
+      } finally {
+        store.close();
+      }
+      return;
+    }
+    if (method !== 'POST') return methodNotAllowed(response);
+    const sessionId = `theta-web-workspace-${randomUUID()}`;
+    const store = new SQLiteConversationStore(options.runtimeDb);
+    try {
+      store.getOrCreateSession(sessionId);
+      writeJson(response, 201, {
+        ok: true,
+        data: { sessionId, interaction: buildThetaWorkspaceInteraction() },
+      });
+    } finally {
+      store.close();
+    }
+    return;
+  }
+
+  const workspaceSessionMatch = url.pathname.match(/^\/api\/v2\/workspace\/sessions\/([^/]+)$/);
+  if (workspaceSessionMatch) {
+    const sessionId = decodeURIComponent(workspaceSessionMatch[1]);
+    if (!sessionId.startsWith('theta-web-workspace-')) throw new SyntaxError('Invalid workspace session.');
+    const store = new SQLiteConversationStore(options.runtimeDb);
+    try {
+      if (method === 'PATCH') {
+        const input = thetaWebRenameRunSchema.parse(await readJsonBody(request));
+        writeJson(response, 200, { ok: true, data: store.renameSession(sessionId, input.displayName) });
+        return;
+      }
+      if (method === 'DELETE') {
+        const deleted = store.deleteSession(sessionId);
+        writeJson(response, deleted ? 200 : 404, deleted
+          ? { ok: true, data: { sessionId } }
+          : { ok: false, error: { code: 'THETA_WORKSPACE_SESSION_NOT_FOUND', message: 'Conversation not found.' } });
+        return;
+      }
+      return methodNotAllowed(response);
+    } finally {
+      store.close();
+    }
+  }
+
+  const workspaceConversationMatch = url.pathname.match(
+    /^\/api\/v2\/workspace\/sessions\/([^/]+)\/conversation$/,
+  );
+  if (workspaceConversationMatch) {
+    if (method !== 'GET') return methodNotAllowed(response);
+    const sessionId = decodeURIComponent(workspaceConversationMatch[1]);
+    if (!sessionId.startsWith('theta-web-workspace-')) throw new SyntaxError('Invalid workspace session.');
+    const store = new SQLiteConversationStore(options.runtimeDb);
+    try {
+      store.getOrCreateSession(sessionId);
+      const messages = store
+        .listRecentMessages(sessionId, boundedLimit(url.searchParams.get('limit')))
+        .filter((message) => message.role === 'user' || message.role === 'assistant')
+        .map(presentConversationMessage);
+      writeJson(response, 200, {
+        ok: true,
+        data: {
+          sessionId,
+          messages,
+          memory: store.getMemory(sessionId) ?? store.refreshMemory(sessionId),
+          interaction: buildThetaWorkspaceInteraction(),
+        },
+      });
+    } finally {
+      store.close();
+    }
+    return;
+  }
+
+  const workspaceMessageMatch = url.pathname.match(
+    /^\/api\/v2\/workspace\/sessions\/([^/]+)\/messages$/,
+  );
+  if (workspaceMessageMatch) {
+    if (method !== 'POST') return methodNotAllowed(response);
+    const sessionId = decodeURIComponent(workspaceMessageMatch[1]);
+    if (!sessionId.startsWith('theta-web-workspace-')) throw new SyntaxError('Invalid workspace session.');
+    const input = thetaWebPostMessageSchema.parse(await readJsonBody(request));
+    const store = new SQLiteConversationStore(options.runtimeDb);
+    try {
+      const before = new Set(
+        store.listRecentMessages(sessionId, 100).map((message) => message.messageId),
+      );
+      store.getOrCreateSession(sessionId);
+      store.updateSession(sessionId, {
+        languageConsent: languageProviderEnabled(input),
+        providerMode: languageProviderEnabled(input) ? 'provider' : 'deterministic',
+      });
+      const result = await new ThetaTurnOrchestrator(store, workflow).execute(
+        { kind: 'natural', text: input.text },
+        { sessionId, runtimeDb: options.runtimeDb },
+      );
+      const value = asRecord(result.value) ?? {};
+      if (before.size === 0) store.renameSession(sessionId, input.text.slice(0, 64));
+      const proposal = asRecord(value.proposal);
+      const requestDataset = proposal?.intent === 'needs_dataset';
+      const messages = store
+        .listRecentMessages(sessionId, 100)
+        .filter((message) => !before.has(message.messageId))
+        .filter((message) => message.role === 'user' || message.role === 'assistant')
+        .map(presentConversationMessage);
+      writeJson(response, 200, {
+        ok: true,
+        data: {
+          sessionId,
+          messages,
+          memory: store.getMemory(sessionId),
+          activity: {
+            proposal: value.proposal,
+            result: value.result,
+            evidenceRefs: value.evidenceRefs,
+          },
+          interaction: buildThetaWorkspaceInteraction(
+            requestDataset,
+            requestDataset
+              ? 'The user intent requires analysis of data that is not registered yet.'
+              : 'The current request can be answered without registering a dataset.',
+          ),
+        },
+      });
+    } finally {
+      store.close();
+    }
     return;
   }
 
@@ -162,6 +306,9 @@ const routeRequest = async (
         runtimeDb: options.runtimeDb,
       });
       const initialContext = await workflow.conversationContext(result.runId, options.runtimeDb);
+      if (input.sourceSessionId) {
+        promoteWorkspaceConversation(options.runtimeDb, input.sourceSessionId, result.runId);
+      }
       persistInitialDatasetConversation(
         options.runtimeDb,
         result.runId,
@@ -185,6 +332,7 @@ const routeRequest = async (
             workflow.status(run.runId, options.runtimeDb),
             workflow.plan(run.runId, options.runtimeDb),
           ]);
+          const identity = buildRunIdentity(plan);
           return {
             ...run,
             status: status.status,
@@ -193,7 +341,7 @@ const routeRequest = async (
             lastEventType: status.lastEventType,
             lastEventAt: status.lastEventAt,
             presentation: buildHumanResponse(status),
-            identity: buildRunIdentity(plan),
+            identity: run.displayName ? { ...identity, displayName: run.displayName } : identity,
           };
         } catch {
           return {
@@ -215,6 +363,15 @@ const routeRequest = async (
 
   const compatibilityRunDeleteMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/delete$/);
   const runMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)$/);
+  if (runMatch && method === 'PATCH') {
+    const runId = decodeURIComponent(runMatch[1]);
+    const input = thetaWebRenameRunSchema.parse(await readJsonBody(request));
+    writeJson(response, 200, {
+      ok: true,
+      data: renameLocalRun(runId, input.displayName, options.runtimeDb),
+    });
+    return;
+  }
   if ((compatibilityRunDeleteMatch || runMatch) && method !== 'GET') {
     if (compatibilityRunDeleteMatch ? method !== 'POST' : method !== 'DELETE') {
       return methodNotAllowed(response);
@@ -368,7 +525,14 @@ const routeRequest = async (
           sequenceNumber: message.sequenceNumber,
           createdAt: message.createdAt,
         }));
-      writeJson(response, 200, { ok: true, data: { runId, messages } });
+      writeJson(response, 200, {
+        ok: true,
+        data: {
+          runId,
+          messages,
+          memory: store.getMemory(`theta-web-${runId}`) ?? store.refreshMemory(`theta-web-${runId}`),
+        },
+      });
     } finally {
       store.close();
     }
@@ -391,6 +555,59 @@ const routeRequest = async (
         languageConsent: languageProviderEnabled(input),
         providerMode: languageProviderEnabled(input) ? 'provider' : 'deterministic',
       });
+      if (input.attachments.length > 0) {
+        appendRunMessage(
+          options.runtimeDb,
+          runId,
+          'user',
+          'result.analysis.question',
+          input.text,
+        );
+        appendRunMessage(
+          options.runtimeDb,
+          runId,
+          'assistant',
+          'activity.artifacts.viewed',
+          JSON.stringify({ attachments: input.attachments }),
+        );
+        const analysis = await new ResultAnalysisService(workflow).analyze(
+          runId,
+          options.runtimeDb,
+          {
+            question: input.text,
+            selection: {
+              topicIds: input.attachments.filter((item) => item.kind === 'topic').map((item) => item.id),
+              metricKeys: input.attachments.filter((item) => item.kind === 'metric').map((item) => item.id),
+              visualizationIds: input.attachments.filter((item) => item.kind === 'visualization').map((item) => item.id),
+              includeGoalAssessment: input.attachments.some((item) => item.kind === 'table'),
+              includeWarnings: true,
+            },
+            history: store
+              .listRecentMessages(sessionId, 8)
+              .filter((message): message is typeof message & { role: 'user' | 'assistant' } =>
+                message.role === 'user' || message.role === 'assistant')
+              .map((message) => ({ role: message.role, content: message.content })),
+          },
+        );
+        appendRunMessage(
+          options.runtimeDb,
+          runId,
+          'assistant',
+          'result.analysis.response',
+          analysis.answer,
+        );
+        const messages = store
+          .listRecentMessages(sessionId, 200)
+          .filter((message) => !before.has(message.messageId) && message.runId === runId)
+          .filter((message) => message.role === 'user' || message.role === 'assistant')
+          .map(presentConversationMessage);
+        const status = await workflow.status(runId, options.runtimeDb);
+        writeJson(response, 200, {
+          ok: true,
+          data: { runId, activeRunId: runId, messages, status: presentRun(status) },
+        });
+        return;
+      }
       const orchestrator = new ThetaTurnOrchestrator(store, workflow);
       const result = await orchestrator.execute(
         { kind: 'natural', text: input.text },
@@ -491,6 +708,16 @@ const routeRequest = async (
     }
     if (!resultRoot) throw new Error('当前任务没有可读取的结果目录。');
     await writeResultAsset(response, resultRoot, relativePath);
+    return;
+  }
+
+  const resultArchiveMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/results\/archive$/);
+  if (resultArchiveMatch) {
+    if (method !== 'GET') return methodNotAllowed(response);
+    const runId = decodeURIComponent(resultArchiveMatch[1]);
+    const results = await new ResultService(workflow).overview(runId, options.runtimeDb);
+    if (!results.resultRoot) throw new Error('当前任务没有可打包的结果目录。');
+    await writeResultArchive(response, results.resultRoot, runId);
     return;
   }
 
@@ -608,13 +835,57 @@ const writeResultAsset = async (
     'Content-Type': contentType,
     'Content-Length': String(content.byteLength),
     'X-Content-Type-Options': 'nosniff',
+    ...(extension === '.html' ? { 'Content-Security-Policy': 'sandbox allow-scripts' } : {}),
   });
   response.end(content);
 };
 
-const writeCors = (response: ServerResponse): void => {
-  response.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:4320');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+const writeResultArchive = async (
+  response: ServerResponse,
+  resultRoot: string,
+  runId: string,
+): Promise<void> => {
+  const root = path.resolve(resultRoot);
+  const metadata = await stat(root);
+  if (!metadata.isDirectory()) throw new Error('The result archive source is not a directory.');
+  writeCors(response);
+  response.writeHead(200, {
+    'Content-Type': 'application/gzip',
+    'Content-Disposition': `attachment; filename="theta-results-${runId.replace(/[^a-z0-9._-]/giu, '_')}.tar.gz"`,
+    'X-Content-Type-Options': 'nosniff',
+  });
+  await new Promise<void>((resolve, reject) => {
+    const archive = spawn('tar', ['-czf', '-', '-C', root, '.'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stderr = '';
+    archive.stderr.on('data', (chunk: Buffer) => {
+      stderr = `${stderr}${chunk.toString('utf8')}`.slice(-2000);
+    });
+    archive.on('error', reject);
+    archive.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Result archive failed (${String(code)}): ${stderr}`));
+    });
+    archive.stdout.pipe(response);
+  });
+};
+
+const writeCors = (response: ServerResponse, origin?: string): void => {
+  const configured = (process.env.THETA_WEB_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowed = new Set([
+    'http://127.0.0.1:4318',
+    'http://localhost:4318',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+    ...configured,
+  ]);
+  if (origin && allowed.has(origin)) response.setHeader('Access-Control-Allow-Origin', origin);
+  response.setHeader('Vary', 'Origin');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   response.setHeader('Cache-Control', 'no-store');
 };
@@ -707,6 +978,7 @@ const appendRunMessage = (
       content,
       createdAt: new Date().toISOString(),
     });
+    store.refreshMemory(sessionId);
   } finally {
     store.close();
   }
@@ -928,6 +1200,23 @@ const executeRunAction = async (
     );
     return result;
   }
+  if (action.action === 'reject') {
+    appendRunMessage(runtimeDb, runId, 'user', 'human.review.rejected', action.reason);
+    const result = await workflow.resume({
+      runId,
+      runtimeDb,
+      reject: true,
+      approvedBy: 'local_user',
+    });
+    appendRunMessage(
+      runtimeDb,
+      runId,
+      'assistant',
+      'human.review.rejection-recorded',
+      '已记录拒绝原因，Agent 不会继续执行该审批动作。',
+    );
+    return result;
+  }
   const store = new SQLiteConversationStore(runtimeDb);
   try {
     const sessionId = `theta-web-${runId}`;
@@ -1134,8 +1423,10 @@ const buildReasoning = async (
     .map((event) => {
       const record = asRecord(event.payload);
       const toolId = stringField(record, 'toolId') ?? 'unknown-tool';
+      const invocationId = stringField(record, 'invocationId');
       return {
         eventId: event.id,
+        ...(invocationId ? { invocationId } : {}),
         toolId,
         phase: toolPhases[event.type],
         label: EVENT_TITLES[event.type] ?? event.type,
@@ -1435,7 +1726,10 @@ const persistInitialDatasetConversation = (
       content: researchGoal,
       createdAt: new Date().toISOString(),
     });
-    if (!facts || !understanding) return;
+    if (!facts || !understanding) {
+      store.refreshMemory(sessionId);
+      return;
+    }
     store.appendMessage({
       messageId: `message.assistant.${randomUUID()}`,
       sessionId,
@@ -1451,6 +1745,38 @@ const persistInitialDatasetConversation = (
       ].join(' '),
       createdAt: new Date().toISOString(),
     });
+    store.refreshMemory(sessionId);
+  } finally {
+    store.close();
+  }
+};
+
+const promoteWorkspaceConversation = (
+  runtimeDb: string,
+  sourceSessionId: string,
+  runId: string,
+): void => {
+  if (!sourceSessionId.startsWith('theta-web-workspace-')) {
+    throw new SyntaxError('sourceSessionId is not a workspace conversation.');
+  }
+  const store = new SQLiteConversationStore(runtimeDb);
+  try {
+    if (!store.getSession(sourceSessionId)) return;
+    const targetSessionId = `theta-web-${runId}`;
+    store.getOrCreateSession(targetSessionId, { activeRunId: runId });
+    for (const message of store.listRecentMessages(sourceSessionId, 100)) {
+      if (message.role !== 'user' && message.role !== 'assistant') continue;
+      store.appendMessage({
+        messageId: `message.${message.role}.${randomUUID()}`,
+        sessionId: targetSessionId,
+        runId,
+        role: message.role,
+        messageKind: message.messageKind,
+        content: message.content,
+        createdAt: message.createdAt,
+      });
+    }
+    store.refreshMemory(targetSessionId);
   } finally {
     store.close();
   }

@@ -1,20 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  createWorkspaceSession,
+  deleteWorkspaceSession,
   deleteRun,
   getConversation,
   getEvents,
   getReasoning,
   getRun,
   getRuntimeProfile,
+  getWorkspaceConversation,
+  listWorkspaceSessions,
   listRuns,
   openRunStream,
   postMessage,
+  postWorkspaceMessage,
+  renameRun,
+  renameWorkspaceSession,
+  type WebAgentInteraction,
+  type WebAttachment,
+  type WebConversationMemory,
   type WebMessage,
   type WebReasoning,
   type WebRunEvent,
   type WebRunStatus,
   type WebRunSummary,
   type WebRuntimeProfile,
+  type WebRunResults,
+  type WebWorkspaceSummary,
 } from './api/client.ts'
 import {
   BrandWordmark,
@@ -24,10 +36,9 @@ import {
   IconTrashOutline16,
   StateDot,
 } from './ui/index.ts'
-import { ConversationPane } from './panels/ConversationPane.tsx'
+import { ConversationPane, type QueuedChatMessage } from './panels/ConversationPane.tsx'
 import { DetailPane } from './panels/DetailPane.tsx'
-import { InferenceSelector } from './panels/InferenceSelector.tsx'
-import { NewRunDialog } from './panels/NewRunDialog.tsx'
+import { usePreferences } from './preferences.tsx'
 import './styles/base.css'
 import css from './styles/app.module.css'
 
@@ -42,30 +53,52 @@ const dotState = (value?: string): 'error' | 'warning' | 'done' | 'ongoing' =>
         ? 'done'
         : 'ongoing'
 
-const relativeTime = (timestamp: string): string => {
+const relativeTime = (timestamp: string, locale: 'zh-CN' | 'en'): string => {
   const elapsed = Date.now() - Date.parse(timestamp)
-  if (!Number.isFinite(elapsed) || elapsed < 0) return '刚刚'
+  if (!Number.isFinite(elapsed) || elapsed < 0) return locale === 'zh-CN' ? '刚刚' : 'now'
   const minutes = Math.floor(elapsed / 60_000)
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
+  if (minutes < 1) return locale === 'zh-CN' ? '刚刚' : 'now'
+  if (minutes < 60) return locale === 'zh-CN' ? `${minutes} 分钟前` : `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-  return `${Math.floor(hours / 24)} 天前`
+  if (hours < 24) return locale === 'zh-CN' ? `${hours} 小时前` : `${hours}h ago`
+  return locale === 'zh-CN' ? `${Math.floor(hours / 24)} 天前` : `${Math.floor(hours / 24)}d ago`
+}
+
+const runStateLabel = (state: string | undefined, status: string, locale: 'zh-CN' | 'en'): string => {
+  const waiting = status === 'waiting_human'
+  if (locale === 'en') {
+    if (status === 'completed') return 'Completed'
+    if (status === 'failed') return 'Needs attention'
+    if (waiting) return 'Waiting for you'
+    return 'In progress'
+  }
+  if (status === 'completed') return '已完成'
+  if (status === 'failed') return '需要处理'
+  if (waiting) return state?.includes('Training') ? '等待启动确认' : '等待你确认'
+  return '进行中'
 }
 
 export const AppRoot = (): React.ReactElement => {
+  const { locale, setLocale, resolvedTheme, toggleTheme, t } = usePreferences()
   const [runs, setRuns] = useState<WebRunSummary[]>([])
+  const [workspaceSessions, setWorkspaceSessions] = useState<WebWorkspaceSummary[]>([])
   const [runsLoading, setRunsLoading] = useState(true)
   const [selectedRunId, setSelectedRunId] = useState<string>()
   const [messages, setMessages] = useState<WebMessage[]>([])
   const [status, setStatus] = useState<WebRunStatus>()
   const [events, setEvents] = useState<WebRunEvent[]>([])
   const [reasoning, setReasoning] = useState<WebReasoning>()
+  const [results, setResults] = useState<WebRunResults>()
+  const [memory, setMemory] = useState<WebConversationMemory>()
   const [sending, setSending] = useState(false)
+  const [queued, setQueued] = useState<Array<QueuedChatMessage & { runId?: string; workspaceSessionId?: string }>>([])
+  const [attachments, setAttachments] = useState<WebAttachment[]>([])
   const [loadError, setLoadError] = useState<string>()
   const [streamState, setStreamState] = useState<StreamState>('idle')
   const [runtimeProfile, setRuntimeProfile] = useState<WebRuntimeProfile>()
-  const [newRunOpen, setNewRunOpen] = useState(false)
+  const [workspaceSessionId, setWorkspaceSessionId] = useState<string>()
+  const [workspaceInteraction, setWorkspaceInteraction] = useState<WebAgentInteraction>()
+  const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; result?: unknown; evidenceRefs?: unknown }>()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(true)
   const knownMessageIds = useRef(new Set<string>())
@@ -86,9 +119,18 @@ export const AppRoot = (): React.ReactElement => {
     }
   }, [])
 
+  const refreshWorkspaceSessions = useCallback(async () => {
+    try {
+      setWorkspaceSessions((await listWorkspaceSessions()).sessions)
+    } catch {
+      setWorkspaceSessions([])
+    }
+  }, [])
+
   useEffect(() => {
     void refreshRuns()
-  }, [refreshRuns])
+    void refreshWorkspaceSessions()
+  }, [refreshRuns, refreshWorkspaceSessions])
 
   useEffect(() => {
     void getRuntimeProfile()
@@ -134,6 +176,8 @@ export const AppRoot = (): React.ReactElement => {
       mergeMessages(conversation.messages)
       setEvents(eventData.events)
       setReasoning(reasoningData)
+      setResults(detail.results)
+      setMemory(conversation.memory)
       setLoadError(undefined)
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error))
@@ -152,6 +196,8 @@ export const AppRoot = (): React.ReactElement => {
     setMessages([])
     setEvents([])
     setReasoning(undefined)
+    setResults(undefined)
+    setMemory(undefined)
     setStatus(undefined)
     setStreamState('connecting')
     knownMessageIds.current.clear()
@@ -169,6 +215,8 @@ export const AppRoot = (): React.ReactElement => {
         mergeMessages(conversation.messages)
         setEvents(eventData.events)
         setReasoning(reasoningData)
+        setResults(detail.results)
+        setMemory(conversation.memory)
       } catch (error) {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error))
       }
@@ -210,30 +258,143 @@ export const AppRoot = (): React.ReactElement => {
     }
   }, [selectedRunId, mergeMessages])
 
-  const send = useCallback(async (text: string) => {
-    if (!selectedRunId || sending) return
+  const enqueue = useCallback((text: string, nextAttachments: WebAttachment[]) => {
+    setQueued((current) => [...current, {
+      id: crypto.randomUUID(),
+      text,
+      attachments: nextAttachments,
+      ...(selectedRunId ? { runId: selectedRunId } : {}),
+      ...(workspaceSessionId ? { workspaceSessionId } : {}),
+    }])
+  }, [selectedRunId, workspaceSessionId])
+
+  useEffect(() => {
+    const next = queued[0]
+    if (!next || sending) return
     setSending(true)
     setLoadError(undefined)
+    void (async () => {
+      try {
+        if (next.runId) {
+          const result = await postMessage(next.runId, next.text, true, next.attachments)
+          if (selectedRunId === next.runId) {
+            setStatus(result.status)
+            mergeMessages(result.messages)
+          }
+          void refreshRuns()
+        } else {
+          let sessionId = next.workspaceSessionId ?? workspaceSessionId
+          if (!sessionId) {
+            const created = await createWorkspaceSession()
+            sessionId = created.sessionId
+            setWorkspaceSessionId(sessionId)
+            setWorkspaceInteraction(created.interaction)
+          }
+          const result = await postWorkspaceMessage(sessionId, next.text)
+          if (selectedRunId == null) {
+            mergeMessages(result.messages)
+            setWorkspaceInteraction(result.interaction)
+            setWorkspaceActivity(result.activity)
+            setMemory(result.memory)
+          }
+          void refreshWorkspaceSessions()
+        }
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : String(error))
+      } finally {
+        setQueued((current) => current.filter((item) => item.id !== next.id))
+        setSending(false)
+      }
+    })()
+  }, [queued, sending, selectedRunId, workspaceSessionId, mergeMessages, refreshRuns, refreshWorkspaceSessions])
+
+  const startNewConversation = useCallback(async () => {
+    setSelectedRunId(undefined)
+    setMessages([])
+    setEvents([])
+    setReasoning(undefined)
+    setResults(undefined)
+    setMemory(undefined)
+    setStatus(undefined)
+    setWorkspaceActivity(undefined)
+    setWorkspaceInteraction(undefined)
+    setAttachments([])
+    knownMessageIds.current.clear()
     try {
-      const result = await postMessage(selectedRunId, text)
-      setStatus(result.status)
-      mergeMessages(result.messages)
-      void refreshRuns()
+      const created = await createWorkspaceSession()
+      setWorkspaceSessionId(created.sessionId)
+      setWorkspaceInteraction(created.interaction)
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error))
-    } finally {
-      setSending(false)
     }
-  }, [selectedRunId, sending, mergeMessages, refreshRuns])
+  }, [])
 
-  const removeSelectedRun = async (): Promise<void> => {
-    if (!selectedRunId || !window.confirm('删除该研究任务及其本地运行记录？此操作无法撤销。')) return
+  const removeRun = async (runId: string): Promise<void> => {
+    if (!window.confirm(locale === 'zh-CN' ? '删除该研究任务及其本地运行记录？此操作无法撤销。' : 'Delete this research task and its local records? This cannot be undone.')) return
     try {
-      await deleteRun(selectedRunId)
-      setSelectedRunId(undefined)
-      setMessages([])
-      setStatus(undefined)
+      await deleteRun(runId)
+      if (selectedRunId === runId) {
+        setSelectedRunId(undefined)
+        setMessages([])
+        setStatus(undefined)
+      }
       await refreshRuns()
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const renameHistory = async (run: WebRunSummary): Promise<void> => {
+    const current = run.identity?.displayName ?? run.presentation?.title ?? run.runId
+    const displayName = window.prompt(locale === 'zh-CN' ? '修改对话名称' : 'Rename conversation', current)?.trim()
+    if (!displayName || displayName === current) return
+    try {
+      await renameRun(run.runId, displayName)
+      await refreshRuns()
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const selectWorkspaceHistory = async (sessionId: string): Promise<void> => {
+    setSelectedRunId(undefined)
+    setMessages([])
+    setStatus(undefined)
+    setEvents([])
+    setReasoning(undefined)
+    setResults(undefined)
+    setWorkspaceActivity(undefined)
+    setWorkspaceInteraction(undefined)
+    setAttachments([])
+    knownMessageIds.current.clear()
+    try {
+      const conversation = await getWorkspaceConversation(sessionId)
+      setWorkspaceSessionId(sessionId)
+      setWorkspaceInteraction(conversation.interaction)
+      setMemory(conversation.memory)
+      mergeMessages(conversation.messages)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const renameWorkspaceHistory = async (session: WebWorkspaceSummary): Promise<void> => {
+    const displayName = window.prompt(locale === 'zh-CN' ? '修改对话名称' : 'Rename conversation', session.title)?.trim()
+    if (!displayName || displayName === session.title) return
+    try {
+      await renameWorkspaceSession(session.sessionId, displayName)
+      await refreshWorkspaceSessions()
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const removeWorkspaceHistory = async (session: WebWorkspaceSummary): Promise<void> => {
+    if (!window.confirm(locale === 'zh-CN' ? '删除这个对话？' : 'Delete this conversation?')) return
+    try {
+      await deleteWorkspaceSession(session.sessionId)
+      if (workspaceSessionId === session.sessionId) await startNewConversation()
+      await refreshWorkspaceSessions()
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error))
     }
@@ -277,39 +438,16 @@ export const AppRoot = (): React.ReactElement => {
           <span className={css.topbarSubtitle}>{selectedRun?.identity?.datasetName ?? 'THETA autonomous research agent'}</span>
         </div>
         <div className={css.topbarActions}>
-          <div
-            className={css.computeState}
-            title={runtimeProfile == null
-              ? '正在读取 Agent 计算运行时'
-              : `${runtimeProfile.capabilities.tools} tools · ${runtimeProfile.capabilities.skills} skills`}
-          >
+          <div className={`${css.connectionState} ${css[`connection_${streamState}`]}`} title={streamState}>
             <span />
-            {runtimeProfile == null
-              ? 'RUNTIME'
-              : `${runtimeProfile.compute.defaultDevice.toUpperCase()} · ${runtimeProfile.compute.backend.toUpperCase()}`}
+            {streamState === 'live' ? (locale === 'zh-CN' ? '实时' : 'Live') : (locale === 'zh-CN' ? '本地' : 'Local')}
           </div>
-          <InferenceSelector />
-          <div className={`${css.connectionState} ${css[`connection_${streamState}`]}`}>
-            <span />
-            {streamState === 'live'
-              ? '实时'
-              : streamState === 'reconnecting'
-                ? '重连中'
-                : streamState === 'connecting'
-                  ? '连接中'
-                  : '待机'}
-          </div>
-          {selectedRunId != null && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className={css.iconButton}
-              aria-label="删除当前任务"
-              onClick={() => void removeSelectedRun()}
-            >
-              <IconTrashOutline16 />
-            </Button>
-          )}
+          <button type="button" className={css.preferenceButton} onClick={toggleTheme} title={resolvedTheme === 'dark' ? t('light') : t('dark')}>
+            {resolvedTheme === 'dark' ? '☼' : '◐'}
+          </button>
+          <button type="button" className={css.preferenceButton} onClick={() => setLocale(locale === 'zh-CN' ? 'en' : 'zh-CN')}>
+            {locale === 'zh-CN' ? 'EN' : '中'}
+          </button>
           {selectedRunId != null && (
             <Button
               size="sm"
@@ -338,40 +476,64 @@ export const AppRoot = (): React.ReactElement => {
               variant="primary"
               className={css.newRunButton}
               icon={<IconNewChatOutline16 />}
-              onClick={() => {
-                setSelectedRunId(undefined)
-                setMessages([])
-                setEvents([])
-                setReasoning(undefined)
-                setStatus(undefined)
-              }}
+              onClick={() => void startNewConversation()}
             >
-              新建研究任务
+              {t('newChat')}
             </Button>
             <div className={css.sidebarHeading}>
-              <span>RESEARCH RUNS</span>
-              <span>{runs.length}</span>
+              <span>{t('history')}</span>
+              <span>{runs.length + workspaceSessions.length}</span>
             </div>
             <nav className={css.runList} aria-label="研究任务">
               {runsLoading && <div className={css.sidebarEmpty}>正在同步任务目录…</div>}
-              {!runsLoading && runs.length === 0 && (
-                <div className={css.sidebarEmpty}>还没有任务。上传数据集后开始第一次研究。</div>
+              {!runsLoading && runs.length === 0 && workspaceSessions.length === 0 && (
+                <div className={css.sidebarEmpty}>{t('emptyHistory')}</div>
               )}
+              {workspaceSessions.map((session) => (
+                <div key={session.sessionId} className={css.runRow}>
+                  <button
+                    type="button"
+                    className={`${css.runItem} ${session.sessionId === workspaceSessionId && selectedRunId == null ? css.runItemActive : ''}`}
+                    onClick={() => void selectWorkspaceHistory(session.sessionId)}
+                  >
+                    <span className={css.runName}>{session.title}</span>
+                    <span className={css.runDataset}>{locale === 'zh-CN' ? '普通对话' : 'Conversation'} · {session.messageCount} messages</span>
+                    <span className={css.runMeta}>
+                      <StateDot size={7} state="done" />
+                      <span>{locale === 'zh-CN' ? '可继续' : 'Ready'}</span>
+                      <time dateTime={session.updatedAt}>{relativeTime(session.updatedAt, locale)}</time>
+                    </span>
+                  </button>
+                  <div className={css.runActions}>
+                    <button type="button" title={t('rename')} onClick={() => void renameWorkspaceHistory(session)}>✎</button>
+                    <button type="button" title={t('delete')} onClick={() => void removeWorkspaceHistory(session)}><IconTrashOutline16 /></button>
+                  </div>
+                </div>
+              ))}
               {runs.map((run) => (
-                <button
-                  key={run.runId}
-                  type="button"
-                  className={`${css.runItem} ${run.runId === selectedRunId ? css.runItemActive : ''}`}
-                  onClick={() => setSelectedRunId(run.runId)}
-                >
-                  <span className={css.runName}>{run.identity?.displayName ?? run.presentation?.title ?? run.runId}</span>
-                  <span className={css.runDataset}>{run.identity?.datasetName ?? run.identity?.researchQuestion ?? 'Local research run'}</span>
-                  <span className={css.runMeta}>
-                    <StateDot size={7} state={dotState(run.status)} />
-                    <span>{run.currentState ?? run.status}</span>
-                    <time dateTime={run.updatedAt}>{relativeTime(run.updatedAt)}</time>
-                  </span>
-                </button>
+                <div key={run.runId} className={css.runRow}>
+                  <button
+                    type="button"
+                    className={`${css.runItem} ${run.runId === selectedRunId ? css.runItemActive : ''}`}
+                    onClick={() => {
+                      setWorkspaceSessionId(undefined)
+                      setWorkspaceActivity(undefined)
+                      setSelectedRunId(run.runId)
+                    }}
+                  >
+                    <span className={css.runName}>{run.identity?.displayName ?? run.presentation?.title ?? run.runId}</span>
+                    <span className={css.runDataset}>{run.identity?.datasetName ?? run.identity?.researchQuestion ?? 'Local research run'}</span>
+                    <span className={css.runMeta}>
+                      <StateDot size={7} state={dotState(run.status)} />
+                      <span>{runStateLabel(run.currentState, run.status, locale)}</span>
+                      <time dateTime={run.updatedAt}>{relativeTime(run.updatedAt, locale)}</time>
+                    </span>
+                  </button>
+                  <div className={css.runActions}>
+                    <button type="button" title={t('rename')} onClick={() => void renameHistory(run)}>✎</button>
+                    <button type="button" title={t('delete')} onClick={() => void removeRun(run.runId)}><IconTrashOutline16 /></button>
+                  </div>
+                </div>
               ))}
             </nav>
             <div className={css.sidebarFooter}>
@@ -394,17 +556,23 @@ export const AppRoot = (): React.ReactElement => {
               <ConversationPane
                 messages={messages}
                 sending={sending}
-                onSend={send}
-                onCreate={() => setNewRunOpen(true)}
+                queued={queued.filter((item) => item.runId === selectedRunId && item.workspaceSessionId === (selectedRunId ? undefined : workspaceSessionId))}
+                onSend={enqueue}
                 onCreated={(runId) => {
                   setSelectedRunId(runId)
+                  setWorkspaceSessionId(undefined)
+                  setWorkspaceActivity(undefined)
                   void refreshRuns()
                 }}
-                entryInteraction={runtimeProfile?.entryInteraction}
+                workspaceSessionId={workspaceSessionId}
+                entryInteraction={workspaceInteraction ?? runtimeProfile?.entryInteraction}
+                workspaceActivity={workspaceActivity}
                 runId={selectedRunId}
                 status={status}
                 reasoning={reasoning}
                 onApproved={() => void refreshRun()}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
               />
             )}
         </main>
@@ -415,19 +583,15 @@ export const AppRoot = (): React.ReactElement => {
             status={status}
             events={events}
             reasoning={reasoning}
+            results={results}
+            memory={memory}
+            onAttach={(attachment) => {
+              setAttachments((current) => [...current.filter((item) => item.id !== attachment.id), attachment].slice(-12))
+            }}
             onChanged={() => void refreshRun()}
           />
         )}
       </div>
-
-      <NewRunDialog
-        open={newRunOpen}
-        onClose={() => setNewRunOpen(false)}
-        onCreated={(runId) => {
-          setSelectedRunId(runId)
-          void refreshRuns()
-        }}
-      />
     </div>
   )
 }

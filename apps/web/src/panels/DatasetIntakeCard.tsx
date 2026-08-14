@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createRun,
   listDatasets,
@@ -7,10 +7,13 @@ import {
   type WebDataset,
 } from '../api/client.ts'
 import { Button } from '../ui/index.ts'
+import { usePreferences } from '../preferences.tsx'
 import css from '../styles/app.module.css'
 
 interface DatasetIntakeCardProps {
   interaction: WebAgentInteraction
+  sourceSessionId?: string
+  initialGoal?: string
   onCreated: (runId: string) => void
 }
 
@@ -22,17 +25,23 @@ const readableBytes = (value: number): string => {
 
 export const DatasetIntakeCard = ({
   interaction,
+  sourceSessionId,
+  initialGoal = '',
   onCreated,
 }: DatasetIntakeCardProps): React.ReactElement => {
+  const { locale, t } = usePreferences()
   const [datasets, setDatasets] = useState<WebDataset[]>([])
   const [datasetRef, setDatasetRef] = useState('')
-  const [researchGoal, setResearchGoal] = useState('')
-  const [useLanguageProvider, setUseLanguageProvider] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string>()
+  const fileInput = useRef<HTMLInputElement>(null)
+  const folderInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    folderInput.current?.setAttribute('webkitdirectory', '')
+    folderInput.current?.setAttribute('directory', '')
     void listDatasets()
       .then(({ datasets: available }) => {
         setDatasets(available)
@@ -48,14 +57,21 @@ export const DatasetIntakeCard = ({
     [datasets, datasetRef],
   )
 
-  const upload = async (file?: File): Promise<void> => {
-    if (!file || uploading) return
+  const uploadFiles = async (files: File[]): Promise<void> => {
+    const accepted = files
+      .filter((file) => /\.(csv|tsv|json|jsonl|txt|xlsx|xls|parquet)$/iu.test(file.name))
+      .slice(0, 25)
+    if (accepted.length === 0 || uploading) return
     setUploading(true)
     setError(undefined)
     try {
-      const dataset = await uploadDataset(file)
-      setDatasets((current) => [dataset, ...current.filter((item) => item.datasetRef !== dataset.datasetRef)])
-      setDatasetRef(dataset.datasetRef)
+      const uploaded: WebDataset[] = []
+      for (const file of accepted) uploaded.push(await uploadDataset(file))
+      setDatasets((current) => [
+        ...uploaded,
+        ...current.filter((item) => !uploaded.some((next) => next.datasetRef === item.datasetRef)),
+      ])
+      setDatasetRef(uploaded[0]?.datasetRef ?? '')
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : String(uploadError))
     } finally {
@@ -70,8 +86,9 @@ export const DatasetIntakeCard = ({
     try {
       const result = await createRun({
         datasetRef,
-        ...(researchGoal.trim().length >= 4 ? { researchGoal: researchGoal.trim() } : {}),
-        useLanguageProvider,
+        ...(initialGoal.trim().length >= 4 ? { researchGoal: initialGoal.trim() } : {}),
+        useLanguageProvider: true,
+        ...(sourceSessionId ? { sourceSessionId } : {}),
       })
       onCreated(result.runId)
     } catch (createError) {
@@ -82,62 +99,50 @@ export const DatasetIntakeCard = ({
   }
 
   return (
-    <section className={`${css.agentCard} ${css.intakeCard}`} aria-label={interaction.card?.title}>
-      <div className={css.agentCardHead}>
-        <span>01 · DATA INTAKE</span>
-        <strong>{interaction.card?.title ?? '上传研究数据'}</strong>
+    <section className={`${css.contextCard} ${dragging ? css.contextCardDragging : ''}`} aria-label={interaction.card?.title}>
+      <div className={css.contextCardCopy}>
+        <span>DATA REQUEST</span>
+        <strong>{interaction.card?.title ?? t('addData')}</strong>
         <p>{interaction.card?.description}</p>
       </div>
-      <div className={css.agentCardBody}>
-        <label className={css.fieldLabel} htmlFor="inline-dataset-select">已注册数据</label>
-        <select
-          id="inline-dataset-select"
-          className={css.selectControl}
-          value={datasetRef}
-          onChange={(event) => setDatasetRef(event.target.value)}
-        >
-          {datasets.length === 0 && <option value="">尚未上传数据集</option>}
+      <div
+        className={css.contextDropzone}
+        onDragEnter={(event) => { event.preventDefault(); setDragging(true) }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault()
+          setDragging(false)
+          void uploadFiles(Array.from(event.dataTransfer.files))
+        }}
+      >
+        <span>{uploading ? (locale === 'zh-CN' ? '正在注册数据…' : 'Registering data…') : t('chooseFiles')}</span>
+        <div>
+          <Button size="sm" variant="outline" disabled={uploading} onClick={() => fileInput.current?.click()}>
+            {locale === 'zh-CN' ? '选择文件' : 'Choose files'}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={uploading} onClick={() => folderInput.current?.click()}>
+            {locale === 'zh-CN' ? '选择文件夹' : 'Choose folder'}
+          </Button>
+        </div>
+        <input ref={fileInput} type="file" multiple hidden onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))} />
+        <input ref={folderInput} type="file" multiple hidden onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))} />
+      </div>
+      <div className={css.contextCardActions}>
+        <select value={datasetRef} onChange={(event) => setDatasetRef(event.target.value)}>
+          {datasets.length === 0 && <option value="">{locale === 'zh-CN' ? '还没有数据' : 'No data yet'}</option>}
           {datasets.map((dataset) => (
             <option key={dataset.datasetRef} value={dataset.datasetRef}>
               {dataset.name} · {readableBytes(dataset.sizeBytes)}
             </option>
           ))}
         </select>
-        {selected != null && <span className={css.fieldHint}>{selected.suffix.toUpperCase()} · 已完成本地注册</span>}
-
-        <label className={css.uploadBox}>
-          <input
-            type="file"
-            accept=".csv,.tsv,.json,.jsonl,.txt,.xlsx,.xls,.parquet"
-            disabled={uploading}
-            onChange={(event) => void upload(event.target.files?.[0])}
-          />
-          <span>{uploading ? '正在安全注册数据…' : '拖入或选择新的数据集'}</span>
-          <small>文件只写入本地受管目录；Agent 在创建 Run 后才会读取。</small>
-        </label>
-
-        <label className={css.fieldLabel} htmlFor="inline-research-goal">给 Agent 的研究方向</label>
-        <textarea
-          id="inline-research-goal"
-          className={css.textareaControl}
-          rows={3}
-          value={researchGoal}
-          placeholder="例如：识别用户反馈中的核心主题，并解释负面体验。留空则自主探索。"
-          onChange={(event) => setResearchGoal(event.target.value)}
-        />
-        <label className={css.checkRow}>
-          <input
-            type="checkbox"
-            checked={useLanguageProvider}
-            onChange={(event) => setUseLanguageProvider(event.target.checked)}
-          />
-          <span>允许 DeepSeek 执行结构化 Agent 推理<small>Tool 仍受 FSM allowlist、Hypha policy 与审批约束。</small></span>
-        </label>
-        {error != null && <div className={css.formError}>{error}</div>}
-        <Button variant="primary" disabled={!datasetRef || uploading || creating} onClick={() => void start()}>
-          {creating ? '正在创建 FSM Run…' : '交给 Agent 开始研究'}
+        {selected != null && <small>{selected.suffix.toUpperCase()} · {locale === 'zh-CN' ? '本地受管注册' : 'locally managed'}</small>}
+        <Button size="sm" variant="primary" disabled={!datasetRef || uploading || creating} onClick={() => void start()}>
+          {creating ? (locale === 'zh-CN' ? '创建中…' : 'Creating…') : t('run')}
         </Button>
       </div>
+      {error != null && <div className={css.formError}>{error}</div>}
     </section>
   )
 }

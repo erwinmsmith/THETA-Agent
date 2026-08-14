@@ -37,6 +37,10 @@ export const thetaWebRunActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('adjustPlan'), text: z.string().trim().min(1).max(4000) }).strict(),
   z.object({ action: z.literal('approvePlan'), acceptDegradation: z.boolean().default(false) }).strict(),
   z.object({ action: z.literal('startTraining') }).strict(),
+  z.object({
+    action: z.literal('reject'),
+    reason: z.string().trim().min(1).max(1000),
+  }).strict(),
   z.object({ action: z.literal('poll') }).strict(),
   z.object({ action: z.literal('retry') }).strict(),
 ]);
@@ -49,6 +53,7 @@ export const thetaWebCreateRunSchema = z.object({
   /** @deprecated Use useLanguageProvider. */
   useMiniMax: z.boolean().optional(),
   allowRemoteSamples: z.boolean().default(false),
+  sourceSessionId: z.string().trim().min(8).max(200).optional(),
 }).strict().refine(
   (input) => Boolean(input.datasetRef || input.filePath),
   { message: 'datasetRef 或 filePath 至少提供一项。' },
@@ -76,6 +81,15 @@ export const thetaWebPostMessageSchema = z.object({
   useLanguageProvider: z.boolean().optional(),
   /** @deprecated Use useLanguageProvider. */
   useMiniMax: z.boolean().optional(),
+  attachments: z.array(z.object({
+    kind: z.enum(['visualization', 'topic', 'metric', 'table']),
+    id: z.string().trim().min(1).max(240),
+    label: z.string().trim().min(1).max(240),
+  }).strict()).max(12).default([]),
+}).strict();
+
+export const thetaWebRenameRunSchema = z.object({
+  displayName: z.string().trim().min(1).max(120),
 }).strict();
 
 export const thetaWebInferenceSelectionSchema = z.discriminatedUnion('action', [
@@ -88,6 +102,7 @@ export type ThetaWebCreateRun = z.infer<typeof thetaWebCreateRunSchema>;
 export type ThetaResultAnalysisRequest = z.infer<typeof thetaResultAnalysisRequestSchema>;
 export type ThetaWebPostMessage = z.infer<typeof thetaWebPostMessageSchema>;
 export type ThetaWebInferenceSelection = z.infer<typeof thetaWebInferenceSelectionSchema>;
+export type ThetaWebRenameRun = z.infer<typeof thetaWebRenameRunSchema>;
 
 export const thetaWebApiEnvelopeSchema = z.object({
   ok: z.boolean(),
@@ -221,6 +236,7 @@ export interface ThetaWebReasoningDecisionGap {
 
 export interface ThetaWebReasoningToolCall {
   eventId: string;
+  invocationId?: string;
   toolId: string;
   phase: 'requested' | 'started' | 'policy' | 'completed' | 'failed' | 'validated';
   label: string;

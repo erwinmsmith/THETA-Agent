@@ -198,6 +198,7 @@ export const conversationIntentSchema = z.enum([
   'reject_current',
   'help',
   'chat',
+  'needs_dataset',
   'research_answer',
   'unknown',
 ]);

@@ -82,25 +82,34 @@ const cardByActionRef: Readonly<Record<string, Omit<ThetaAgentActionCard, 'actio
   },
 };
 
-export const buildThetaWorkspaceInteraction = (): ThetaAgentInteraction => ({
+export const buildThetaWorkspaceInteraction = (
+  requestDataset = false,
+  observation = 'No active research Run exists in the workspace.',
+): ThetaAgentInteraction => ({
   source: 'fsm',
   state: THETA_WORKFLOW_STATES.intake,
   status: 'waiting_human',
   reasoning: {
     goal: 'Receive a registered dataset and a bounded research direction.',
-    observation: 'No active research Run exists in the workspace.',
-    decision: 'Request a dataset before creating the governed FSM Run.',
+    observation,
+    decision: requestDataset
+      ? 'Request a dataset because the user intent requires corpus evidence.'
+      : 'Wait for the user intent before requesting data or creating a governed FSM Run.',
     nextStates: resolveThetaWorkflowTransitionTargets(THETA_WORKFLOW_STATES.intake),
-    allowedTools: [],
+      allowedTools: ['theta.rag.search', 'theta.model.catalog'],
     policyRefs: [],
   },
-  card: {
-    kind: 'dataset_upload',
-    title: '上传研究数据',
-    description: '数据注册完成后，Agent 才会创建 Run 并进入 FSM 推理。',
-    actionRef: 'theta.dataset.register',
-    requiresHumanAction: true,
-  },
+  ...(requestDataset
+    ? {
+        card: {
+          kind: 'dataset_upload' as const,
+          title: '添加研究数据',
+          description: 'Agent 判断当前意图需要读取语料。你可以拖入文件，或选择文件/文件夹。',
+          actionRef: 'theta.dataset.register',
+          requiresHumanAction: true as const,
+        },
+      }
+    : {}),
 });
 
 export const buildThetaAgentInteraction = (value: unknown): ThetaAgentInteraction => {

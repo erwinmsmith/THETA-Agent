@@ -158,6 +158,8 @@ npm run start:api
 API 服务器同时托管对话式 Web 前端（`npm run build` 会构建 `apps/web`）：
 访问 `http://127.0.0.1:4318/` 即可使用研究列表、对话流、审批表单、工具调用
 轨迹、推理面板与 SSE 实时更新。详见 [docs/WEB.md](docs/WEB.md)。
+当前已经交付的能力和明确的实现缺口统一记录在
+[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) 中。
 
 首次会话示例：
 

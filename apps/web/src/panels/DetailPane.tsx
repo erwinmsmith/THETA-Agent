@@ -1,29 +1,30 @@
 import { useCallback, useState } from 'react'
 import {
   postAction,
+  type WebAttachment,
+  type WebConversationMemory,
   type WebReasoning,
   type WebRunEvent,
   type WebRunStatus,
+  type WebRunResults,
 } from '../api/client.ts'
 import { Button, JsonTree, Pill, StateDot } from '../ui/index.ts'
 import css from '../styles/app.module.css'
+import { usePreferences } from '../preferences.tsx'
+import { ResultsPreview } from './ResultsPreview.tsx'
 
-type TabId = 'status' | 'tools' | 'reasoning' | 'events'
+type TabId = 'results' | 'status' | 'tools' | 'reasoning' | 'events' | 'memory'
 
 interface DetailPaneProps {
   runId?: string
   status?: WebRunStatus
   events: WebRunEvent[]
   reasoning?: WebReasoning
+  results?: WebRunResults
+  memory?: WebConversationMemory
+  onAttach: (attachment: WebAttachment) => void
   onChanged: () => void
 }
-
-const TABS: Array<{ id: TabId; label: string }> = [
-  { id: 'status', label: '状态' },
-  { id: 'tools', label: '工具' },
-  { id: 'reasoning', label: '推理' },
-  { id: 'events', label: '事件' },
-]
 
 const stateOf = (status?: WebRunStatus): 'done' | 'warning' | 'ongoing' | 'error' =>
   status?.status === 'failed'
@@ -46,9 +47,13 @@ export const DetailPane = ({
   status,
   events,
   reasoning,
+  results,
+  memory,
+  onAttach,
   onChanged,
 }: DetailPaneProps): React.ReactElement => {
-  const [tab, setTab] = useState<TabId>('status')
+  const { locale, t } = usePreferences()
+  const [tab, setTab] = useState<TabId>('results')
   const [expandedEvent, setExpandedEvent] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string>()
@@ -68,6 +73,12 @@ export const DetailPane = ({
   }, [runId, busy, onChanged])
 
   const presentation = status?.presentation
+  const tabs: Array<{ id: TabId; label: string }> = [
+    { id: 'results', label: t('results') },
+    { id: 'status', label: t('status') },
+    { id: 'tools', label: t('activity') },
+    { id: 'memory', label: t('memory') },
+  ]
   const statePath = status?.statePath?.filter(
     (state, index, path) => index === 0 || state !== path[index - 1],
   )
@@ -75,11 +86,11 @@ export const DetailPane = ({
   return (
     <aside className={css.detail}>
       <div className={css.detailHeader}>
-        <span>RUN INSPECTOR</span>
-        <strong>{events.length} events</strong>
+          <span>{locale === 'zh-CN' ? '研究侧栏' : 'RESEARCH SIDECAR'}</span>
+          <strong>{results?.visualizations.length ?? 0} {locale === 'zh-CN' ? '个图表' : 'visuals'}</strong>
       </div>
       <div className={css.tabs}>
-        {TABS.map((item) => (
+        {tabs.map((item) => (
           <Pill key={item.id} active={tab === item.id} onClick={() => setTab(item.id)}>
             {item.label}
           </Pill>
@@ -87,6 +98,9 @@ export const DetailPane = ({
       </div>
       <div className={css.tabBody}>
         {runId == null && <div className={css.empty}>选择一个研究任务以查看运行详情。</div>}
+        {tab === 'results' && runId != null && (
+          <ResultsPreview runId={runId} results={results} onAttach={onAttach} />
+        )}
         {tab === 'status' && (
           <>
             {presentation != null && (
@@ -305,6 +319,26 @@ export const DetailPane = ({
                 )}
               </div>
             ))}
+          </>
+        )}
+        {tab === 'memory' && (
+          <>
+            {memory == null ? (
+              <div className={css.empty}>{locale === 'zh-CN' ? '还没有可用的对话记忆。' : 'No conversation memory is available yet.'}</div>
+            ) : (
+              <div className={css.section}>
+                <span className={css.sectionTitle}>{locale === 'zh-CN' ? '持久工作记忆' : 'Persistent working memory'}</span>
+                <span className={css.sectionLine}>{memory.summary}</span>
+                <span className={css.runMeta}>{memory.sourceMessageCount} messages · {memory.updatedAt.slice(0, 19)}</span>
+                {memory.recentUserGoals.map((goal) => <span key={goal} className={css.sectionLine}>• {goal}</span>)}
+              </div>
+            )}
+            {status != null && 'interviewMemory' in status && (
+              <div className={css.section}>
+                <span className={css.sectionTitle}>{locale === 'zh-CN' ? '研究访谈记忆' : 'Research interview memory'}</span>
+                <div className={css.toolCallPayload}>{jsonPayload((status as Record<string, unknown>).interviewMemory)}</div>
+              </div>
+            )}
           </>
         )}
       </div>

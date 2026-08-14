@@ -79,6 +79,22 @@ export interface ConversationTurn {
   updatedAt: string;
 }
 
+export interface ConversationMemory {
+  sessionId: string;
+  summary: string;
+  recentUserGoals: string[];
+  sourceMessageCount: number;
+  updatedAt: string;
+}
+
+export interface ConversationSessionSummary {
+  sessionId: string;
+  title: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ConversationStore {
   getOrCreateSession(
     sessionId: string,
@@ -108,5 +124,10 @@ export interface ConversationStore {
     error?: unknown,
   ): void;
   listRecoverableTurns(sessionId: string): ConversationTurn[];
+  refreshMemory(sessionId: string): ConversationMemory;
+  getMemory(sessionId: string): ConversationMemory | undefined;
+  listWorkspaceSessions(limit?: number): ConversationSessionSummary[];
+  renameSession(sessionId: string, title: string): ConversationSessionSummary;
+  deleteSession(sessionId: string): boolean;
   close(): void;
 }

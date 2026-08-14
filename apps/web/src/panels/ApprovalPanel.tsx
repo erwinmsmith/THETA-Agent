@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getStatus,
   postAction,
@@ -6,54 +6,24 @@ import {
   type WebReasoning,
   type WebRunStatus,
 } from '../api/client.ts'
-import { Button, Input } from '../ui/index.ts'
+import { Button } from '../ui/index.ts'
+import { usePreferences } from '../preferences.tsx'
 import css from '../styles/app.module.css'
 
-/** Approximate shapes of the dataset facts/understanding carried by /status. */
-interface ColumnFact {
-  name: string
-  dataType?: string
-  nonNullRatio?: number
-  sampleValues?: string[]
-}
-
-interface WebDatasetFacts {
-  rowCount?: number
-  columns?: ColumnFact[]
-}
-
-interface RoleColumns {
-  column: string
-}
-
-interface WebDatasetUnderstanding {
+interface RoleColumn { column: string }
+interface DatasetUnderstanding {
   domain?: { label?: string }
   analysisUnit?: string
-  textColumns?: RoleColumns[]
-  timeColumns?: RoleColumns[]
-  idColumns?: RoleColumns[]
-  metadataColumns?: RoleColumns[]
-  groupColumns?: RoleColumns[]
-  covariateColumns?: RoleColumns[]
-  evaluationColumns?: RoleColumns[]
-  ignoredColumns?: RoleColumns[]
+  textColumns?: RoleColumn[]
+  timeColumns?: RoleColumn[]
+  idColumns?: RoleColumn[]
+  metadataColumns?: RoleColumn[]
+  groupColumns?: RoleColumn[]
+  covariateColumns?: RoleColumn[]
+  evaluationColumns?: RoleColumn[]
+  ignoredColumns?: RoleColumn[]
 }
-
-type StatusExtras = WebRunStatus & {
-  datasetFacts?: WebDatasetFacts
-  datasetUnderstanding?: WebDatasetUnderstanding
-}
-
-const ROLE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'textColumns', label: '正文列' },
-  { value: 'timeColumns', label: '时间列' },
-  { value: 'idColumns', label: 'ID 列' },
-  { value: 'metadataColumns', label: '元数据列' },
-  { value: 'groupColumns', label: '分组列' },
-  { value: 'covariateColumns', label: '协变量列' },
-  { value: 'evaluationColumns', label: '评估列' },
-  { value: 'ignoredColumns', label: '忽略列' },
-]
+type StatusWithDataset = WebRunStatus & { datasetUnderstanding?: DatasetUnderstanding }
 
 interface ApprovalPanelProps {
   runId?: string
@@ -68,310 +38,99 @@ export const ApprovalPanel = ({
   reasoning,
   onApproved,
 }: ApprovalPanelProps): React.ReactElement | null => {
-  const cardKind = interaction.card?.kind
-  if (cardKind == null || runId == null) return null
-
-  if (cardKind === 'dataset_review' || cardKind === 'column_review') {
-    return <DatasetConfirmForm runId={runId} onApproved={onApproved} />
-  }
-  if (cardKind === 'research_intent_review') {
-    return <SimpleApproval runId={runId} onApproved={onApproved} />
-  }
-  if (cardKind === 'plan_review') {
-    return <PlanApproval runId={runId} reasoning={reasoning} onApproved={onApproved} />
-  }
-  if (cardKind === 'training_review') {
-    return <TrainingApproval runId={runId} onApproved={onApproved} />
-  }
-  return null
-}
-
-const DatasetConfirmForm = ({
-  runId,
-  onApproved,
-}: {
-  runId: string
-  onApproved: () => void
-}): React.ReactElement | null => {
-  const [status, setStatus] = useState<StatusExtras>()
-  const [domainLabel, setDomainLabel] = useState('')
-  const [analysisUnit, setAnalysisUnit] = useState('')
-  const [roles, setRoles] = useState<Record<string, string>>({})
-  const [busy, setBusy] = useState(false)
+  const { locale, t } = usePreferences()
+  const card = interaction.card
+  const [status, setStatus] = useState<StatusWithDataset>()
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState<'accept' | 'reject'>()
   const [error, setError] = useState<string>()
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const data = (await getStatus(runId)) as StatusExtras
-        setStatus(data)
-        const understanding = data.datasetUnderstanding
-        const nextRoles: Record<string, string> = {}
-        const roleSets: Array<[string, RoleColumns[] | undefined]> = [
-          ['textColumns', understanding?.textColumns],
-          ['timeColumns', understanding?.timeColumns],
-          ['idColumns', understanding?.idColumns],
-          ['metadataColumns', understanding?.metadataColumns],
-          ['groupColumns', understanding?.groupColumns],
-          ['covariateColumns', understanding?.covariateColumns],
-          ['evaluationColumns', understanding?.evaluationColumns],
-          ['ignoredColumns', understanding?.ignoredColumns],
-        ]
-        for (const [role, entries] of roleSets) {
-          for (const entry of entries ?? []) nextRoles[entry.column] = role
-        }
-        setRoles(nextRoles)
-        setDomainLabel(understanding?.domain?.label ?? '')
-        setAnalysisUnit(understanding?.analysisUnit ?? '')
-      } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : String(submitError))
-      }
-    })()
-  }, [runId])
+    if (!runId || (card?.kind !== 'dataset_review' && card?.kind !== 'column_review')) return
+    void getStatus(runId).then((value) => setStatus(value as StatusWithDataset)).catch((loadError: unknown) => {
+      setError(loadError instanceof Error ? loadError.message : String(loadError))
+    })
+  }, [runId, card?.kind])
 
-  const originalRoles = useMemo(() => {
-    const map: Record<string, string> = {}
-    const understanding = status?.datasetUnderstanding
-    const roleSets: Array<[string, RoleColumns[] | undefined]> = [
-      ['textColumns', understanding?.textColumns],
-      ['timeColumns', understanding?.timeColumns],
-      ['idColumns', understanding?.idColumns],
-      ['metadataColumns', understanding?.metadataColumns],
-      ['groupColumns', understanding?.groupColumns],
-      ['covariateColumns', understanding?.covariateColumns],
-      ['evaluationColumns', understanding?.evaluationColumns],
-      ['ignoredColumns', understanding?.ignoredColumns],
-    ]
-    for (const [role, entries] of roleSets) {
-      for (const entry of entries ?? []) map[entry.column] = role
-    }
-    return map
-  }, [status])
+  if (!runId || !card || card.kind === 'research_question' || card.kind === 'dataset_upload') return null
 
-  const submit = useCallback(async () => {
-    setBusy(true)
+  const accept = async (): Promise<void> => {
+    setBusy('accept')
     setError(undefined)
-    const columnList = (role: string): string[] =>
-      Object.entries(roles)
-        .filter(([, value]) => value === role)
-        .map(([column]) => column)
-    const changed =
-      Object.entries(roles).some(([column, role]) => originalRoles[column] !== role) ||
-      domainLabel !== (status?.datasetUnderstanding?.domain?.label ?? '') ||
-      analysisUnit !== (status?.datasetUnderstanding?.analysisUnit ?? '')
+    try {
+      if (card.kind === 'dataset_review' || card.kind === 'column_review') {
+        const understanding = status?.datasetUnderstanding
+        if (!understanding?.textColumns?.length) throw new Error(locale === 'zh-CN' ? '还没有可确认的正文列。' : 'No text column is available for confirmation.')
+        await postAction(runId, {
+          action: 'confirmDataset',
+          status: 'confirmed',
+          domainLabel: understanding.domain?.label ?? '通用文本数据',
+          analysisUnit: understanding.analysisUnit ?? '每一行是一条独立记录',
+          textColumns: columns(understanding.textColumns),
+          timeColumns: columns(understanding.timeColumns),
+          idColumns: columns(understanding.idColumns),
+          metadataColumns: columns(understanding.metadataColumns),
+          groupColumns: columns(understanding.groupColumns),
+          covariateColumns: columns(understanding.covariateColumns),
+          evaluationColumns: columns(understanding.evaluationColumns),
+          ignoredColumns: columns(understanding.ignoredColumns),
+        })
+      } else if (card.kind === 'research_intent_review') {
+        await postAction(runId, { action: 'confirmIntent' })
+      } else if (card.kind === 'plan_review') {
+        await postAction(runId, { action: 'approvePlan', acceptDegradation: false })
+      } else if (card.kind === 'training_review') {
+        await postAction(runId, { action: 'startTraining' })
+      }
+      onApproved()
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : String(submitError))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+
+  const reject = async (): Promise<void> => {
+    setBusy('reject')
+    setError(undefined)
     try {
       await postAction(runId, {
-        action: 'confirmDataset',
-        status: changed ? 'corrected' : 'confirmed',
-        domainLabel: domainLabel.trim() || '通用文本数据',
-        analysisUnit: analysisUnit.trim() || '每一行是一条独立记录',
-        textColumns: columnList('textColumns'),
-        timeColumns: columnList('timeColumns'),
-        idColumns: columnList('idColumns'),
-        metadataColumns: columnList('metadataColumns'),
-        groupColumns: columnList('groupColumns'),
-        covariateColumns: columnList('covariateColumns'),
-        evaluationColumns: columnList('evaluationColumns'),
-        ignoredColumns: columnList('ignoredColumns'),
+        action: 'reject',
+        reason: reason.trim() || (locale === 'zh-CN' ? '我拒绝当前建议，请重新评估并向我询问需要修正的信息。' : 'I reject this proposal. Re-evaluate it and ask what should be corrected.'),
       })
       onApproved()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : String(submitError))
     } finally {
-      setBusy(false)
+      setBusy(undefined)
     }
-  }, [roles, originalRoles, domainLabel, analysisUnit, status, runId, onApproved])
-
-  if (status?.datasetFacts == null) {
-    return <div className={css.banner}>正在加载数据集事实…</div>
   }
 
+  const planSummary = card.kind === 'plan_review' ? reasoning?.plan?.presentation?.summary : undefined
   return (
-    <div className={css.banner}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>
-        确认数据理解（{status.datasetFacts.rowCount ?? '?'} 行 · {status.datasetFacts.columns?.length ?? 0} 列）
+    <section className={css.approvalBar}>
+      <div className={css.approvalBarCopy}>
+        <span>HUMAN CHECK</span>
+        <strong>{card.title}</strong>
+        <p>{planSummary ?? card.description}</p>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label className={css.runMeta}>
-          领域
-          <Input
-            value={domainLabel}
-            onChange={(event) => setDomainLabel(event.target.value)}
-            style={{ marginTop: 2 }}
-          />
-        </label>
-        <label className={css.runMeta}>
-          分析单位
-          <Input
-            value={analysisUnit}
-            onChange={(event) => setAnalysisUnit(event.target.value)}
-            style={{ marginTop: 2 }}
-          />
-        </label>
-        {(status.datasetFacts.columns ?? []).map((column) => (
-          <label key={column.name} className={css.runMeta}>
-            {column.name}
-            <select
-              value={roles[column.name] ?? 'ignoredColumns'}
-              onChange={(event) =>
-                setRoles((current) => ({ ...current, [column.name]: event.target.value }))
-              }
-              style={{ marginLeft: 8 }}
-            >
-              {ROLE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-        {error != null && <span>{error}</span>}
-        <Button
-          variant="primary"
-          disabled={busy || !columnListOk(roles)}
-          onClick={() => void submit()}
-        >
-          {busy ? '提交中…' : '确认数据理解'}
+      <input
+        value={reason}
+        placeholder={t('reason')}
+        aria-label={t('reason')}
+        onChange={(event) => setReason(event.target.value)}
+      />
+      <div className={css.approvalBarActions}>
+        <Button size="sm" variant="ghost" disabled={busy != null} onClick={() => void reject()}>
+          {busy === 'reject' ? '…' : t('reject')}
+        </Button>
+        <Button size="sm" variant="primary" disabled={busy != null} onClick={() => void accept()}>
+          {busy === 'accept' ? '…' : t('accept')}
         </Button>
       </div>
-    </div>
-  )
-}
-
-const columnListOk = (roles: Record<string, string>): boolean =>
-  Object.values(roles).some((role) => role === 'textColumns')
-
-const SimpleApproval = ({
-  runId,
-  onApproved,
-}: {
-  runId: string
-  onApproved: () => void
-}): React.ReactElement => {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
-  return (
-    <div className={css.banner}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>研究意图确认</div>
-      <div style={{ marginBottom: 8 }}>
-        请查看右侧「推理」页的研究意图摘要；需要修改可直接在对话中输入，确认无误后点击批准。
-      </div>
-      {error != null && <div>{error}</div>}
-      <Button
-        variant="primary"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true)
-          setError(undefined)
-          void postAction(runId, { action: 'confirmIntent' })
-            .then(onApproved)
-            .catch((submitError: unknown) =>
-              setError(submitError instanceof Error ? submitError.message : String(submitError)),
-            )
-            .finally(() => setBusy(false))
-        }}
-      >
-        {busy ? '提交中…' : '批准研究意图'}
-      </Button>
-    </div>
-  )
-}
-
-const PlanApproval = ({
-  runId,
-  reasoning,
-  onApproved,
-}: {
-  runId: string
-  reasoning?: WebReasoning
-  onApproved: () => void
-}): React.ReactElement => {
-  const [acceptDegradation, setAcceptDegradation] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
-  return (
-    <section className={css.agentCard}>
-      <div className={css.agentCardHead}>
-        <span>PLAN · HUMAN REVIEW</span>
-        <strong>确认 Agent 生成的训练方案</strong>
-        <p>方案由 Planner、模型能力卡和 RAG 证据共同生成；批准只固化方案，不启动训练。</p>
-      </div>
-      <div className={css.agentCardBody}>
-        {reasoning?.plan?.presentation != null && (
-          <div className={css.planReviewSummary}>
-            <strong>{reasoning.plan.presentation.title}</strong>
-            <p>{reasoning.plan.presentation.summary}</p>
-            {reasoning.plan.presentation.sections?.slice(0, 4).map((section) => (
-              <div key={section.title}>
-                <span>{section.title}</span>
-                {section.lines.slice(0, 4).map((line) => <small key={line}>{line}</small>)}
-              </div>
-            ))}
-          </div>
-        )}
-      <label className={css.runMeta} style={{ display: 'block', marginBottom: 8 }}>
-        <input
-          type="checkbox"
-          checked={acceptDegradation}
-          onChange={(event) => setAcceptDegradation(event.target.checked)}
-        />{' '}
-        接受方案中的性能降级项（如有）
-      </label>
-      {error != null && <div>{error}</div>}
-      <Button
-        variant="primary"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true)
-          setError(undefined)
-          void postAction(runId, { action: 'approvePlan', acceptDegradation })
-            .then(onApproved)
-            .catch((submitError: unknown) =>
-              setError(submitError instanceof Error ? submitError.message : String(submitError)),
-            )
-            .finally(() => setBusy(false))
-        }}
-      >
-        {busy ? '提交中…' : '批准训练方案'}
-      </Button>
-      </div>
+      {error != null && <div className={css.formError}>{error}</div>}
     </section>
   )
 }
 
-const TrainingApproval = ({
-  runId,
-  onApproved,
-}: {
-  runId: string
-  onApproved: () => void
-}): React.ReactElement => {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
-  return (
-    <div className={css.banner}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>训练启动审批</div>
-      <div style={{ marginBottom: 8 }}>
-        训练将按已批准的方案执行（设备、工作目录、下载与写入均已在 dry-run 中列出）。确认后开始训练。
-      </div>
-      {error != null && <div>{error}</div>}
-      <Button
-        variant="primary"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true)
-          setError(undefined)
-          void postAction(runId, { action: 'startTraining' })
-            .then(onApproved)
-            .catch((submitError: unknown) =>
-              setError(submitError instanceof Error ? submitError.message : String(submitError)),
-            )
-            .finally(() => setBusy(false))
-        }}
-      >
-        {busy ? '提交中…' : '批准并启动训练'}
-      </Button>
-    </div>
-  )
-}
+const columns = (items?: RoleColumn[]): string[] => items?.map((item) => item.column) ?? []

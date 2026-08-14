@@ -161,7 +161,7 @@ const shape = (request: NaturalLanguageRequest): string => {
       return 'Shape: {"task":"interpret_column_confirmation","draft":{"textColumns":[],"timeColumn":null,"idColumn":null,"covariateColumns":[],"metadataColumns":[],"groupingColumns":[],"evaluationLabelColumns":[]},"unknownMentions":[],"ambiguousMentions":[],"confidence":0.0,"needsClarification":false,"explanation":"..."}. The columns command and Web submit button are explicit confirmation, so accept one clear, type-valid assignment without asking the user to repeat it. If the answer is exactly the single supplied text candidate, treat it as the confirmed text column and leave optional roles empty. covariateColumns are training inputs for STM; metadataColumns are descriptive only; groupingColumns are post-hoc display groups; evaluationLabelColumns are held-out labels. Never treat a display group as an STM covariate unless the user explicitly assigns both roles. Omit draft only when a required role is missing or genuinely ambiguous.';
     case 'classify_conversation_intent':
       return [
-        'Shape: {"task":"classify_conversation_intent","intent":"read_status|read_evidence|search_evidence|list_models|explain_current|approve_current|reject_current|help|chat|research_answer|unknown","response":"..."}.',
+        'Shape: {"task":"classify_conversation_intent","intent":"read_status|read_evidence|search_evidence|list_models|explain_current|approve_current|reject_current|help|chat|needs_dataset|research_answer|unknown","response":"..."}.',
         'When currentQuestion is supplied, use research_answer only when the user supplies information that answers or corrects that question.',
         'Short category phrases may be complete research answers when the currentQuestion asks for a category, content type, comparison group, language, granularity, or other bounded value.',
         'Questions about THETA capabilities, models, data handling, the current workflow, or how to answer are assistant requests, not research_answer.',
@@ -171,6 +171,7 @@ const shape = (request: NaturalLanguageRequest): string => {
       return [
         'Shape: {"task":"propose_readonly_tool","intent":"...","toolId":"one supplied allowedToolIds or null","arguments":{},"reason":"...","confidence":0.0,"requiresConfirmation":false}.',
         'Select a Tool by semantic reasoning over the complete request and current FSM state, never by keyword or substring matching.',
+        'Use intent needs_dataset when the user wants analysis of their own data but no active dataset context exists. Do not use it for questions about capabilities, setup, examples, models, or how the system works.',
         'Use only a supplied allowedToolId, and return toolId null when the allowlist is empty, the request can be answered from supplied context, or confidence is below 0.75.',
         'For theta.rag.search include a concise semantic search query in arguments.query. Never propose a write, approval, or training Tool.',
       ].join(' ');

@@ -3,7 +3,9 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type {
   ConversationMessage,
+  ConversationMemory,
   ConversationSession,
+  ConversationSessionSummary,
   ConversationStore,
   ConversationTurn,
   ConversationTurnStatus,
@@ -262,6 +264,99 @@ export class SQLiteConversationStore implements ConversationStore {
     ).map(turn);
   }
 
+  refreshMemory(sessionId: string): ConversationMemory {
+    const messages = this.listRecentMessages(sessionId, 100);
+    const recentUserGoals = messages
+      .filter((item) => item.role === 'user')
+      .slice(-8)
+      .map((item) => item.content.replace(/\s+/gu, ' ').trim().slice(0, 280))
+      .filter(Boolean);
+    const summary = recentUserGoals.length > 0
+      ? recentUserGoals.slice(-4).join(' / ')
+      : 'No durable user goal has been recorded yet.';
+    const updatedAt = new Date().toISOString();
+    this.database
+      .prepare(
+        `INSERT INTO theta_conversation_memory
+         (session_id, summary, recent_user_goals_json, source_message_count, updated_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(session_id) DO UPDATE SET
+           summary = excluded.summary,
+           recent_user_goals_json = excluded.recent_user_goals_json,
+           source_message_count = excluded.source_message_count,
+           updated_at = excluded.updated_at`,
+      )
+      .run(sessionId, summary, JSON.stringify(recentUserGoals), messages.length, updatedAt);
+    return { sessionId, summary, recentUserGoals, sourceMessageCount: messages.length, updatedAt };
+  }
+
+  getMemory(sessionId: string): ConversationMemory | undefined {
+    const row = this.database
+      .prepare(
+        `SELECT session_id, summary, recent_user_goals_json,
+                source_message_count, updated_at
+           FROM theta_conversation_memory WHERE session_id = ?`,
+      )
+      .get(sessionId) as Row | undefined;
+    return row
+      ? {
+          sessionId: string(row.session_id),
+          summary: string(row.summary),
+          recentUserGoals: JSON.parse(string(row.recent_user_goals_json)) as string[],
+          sourceMessageCount: number(row.source_message_count),
+          updatedAt: string(row.updated_at),
+        }
+      : undefined;
+  }
+
+  listWorkspaceSessions(limit = 50): ConversationSessionSummary[] {
+    const rows = this.database
+      .prepare(
+        `SELECT s.session_id, COALESCE(s.title, 'New conversation') AS title,
+                s.created_at, s.updated_at, COUNT(m.message_id) AS message_count
+           FROM theta_conversation_sessions s
+           LEFT JOIN theta_conversation_messages m ON m.session_id = s.session_id
+          WHERE s.session_id LIKE 'theta-web-workspace-%'
+          GROUP BY s.session_id
+         HAVING COUNT(m.message_id) > 0
+          ORDER BY s.updated_at DESC
+          LIMIT ?`,
+      )
+      .all(Math.max(1, Math.min(100, Math.trunc(limit)))) as Row[];
+    return rows.map(sessionSummary);
+  }
+
+  renameSession(sessionId: string, title: string): ConversationSessionSummary {
+    const normalized = title.replace(/\s+/gu, ' ').trim().slice(0, 120);
+    if (!normalized) throw new Error('Conversation title cannot be empty.');
+    const updatedAt = new Date().toISOString();
+    const result = this.database
+      .prepare('UPDATE theta_conversation_sessions SET title = ?, updated_at = ? WHERE session_id = ?')
+      .run(normalized, updatedAt, sessionId);
+    if (Number(result.changes) === 0) throw new Error(`Conversation session not found: ${sessionId}`);
+    const summary = this.listWorkspaceSessions(100).find((item) => item.sessionId === sessionId);
+    return summary ?? { sessionId, title: normalized, messageCount: 0, createdAt: updatedAt, updatedAt };
+  }
+
+  deleteSession(sessionId: string): boolean {
+    if (!sessionId.startsWith('theta-web-workspace-')) return false;
+    const exists = Boolean(this.getSession(sessionId));
+    if (!exists) return false;
+    this.database.exec('BEGIN IMMEDIATE');
+    try {
+      this.database.prepare('DELETE FROM theta_conversation_memory WHERE session_id = ?').run(sessionId);
+      this.database.prepare('DELETE FROM theta_conversation_turns WHERE session_id = ?').run(sessionId);
+      this.database.prepare('DELETE FROM theta_language_interpretations WHERE session_id = ?').run(sessionId);
+      this.database.prepare('DELETE FROM theta_conversation_messages WHERE session_id = ?').run(sessionId);
+      this.database.prepare('DELETE FROM theta_conversation_sessions WHERE session_id = ?').run(sessionId);
+      this.database.exec('COMMIT');
+      return true;
+    } catch (error) {
+      this.database.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
   close(): void {
     this.database.close();
   }
@@ -281,6 +376,7 @@ export class SQLiteConversationStore implements ConversationStore {
       CREATE TABLE IF NOT EXISTS theta_conversation_sessions (
         session_id TEXT PRIMARY KEY,
         active_run_id TEXT,
+        title TEXT,
         provider_mode TEXT NOT NULL,
         language_consent INTEGER NOT NULL,
         created_at TEXT NOT NULL,
@@ -340,6 +436,15 @@ export class SQLiteConversationStore implements ConversationStore {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS theta_conversation_memory (
+        session_id TEXT PRIMARY KEY,
+        summary TEXT NOT NULL,
+        recent_user_goals_json TEXT NOT NULL,
+        source_message_count INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (session_id)
+          REFERENCES theta_conversation_sessions(session_id)
+      );
       INSERT OR IGNORE INTO theta_conversation_migrations(version, applied_at)
       VALUES (1, datetime('now'));
     `);
@@ -350,6 +455,12 @@ export class SQLiteConversationStore implements ConversationStore {
       this.database.exec(
         'ALTER TABLE theta_research_brief_revisions ADD COLUMN field_evidence_json TEXT',
       );
+    }
+    const sessionColumns = this.database
+      .prepare('PRAGMA table_info(theta_conversation_sessions)')
+      .all() as Row[];
+    if (!sessionColumns.some((column) => column.name === 'title')) {
+      this.database.exec('ALTER TABLE theta_conversation_sessions ADD COLUMN title TEXT');
     }
     this.database
       .prepare(
@@ -419,6 +530,14 @@ const turn = (row: Row): ConversationTurn => ({
   ...(nullableString(row.error_json)
     ? { error: JSON.parse(string(row.error_json)) }
     : {}),
+  createdAt: string(row.created_at),
+  updatedAt: string(row.updated_at),
+});
+
+const sessionSummary = (row: Row): ConversationSessionSummary => ({
+  sessionId: string(row.session_id),
+  title: string(row.title),
+  messageCount: number(row.message_count),
   createdAt: string(row.created_at),
   updatedAt: string(row.updated_at),
 });

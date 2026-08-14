@@ -8,6 +8,7 @@ export interface LocalRunSummary {
   eventCount: number;
   recoveryOfRunId?: string;
   successorRunId?: string;
+  displayName?: string;
 }
 
 export interface DeleteLocalRunResult {
@@ -31,6 +32,7 @@ export const listLocalRuns = (
   const database = new DatabaseSync(path.resolve(runtimeDb));
   try {
     try {
+      ensureRunMetadata(database);
       const summaries = database
         .prepare(
           `SELECT run_id AS runId, MAX(timestamp) AS updatedAt, COUNT(*) AS eventCount
@@ -42,6 +44,12 @@ export const listLocalRuns = (
         .all(Math.max(1, Math.min(limit, 100))) as unknown as LocalRunSummary[];
       const lineage = new Map<string, string>();
       const successor = new Map<string, string>();
+      const metadataRows = database
+        .prepare('SELECT run_id AS runId, display_name AS displayName FROM theta_run_metadata')
+        .all() as unknown as Array<{ runId: string; displayName: string }>;
+      const names = new Map<string, string>(
+        metadataRows.map((item) => [item.runId, item.displayName]),
+      );
       const starts = database
         .prepare("SELECT run_id AS runId, event_json AS eventJson FROM runtime_events WHERE type = 'run.started' ORDER BY timestamp ASC")
         .all() as unknown as Array<{ runId: string; eventJson: string }>;
@@ -60,6 +68,7 @@ export const listLocalRuns = (
         ...summary,
         ...(lineage.has(summary.runId) ? { recoveryOfRunId: lineage.get(summary.runId) } : {}),
         ...(successor.has(summary.runId) ? { successorRunId: successor.get(summary.runId) } : {}),
+        ...(names.has(summary.runId) ? { displayName: names.get(summary.runId) } : {}),
       }));
     } catch {
       return [];
@@ -67,6 +76,45 @@ export const listLocalRuns = (
   } finally {
     database.close();
   }
+};
+
+export const renameLocalRun = (
+  runId: string,
+  displayName: string,
+  runtimeDb = defaultThetaWorkflowDb(),
+): { runId: string; displayName: string } => {
+  const database = new DatabaseSync(path.resolve(runtimeDb));
+  try {
+    ensureRunMetadata(database);
+    const exists = database
+      .prepare('SELECT 1 AS value FROM runtime_events WHERE run_id = ? LIMIT 1')
+      .get(runId);
+    if (!exists) throw new Error(`Run not found: ${runId}`);
+    const normalized = displayName.replace(/\s+/gu, ' ').trim().slice(0, 120);
+    if (!normalized) throw new Error('Run display name cannot be empty.');
+    database
+      .prepare(
+        `INSERT INTO theta_run_metadata (run_id, display_name, updated_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(run_id) DO UPDATE SET
+           display_name = excluded.display_name,
+           updated_at = excluded.updated_at`,
+      )
+      .run(runId, normalized, new Date().toISOString());
+    return { runId, displayName: normalized };
+  } finally {
+    database.close();
+  }
+};
+
+const ensureRunMetadata = (database: DatabaseSync): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS theta_run_metadata (
+      run_id TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
 };
 
 export const deleteLocalRun = (
