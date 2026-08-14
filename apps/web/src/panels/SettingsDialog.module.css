@@ -19,7 +19,13 @@
 .toggleCopy { display: flex; flex-direction: column; gap: 3px; }
 .toggleCopy strong { color: var(--dsw-alias-label-primary); font-size: 12px; }
 .toggleCopy small { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
-.toggleRow input { width: 34px; height: 18px; accent-color: var(--dsw-alias-state-business-primary); }
+.compactToggle { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 12px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.switchInput { position: relative; width: 34px !important; height: 19px !important; flex: 0 0 34px; padding: 0 !important; border: 1px solid var(--dsw-alias-border-l2) !important; border-radius: 999px !important; appearance: none; background: var(--dsw-alias-bg-layer-3) !important; cursor: pointer; transition: background 150ms ease, border-color 150ms ease; }
+.switchInput::after { position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--dsw-alias-label-caption); content: ''; transition: transform 150ms ease, background 150ms ease; }
+.switchInput:checked { border-color: var(--theta-accent) !important; background: var(--theta-accent) !important; }
+.switchInput:checked::after { transform: translateX(15px); background: white; }
+.switchInput:focus-visible { outline: 2px solid var(--theta-accent-soft); outline-offset: 2px; }
+.saveButton { color: white !important; background: var(--theta-accent) !important; }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 10px; background: var(--dsw-alias-bg-layer-1); }
 .segmented button { padding: 7px 4px; border: 0; border-radius: 7px; color: var(--dsw-alias-label-tertiary); background: transparent; cursor: pointer; font-size: 11px; }
 .segmented .active { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-3); box-shadow: var(--dsw-shadow-lv1); }

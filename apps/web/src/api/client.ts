@@ -146,7 +146,7 @@ export interface WebRunResults {
 }
 
 export interface WebAttachment {
-  kind: 'visualization' | 'topic' | 'metric' | 'table';
+  kind: 'visualization' | 'topic' | 'metric' | 'table' | 'dataset';
   id: string;
   label: string;
 }
@@ -174,6 +174,7 @@ export interface WebWorkspaceTurn {
   interaction: WebAgentInteraction;
   activity?: {
     proposal?: unknown;
+    steps?: unknown;
     result?: unknown;
     evidenceRefs?: unknown;
   };
@@ -370,10 +371,11 @@ export const postWorkspaceMessage = (
   sessionId: string,
   text: string,
   useLanguageProvider = true,
+  attachments: WebAttachment[] = [],
 ): Promise<WebWorkspaceTurn> =>
   request(`/api/v2/workspace/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ text, useLanguageProvider, attachments: [] }),
+    body: JSON.stringify({ text, useLanguageProvider, attachments }),
   });
 
 export const listDatasets = (): Promise<{ datasets: WebDataset[] }> =>

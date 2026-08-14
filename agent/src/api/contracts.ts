@@ -82,7 +82,7 @@ export const thetaWebPostMessageSchema = z.object({
   /** @deprecated Use useLanguageProvider. */
   useMiniMax: z.boolean().optional(),
   attachments: z.array(z.object({
-    kind: z.enum(['visualization', 'topic', 'metric', 'table']),
+    kind: z.enum(['visualization', 'topic', 'metric', 'table', 'dataset']),
     id: z.string().trim().min(1).max(240),
     label: z.string().trim().min(1).max(240),
   }).strict()).max(12).default([]),

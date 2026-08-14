@@ -45,6 +45,7 @@ const inputSchema: JsonSchema = {
     currentState: { type: 'string' },
     pendingActionRef: { type: 'string' },
     allowedToolIds: { type: 'array', items: { type: 'string' } },
+    toolHistory: { type: 'array', items: { type: 'object' } },
     userText: { type: 'string' },
     toolId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
     facts: { type: 'object', additionalProperties: true },

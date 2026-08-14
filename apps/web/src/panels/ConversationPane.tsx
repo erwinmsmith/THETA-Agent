@@ -7,6 +7,7 @@ import type {
   WebRunStatus,
   WebTokenUsage,
 } from '../api/client.ts'
+import { uploadDataset } from '../api/client.ts'
 import { Button, JsonTree, StateDot, ThetaMark } from '../ui/index.ts'
 import { usePreferences } from '../preferences.tsx'
 import { useInferenceSettings } from '../inference-settings.tsx'
@@ -33,11 +34,13 @@ interface ConversationPaneProps {
   messages: WebMessage[]
   sending: boolean
   queued: QueuedChatMessage[]
+  processingMessageId?: string
+  onPrioritize: (id: string) => void
   onSend: (text: string, attachments: WebAttachment[]) => void
   onCreated: (runId: string) => void
   workspaceSessionId?: string
   entryInteraction?: WebAgentInteraction
-  workspaceActivity?: { proposal?: unknown; result?: unknown; evidenceRefs?: unknown }
+  workspaceActivity?: { proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
   reasoning?: WebReasoning
   runId?: string
   status?: WebRunStatus
@@ -76,6 +79,31 @@ interface StoredToolActivity {
   result?: unknown
 }
 
+interface StoredAgentProgress {
+  phase: 'thinking' | 'tool'
+  label: string
+  status: 'ongoing'
+  step: number
+  toolId?: string
+}
+
+const agentProgress = (message: WebMessage): StoredAgentProgress | undefined => {
+  if (message.messageKind !== 'activity.agent.progress') return undefined
+  try {
+    const value = JSON.parse(message.content) as Partial<StoredAgentProgress>
+    if ((value.phase !== 'thinking' && value.phase !== 'tool') || typeof value.label !== 'string') return undefined
+    return {
+      phase: value.phase,
+      label: value.label,
+      status: 'ongoing',
+      step: typeof value.step === 'number' ? value.step : 1,
+      ...(typeof value.toolId === 'string' ? { toolId: value.toolId } : {}),
+    }
+  } catch {
+    return undefined
+  }
+}
+
 const storedToolActivity = (message: WebMessage): StoredToolActivity | undefined => {
   if (message.messageKind !== 'activity.tool.trace') return undefined
   try {
@@ -103,6 +131,8 @@ export const ConversationPane = ({
   messages,
   sending,
   queued,
+  processingMessageId,
+  onPrioritize,
   onSend,
   onCreated,
   workspaceSessionId,
@@ -120,9 +150,13 @@ export const ConversationPane = ({
   const { locale, t } = usePreferences()
   const { settings } = useInferenceSettings()
   const [draft, setDraft] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string>()
+  const [draggingFiles, setDraggingFiles] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const followTail = useRef(true)
   const activeInteraction = runId ? status?.interaction : entryInteraction
 
@@ -145,9 +179,33 @@ export const ConversationPane = ({
     onAttachmentsChange([])
   }
 
+  const addFiles = async (files: FileList | File[]): Promise<void> => {
+    if (files.length === 0 || uploading) return
+    setUploading(true)
+    setUploadError(undefined)
+    try {
+      const uploaded: WebAttachment[] = []
+      for (const file of Array.from(files)) {
+        const dataset = await uploadDataset(file)
+        uploaded.push({ kind: 'dataset', id: dataset.datasetRef, label: file.name })
+      }
+      onAttachmentsChange([...attachments, ...uploaded].filter((item, index, all) => all.findIndex((entry) => entry.id === item.id) === index).slice(-12))
+      textareaRef.current?.focus()
+    } catch (cause) {
+      setUploadError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const dropAttachment = (event: React.DragEvent): void => {
     event.preventDefault()
+    setDraggingFiles(false)
     const encoded = event.dataTransfer.getData('application/x-theta-artifact')
+    if (!encoded && event.dataTransfer.files.length > 0) {
+      void addFiles(event.dataTransfer.files)
+      return
+    }
     if (!encoded) return
     try {
       const attachment = JSON.parse(encoded) as WebAttachment
@@ -162,6 +220,7 @@ export const ConversationPane = ({
   const showStarter = runId == null && messages.length === 0 && !sending
   const latestUserGoal = [...messages].reverse().find((message) => message.role === 'user')?.content
   const suggestions = [t('howStart'), t('capabilities'), t('modelAdvice'), t('analyzeData')]
+  const currentProgress = [...messages].reverse().map(agentProgress).find(Boolean)
 
   return (
     <div className={css.conversation}>
@@ -201,6 +260,7 @@ export const ConversationPane = ({
         )}
 
         {messages.map((message) => {
+          if (message.messageKind === 'activity.agent.progress') return null
           const viewedArtifacts = artifactActivity(message)
           if (viewedArtifacts) {
             const visualizations = viewedArtifacts.filter((item) => item.kind === 'visualization').length
@@ -273,14 +333,9 @@ export const ConversationPane = ({
             reasoning={reasoning}
             workspaceActivity={workspaceActivity}
             working={sending}
+            currentProgress={currentProgress}
           />
         )}
-        {queued.map((item, index) => (
-          <div key={item.id} className={css.queuedMessage}>
-            <span>{t('queued')} {index + 1}</span>
-            <p>{item.text}</p>
-          </div>
-        ))}
         <div ref={bottomRef} />
       </div>
 
@@ -301,13 +356,42 @@ export const ConversationPane = ({
         </div>
       )}
 
-      <div className={`${css.composerWrap} ${showStarter ? css.startComposerWrap : ''}`} onDragOver={(event) => event.preventDefault()} onDrop={dropAttachment}>
+      <div
+        className={`${css.composerWrap} ${showStarter ? css.startComposerWrap : ''} ${draggingFiles ? css.composerWrapDragging : ''}`}
+        onDragEnter={(event) => { event.preventDefault(); if (event.dataTransfer.types.includes('Files')) setDraggingFiles(true) }}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDraggingFiles(false) }}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={dropAttachment}
+      >
+        {queued.length > 0 && (
+          <div className={css.queueDock} aria-label={locale === 'zh-CN' ? '消息队列' : 'Message queue'}>
+            {queued.map((item, index) => {
+              const processing = item.id === processingMessageId
+              return (
+                <div key={item.id} className={`${css.queueItem} ${processing ? css.queueItemActive : ''}`}>
+                  {processing ? <span className={css.activitySpinner} /> : <span className={css.queueIndex}>{index}</span>}
+                  <span>{processing ? (locale === 'zh-CN' ? '正在执行' : 'Running') : (locale === 'zh-CN' ? '已排队' : 'Queued')}</span>
+                  <p>{item.text}</p>
+                  {!processing && index > 1 && <button type="button" onClick={() => onPrioritize(item.id)}>{locale === 'zh-CN' ? '插队' : 'Prioritize'}</button>}
+                </div>
+              )
+            })}
+          </div>
+        )}
         <div className={css.composer}>
+          <input
+            ref={fileInputRef}
+            className={css.visuallyHidden}
+            type="file"
+            multiple
+            accept=".csv,.tsv,.txt,.json,.jsonl,.xlsx,.xls,.parquet,.zip"
+            onChange={(event) => { if (event.target.files) void addFiles(event.target.files); event.target.value = '' }}
+          />
           {attachments.length > 0 && (
             <div className={css.composerAttachments}>
               {attachments.map((attachment) => (
                 <button key={`${attachment.kind}-${attachment.id}`} type="button" onClick={() => onAttachmentsChange(attachments.filter((item) => item !== attachment))}>
-                  <span>{attachment.kind === 'visualization' ? '◇' : '≡'}</span>{attachment.label}<b>×</b>
+                  <span>{attachment.kind === 'visualization' ? '◇' : attachment.kind === 'dataset' ? '⌁' : '≡'}</span>{attachment.label}<b>×</b>
                 </button>
               ))}
             </div>
@@ -330,13 +414,14 @@ export const ConversationPane = ({
             }}
           />
           <div className={css.composerBar}>
-            <span className={css.addButton} title={locale === 'zh-CN' ? '由 Agent 判断何时需要数据' : 'The Agent requests data when needed'}>+</span>
+            <button className={css.addButton} type="button" disabled={uploading} onClick={() => fileInputRef.current?.click()} title={locale === 'zh-CN' ? '选择文件或将文件拖到输入框' : 'Choose files or drop them onto the composer'}>{uploading ? '…' : '+'}</button>
             <InferenceSelector />
             <Button variant="primary" className={css.sendButton} disabled={draft.trim().length === 0} onClick={() => submitText()}>
               {sending ? t('queued') : t('send')}
             </Button>
           </div>
         </div>
+        {uploadError && <div className={css.composerUploadError} role="alert">{uploadError}</div>}
         <div className={css.composerHint}>
           <span>Enter · Shift + Enter</span>
           <div className={css.composerMeta}>

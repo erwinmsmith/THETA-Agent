@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useInferenceSettings } from '../inference-settings.tsx'
 import { usePreferences } from '../preferences.tsx'
-import type { WebInferenceProvider, WebReasoningMode } from '../api/client.ts'
+import type { WebInferenceProvider, WebReasoningEffort, WebReasoningMode } from '../api/client.ts'
 import css from '../styles/app.module.css'
 
 const categories: Array<{ id: WebInferenceProvider['category']; en: string; zh: string }> = [
@@ -21,7 +21,7 @@ export const InferenceSelector = (): React.ReactElement => {
     [catalog, settings?.llm.providerId],
   )
 
-  const apply = async (input: { providerId?: string; model?: string; reasoningMode?: WebReasoningMode }): Promise<void> => {
+  const apply = async (input: { providerId?: string; model?: string; reasoningMode?: WebReasoningMode; reasoningEffort?: WebReasoningEffort }): Promise<void> => {
     if (!settings || busy) return
     const nextProvider = catalog?.providers.find((item) => item.id === (input.providerId ?? settings.llm.providerId))
     const model = input.model ?? (input.providerId ? nextProvider?.configuredModel ?? nextProvider?.models[0] : undefined) ?? settings.llm.model
@@ -34,6 +34,7 @@ export const InferenceSelector = (): React.ReactElement => {
         model,
         baseUrl: nextProvider.baseUrl,
         reasoningMode: input.reasoningMode ?? settings.llm.reasoningMode,
+        reasoningEffort: input.reasoningEffort ?? settings.llm.reasoningEffort,
         models: [...new Set([...nextProvider.models, model])],
       } })
     } catch (cause) {
@@ -58,7 +59,12 @@ export const InferenceSelector = (): React.ReactElement => {
       <select aria-label={locale === 'zh-CN' ? '推理类型' : 'Reasoning type'} value={settings.llm.reasoningMode} onChange={(event) => void apply({ reasoningMode: event.target.value as WebReasoningMode })}>
         <option value="auto">{locale === 'zh-CN' ? '自动推理' : 'Auto reasoning'}</option>
         <option value="chat">{locale === 'zh-CN' ? '对话' : 'Chat'}</option>
-        <option value="reasoning" disabled={!provider?.capabilities.reasoning}>{locale === 'zh-CN' ? '深度推理' : 'Reasoning'}</option>
+        <option value="reasoning">{locale === 'zh-CN' ? '深度推理' : 'Reasoning'}</option>
+      </select>
+      <select aria-label={locale === 'zh-CN' ? '推理强度' : 'Reasoning effort'} value={settings.llm.reasoningEffort} onChange={(event) => void apply({ reasoningEffort: event.target.value as WebReasoningEffort })}>
+        <option value="low">{locale === 'zh-CN' ? '强度 Low' : 'Effort Low'}</option>
+        <option value="medium">{locale === 'zh-CN' ? '强度 Medium' : 'Effort Medium'}</option>
+        <option value="high">{locale === 'zh-CN' ? '强度 High' : 'Effort High'}</option>
       </select>
       {busy && <span className={css.quickModelBusy} aria-hidden="true" />}
     </div>

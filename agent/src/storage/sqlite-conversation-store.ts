@@ -291,6 +291,7 @@ export class SQLiteConversationStore implements ConversationStore {
 
   refreshMemory(sessionId: string): ConversationMemory {
     const messages = this.listRecentMessages(sessionId, 100);
+    const durableMessages = messages.filter((message) => !message.messageKind.startsWith('activity.'));
     const recentUserGoals = messages
       .filter((item) => item.role === 'user')
       .slice(-8)
@@ -311,8 +312,8 @@ export class SQLiteConversationStore implements ConversationStore {
            source_message_count = excluded.source_message_count,
            updated_at = excluded.updated_at`,
       )
-      .run(sessionId, summary, JSON.stringify(recentUserGoals), messages.length, updatedAt);
-    return { sessionId, summary, recentUserGoals, sourceMessageCount: messages.length, updatedAt };
+      .run(sessionId, summary, JSON.stringify(recentUserGoals), durableMessages.length, updatedAt);
+    return { sessionId, summary, recentUserGoals, sourceMessageCount: durableMessages.length, updatedAt };
   }
 
   getMemory(sessionId: string): ConversationMemory | undefined {
@@ -341,7 +342,9 @@ export class SQLiteConversationStore implements ConversationStore {
                 COALESCE(s.pinned, 0) AS pinned,
                 s.created_at, s.updated_at, COUNT(m.message_id) AS message_count
            FROM theta_conversation_sessions s
-           LEFT JOIN theta_conversation_messages m ON m.session_id = s.session_id
+           LEFT JOIN theta_conversation_messages m
+             ON m.session_id = s.session_id
+            AND m.message_kind NOT LIKE 'activity.%'
           WHERE s.session_id LIKE 'theta-web-workspace-%'
           GROUP BY s.session_id
          HAVING COUNT(m.message_id) > 0

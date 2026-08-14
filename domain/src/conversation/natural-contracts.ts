@@ -110,6 +110,17 @@ export const naturalLanguageRequestSchema = z.discriminatedUnion('task', [
           ]),
         )
         .max(4),
+      toolHistory: z
+        .array(
+          z
+            .object({
+              toolId: z.enum(['theta.rag.search', 'theta.model.catalog']),
+              summary: boundedText,
+            })
+            .strict(),
+        )
+        .max(4)
+        .default([]),
     })
     .strict(),
   z

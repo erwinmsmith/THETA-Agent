@@ -104,14 +104,21 @@ export const AppRoot = (): React.ReactElement => {
   const [memory, setMemory] = useState<WebConversationMemory>()
   const [tokenUsage, setTokenUsage] = useState<WebTokenUsage>(EMPTY_TOKEN_USAGE)
   const [sending, setSending] = useState(false)
-  const [queued, setQueued] = useState<Array<QueuedChatMessage & { runId?: string; workspaceSessionId?: string }>>([])
+  const [processingMessageId, setProcessingMessageId] = useState<string>()
+  const [activeScopeKey, setActiveScopeKey] = useState(() => `draft:${crypto.randomUUID()}`)
+  const [queued, setQueued] = useState<Array<QueuedChatMessage & {
+    runId?: string
+    workspaceSessionId?: string
+    scopeKey: string
+    optimisticMessageId: string
+  }>>([])
   const [attachments, setAttachments] = useState<WebAttachment[]>([])
   const [loadError, setLoadError] = useState<string>()
   const [streamState, setStreamState] = useState<StreamState>('idle')
   const [runtimeProfile, setRuntimeProfile] = useState<WebRuntimeProfile>()
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string>()
   const [workspaceInteraction, setWorkspaceInteraction] = useState<WebAgentInteraction>()
-  const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; result?: unknown; evidenceRefs?: unknown }>()
+  const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }>()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -120,6 +127,13 @@ export const AppRoot = (): React.ReactElement => {
   const [historyActionBusy, setHistoryActionBusy] = useState(false)
   const [historyActionError, setHistoryActionError] = useState<string>()
   const knownMessageIds = useRef(new Set<string>())
+  const activeScopeRef = useRef(activeScopeKey)
+  const processingMessageRef = useRef<string>()
+
+  const activateScope = useCallback((scopeKey: string): void => {
+    activeScopeRef.current = scopeKey
+    setActiveScopeKey(scopeKey)
+  }, [])
 
   const refreshRuns = useCallback(async () => {
     try {
@@ -173,6 +187,16 @@ export const AppRoot = (): React.ReactElement => {
       const next = [...current]
       for (const message of incoming) {
         if (knownMessageIds.current.has(message.messageId)) continue
+        if (message.role === 'user') {
+          const optimisticIndex = next.findIndex((item) =>
+            item.messageId.startsWith('optimistic.') && item.role === 'user' && item.content === message.content,
+          )
+          if (optimisticIndex >= 0) {
+            const optimistic = next[optimisticIndex]
+            if (optimistic) knownMessageIds.current.delete(optimistic.messageId)
+            next.splice(optimisticIndex, 1)
+          }
+        }
         knownMessageIds.current.add(message.messageId)
         next.push(message)
       }
@@ -284,10 +308,24 @@ export const AppRoot = (): React.ReactElement => {
   }, [selectedRunId, mergeMessages])
 
   const enqueue = useCallback((text: string, nextAttachments: WebAttachment[]) => {
+    const id = crypto.randomUUID()
+    const optimisticMessageId = `optimistic.${id}`
+    const scopeKey = activeScopeRef.current
+    knownMessageIds.current.add(optimisticMessageId)
+    setMessages((current) => [...current, {
+      messageId: optimisticMessageId,
+      role: 'user',
+      messageKind: 'conversation.text',
+      content: text,
+      sequenceNumber: Math.max(0, ...current.map((message) => message.sequenceNumber)) + 1,
+      createdAt: new Date().toISOString(),
+    }])
     setQueued((current) => [...current, {
-      id: crypto.randomUUID(),
+      id,
       text,
       attachments: nextAttachments,
+      scopeKey,
+      optimisticMessageId,
       ...(selectedRunId ? { runId: selectedRunId } : {}),
       ...(workspaceSessionId ? { workspaceSessionId } : {}),
     }])
@@ -295,14 +333,18 @@ export const AppRoot = (): React.ReactElement => {
 
   useEffect(() => {
     const next = queued[0]
-    if (!next || sending) return
+    if (!next || processingMessageRef.current) return
+    processingMessageRef.current = next.id
+    setProcessingMessageId(next.id)
     setSending(true)
     setLoadError(undefined)
     void (async () => {
       try {
         if (next.runId) {
           const result = await postMessage(next.runId, next.text, true, next.attachments)
-          if (selectedRunId === next.runId) {
+          if (activeScopeRef.current === next.scopeKey) {
+            knownMessageIds.current.delete(next.optimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== next.optimisticMessageId))
             setStatus(result.status)
             const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
             if (latest) setLiveAssistantMessageId(latest.messageId)
@@ -318,8 +360,10 @@ export const AppRoot = (): React.ReactElement => {
             setWorkspaceSessionId(sessionId)
             setWorkspaceInteraction(created.interaction)
           }
-          const result = await postWorkspaceMessage(sessionId, next.text)
-          if (selectedRunId == null) {
+          const result = await postWorkspaceMessage(sessionId, next.text, true, next.attachments)
+          if (activeScopeRef.current === next.scopeKey) {
+            knownMessageIds.current.delete(next.optimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== next.optimisticMessageId))
             const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
             if (latest) setLiveAssistantMessageId(latest.messageId)
             mergeMessages(result.messages)
@@ -334,12 +378,51 @@ export const AppRoot = (): React.ReactElement => {
         setLoadError(error instanceof Error ? error.message : String(error))
       } finally {
         setQueued((current) => current.filter((item) => item.id !== next.id))
+        processingMessageRef.current = undefined
+        setProcessingMessageId(undefined)
         setSending(false)
       }
     })()
-  }, [queued, sending, selectedRunId, workspaceSessionId, mergeMessages, refreshRuns, refreshWorkspaceSessions])
+  }, [queued, selectedRunId, workspaceSessionId, mergeMessages, refreshRuns, refreshWorkspaceSessions])
+
+  useEffect(() => {
+    if (!sending || selectedRunId || !workspaceSessionId) return
+    let cancelled = false
+    const poll = (): void => {
+      const expectedScope = activeScopeRef.current
+      void getWorkspaceConversation(workspaceSessionId)
+        .then((conversation) => {
+          if (cancelled || activeScopeRef.current !== expectedScope) return
+          const activeItem = queued.find((item) => item.id === processingMessageRef.current)
+          if (activeItem && conversation.messages.some((message) => message.role === 'user' && message.content === activeItem.text)) {
+            knownMessageIds.current.delete(activeItem.optimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== activeItem.optimisticMessageId))
+          }
+          mergeMessages(conversation.messages)
+          setMemory(conversation.memory)
+          setTokenUsage(conversation.tokenUsage)
+        })
+        .catch(() => undefined)
+    }
+    poll()
+    const timer = window.setInterval(poll, 400)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [sending, selectedRunId, workspaceSessionId, mergeMessages, queued])
+
+  const prioritizeQueuedMessage = useCallback((id: string): void => {
+    setQueued((current) => {
+      const index = current.findIndex((item) => item.id === id)
+      if (index < 0 || current[index]?.id === processingMessageRef.current) return current
+      const item = current[index]
+      if (!item) return current
+      const next = current.filter((entry) => entry.id !== id)
+      next.splice(processingMessageRef.current ? 1 : 0, 0, item)
+      return next
+    })
+  }, [])
 
   const startNewConversation = useCallback(() => {
+    activateScope(`draft:${crypto.randomUUID()}`)
     setSelectedRunId(undefined)
     setWorkspaceSessionId(undefined)
     setMessages([])
@@ -355,10 +438,13 @@ export const AppRoot = (): React.ReactElement => {
     setLiveAssistantMessageId(undefined)
     setLoadError(undefined)
     knownMessageIds.current.clear()
-  }, [])
+  }, [activateScope])
 
   const selectWorkspaceHistory = async (sessionId: string): Promise<void> => {
+    const scopeKey = `workspace:${sessionId}:${crypto.randomUUID()}`
+    activateScope(scopeKey)
     setSelectedRunId(undefined)
+    setWorkspaceSessionId(sessionId)
     setMessages([])
     setStatus(undefined)
     setEvents([])
@@ -371,6 +457,7 @@ export const AppRoot = (): React.ReactElement => {
     knownMessageIds.current.clear()
     try {
       const conversation = await getWorkspaceConversation(sessionId)
+      if (activeScopeRef.current !== scopeKey) return
       setWorkspaceSessionId(sessionId)
       setWorkspaceInteraction(conversation.interaction)
       setMemory(conversation.memory)
@@ -417,6 +504,11 @@ export const AppRoot = (): React.ReactElement => {
     () => runs.find((run) => run.runId === selectedRunId),
     [runs, selectedRunId],
   )
+  const activeQueued = useMemo(
+    () => queued.filter((item) => item.scopeKey === activeScopeKey),
+    [activeScopeKey, queued],
+  )
+  const activeSending = processingMessageId != null && activeQueued.some((item) => item.id === processingMessageId)
 
   const toggleSidebar = (): void => {
     setSidebarOpen((current) => {
@@ -536,6 +628,7 @@ export const AppRoot = (): React.ReactElement => {
                       type="button"
                       className={`${css.runItem} ${run.runId === selectedRunId ? css.runItemActive : ''}`}
                       onClick={() => {
+                        activateScope(`run:${run.runId}:${crypto.randomUUID()}`)
                         setWorkspaceSessionId(undefined)
                         setWorkspaceActivity(undefined)
                         setSelectedRunId(run.runId)
@@ -577,10 +670,13 @@ export const AppRoot = (): React.ReactElement => {
             : (
               <ConversationPane
                 messages={messages}
-                sending={sending}
-                queued={queued.filter((item) => item.runId === selectedRunId && item.workspaceSessionId === (selectedRunId ? undefined : workspaceSessionId))}
+                sending={activeSending}
+                queued={activeQueued}
+                processingMessageId={processingMessageId}
+                onPrioritize={prioritizeQueuedMessage}
                 onSend={enqueue}
                 onCreated={(runId) => {
+                  activateScope(`run:${runId}:${crypto.randomUUID()}`)
                   setSelectedRunId(runId)
                   setWorkspaceSessionId(undefined)
                   setWorkspaceActivity(undefined)

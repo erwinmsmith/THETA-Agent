@@ -861,107 +861,124 @@ export class ThetaTurnOrchestrator {
     const allowedToolIds = conversationalToolAllowlist(
       workflowContext?.status.currentState,
     );
-    const routed = await this.language(
-      {
-        schemaVersion: NATURAL_LANGUAGE_CONTRACT_VERSION,
-        task: 'propose_readonly_tool',
-        text,
-        ...(workflowContext?.status.currentState
-          ? { currentState: workflowContext.status.currentState }
-          : {}),
-        allowedToolIds,
-      },
-      context.sessionId,
-      runId,
-      message.messageId,
-    );
-    const proposal: ReadonlyToolProposal = routed.output.task === 'propose_readonly_tool'
-      ? routed.output
-      : {
-          task: 'propose_readonly_tool',
-          intent: 'unknown',
-          toolId: null,
-          arguments: {},
-          reason: 'No schema-valid Tool decision was produced.',
-          confidence: 0,
-          requiresConfirmation: false,
-        };
-    let toolResult: unknown;
-    let conversationalToolEvents: Array<{ id: string; type: string; timestamp: string }> = [];
-    const captureTrace = (events: Array<{ id: string; type: string; timestamp: string }>): void => {
-      conversationalToolEvents = events.map(({ id, type, timestamp }) => ({ id, type, timestamp }));
-    };
-    switch (proposal.toolId) {
-      case 'theta.rag.search': {
-        const query = typeof proposal.arguments.query === 'string'
-          ? proposal.arguments.query
-          : text;
-        const result = await runThetaRagSearch({ query, limit: 5 }, { onTrace: captureTrace });
-        toolResult =
-          result.status === 'completed'
-            ? result.output
-            : { status: result.status, error: result.error };
-        break;
-      }
-      case 'theta.model.catalog': {
-        const result = await runThetaModelCatalog({}, { onTrace: captureTrace });
-        toolResult =
-          result.status === 'completed'
-            ? result.output
-            : { status: result.status, error: result.error };
-        break;
-      }
-      default:
-        toolResult = {
-          assistant: 'THETA research-training assistant',
-          capabilities: [
-            '解释 THETA 当前阶段和下一步操作',
-            '读取当前 Run 状态与审计证据',
-            '检索 THETA 本地知识库并说明模型能力',
-            '根据你的研究回答更新研究档案并调整后续问题',
-            '解释训练方案、参数取舍、结果和研究限制',
-          ],
-          boundary:
-            proposal.intent === 'approve_current' ||
-            proposal.intent === 'reject_current'
-              ? '我不会代替你审批方案或启动训练；这些操作必须由你显式确认。'
-              : '我可以提供建议和只读分析，但不会代替你审批方案或启动训练。',
-          currentState: workflowContext?.status.currentState,
-          currentQuestion:
-            workflowContext?.status.pendingActionRef ===
-            THETA_APPROVAL_KEYS.researchClarification
-              ? activeResearchQuestion(workflowContext).question.question
-              : undefined,
-          toolDecision: {
-            source: routed.source,
-            allowedToolIds,
-            selectedToolId: proposal.toolId,
-            reason: proposal.reason,
-            confidence: proposal.confidence,
-          },
-          memory: this.store.getMemory(context.sessionId),
-          requestDataset: !runId && proposal.intent === 'needs_dataset',
-        };
-    }
-    const grounding = safeGrounding(proposal.toolId, toolResult);
-    if (proposal.toolId && conversationalToolEvents.length > 0) {
-      this.assistantMessage(
+    const proposals: ReadonlyToolProposal[] = [];
+    const toolSteps: Array<{
+      toolId: 'theta.rag.search' | 'theta.model.catalog';
+      result: unknown;
+      grounding: ReturnType<typeof safeGrounding>;
+    }> = [];
+    this.activityMessage(context, runId, 'thinking', '正在理解请求并规划解决步骤');
+    for (let step = 0; step < 3; step += 1) {
+      const remainingTools = allowedToolIds.filter(
+        (toolId) => !toolSteps.some((completed) => completed.toolId === toolId),
+      );
+      if (remainingTools.length === 0) break;
+      this.activityMessage(
         context,
         runId,
-        'activity.tool.trace',
-        JSON.stringify({
-          toolId: proposal.toolId,
-          phases: conversationalToolEvents,
-          result: grounding,
-        }),
+        'thinking',
+        step === 0 ? '正在判断是否需要调用工具' : '正在根据工具结果规划下一步',
+        step + 1,
       );
+      const routed = await this.language(
+        {
+          schemaVersion: NATURAL_LANGUAGE_CONTRACT_VERSION,
+          task: 'propose_readonly_tool',
+          text,
+          ...(workflowContext?.status.currentState
+            ? { currentState: workflowContext.status.currentState }
+            : {}),
+          allowedToolIds: remainingTools,
+          toolHistory: toolSteps.map((completed) => ({
+            toolId: completed.toolId,
+            summary: sanitizeLanguageText(JSON.stringify(completed.grounding.facts), 600),
+          })),
+        },
+        context.sessionId,
+        runId,
+        message.messageId,
+      );
+      const proposal: ReadonlyToolProposal = routed.output.task === 'propose_readonly_tool'
+        ? routed.output
+        : {
+            task: 'propose_readonly_tool',
+            intent: 'unknown',
+            toolId: null,
+            arguments: {},
+            reason: 'No schema-valid Tool decision was produced.',
+            confidence: 0,
+            requiresConfirmation: false,
+          };
+      proposals.push(proposal);
+      if (!proposal.toolId || !remainingTools.includes(proposal.toolId)) break;
+
+      this.activityMessage(context, runId, 'tool', `正在执行 ${proposal.toolId}`, step + 1, proposal.toolId);
+      let toolResult: unknown;
+      let conversationalToolEvents: Array<{ id: string; type: string; timestamp: string }> = [];
+      const captureTrace = (events: Array<{ id: string; type: string; timestamp: string }>): void => {
+        conversationalToolEvents = events.map(({ id, type, timestamp }) => ({ id, type, timestamp }));
+      };
+      if (proposal.toolId === 'theta.rag.search') {
+        const query = typeof proposal.arguments.query === 'string' ? proposal.arguments.query : text;
+        const result = await runThetaRagSearch({ query, limit: 5 }, { onTrace: captureTrace });
+        toolResult = result.status === 'completed' ? result.output : { status: result.status, error: result.error };
+      } else {
+        const result = await runThetaModelCatalog({}, { onTrace: captureTrace });
+        toolResult = result.status === 'completed' ? result.output : { status: result.status, error: result.error };
+      }
+      const grounding = safeGrounding(proposal.toolId, toolResult);
+      toolSteps.push({ toolId: proposal.toolId, result: toolResult, grounding });
+      if (conversationalToolEvents.length > 0) {
+        this.activityMessage(context, runId, 'tool', `${proposal.toolId} 执行完成`, step + 1, proposal.toolId);
+        this.assistantMessage(
+          context,
+          runId,
+          'activity.tool.trace',
+          JSON.stringify({ toolId: proposal.toolId, phases: conversationalToolEvents, result: grounding }),
+        );
+      }
     }
+    const proposal = proposals.find((item) => item.intent === 'needs_dataset') ?? proposals.at(-1) ?? {
+      task: 'propose_readonly_tool' as const,
+      intent: 'unknown' as const,
+      toolId: null,
+      arguments: {},
+      reason: 'No Tool decision was produced.',
+      confidence: 0,
+      requiresConfirmation: false,
+    };
+    const contextualResult = {
+      assistant: 'THETA research-training assistant',
+      capabilities: [
+        '解释 THETA 当前阶段和下一步操作',
+        '读取当前 Run 状态与审计证据',
+        '检索 THETA 本地知识库并说明模型能力',
+        '根据你的研究回答更新研究档案并调整后续问题',
+        '解释训练方案、参数取舍、结果和研究限制',
+      ],
+      boundary: proposal.intent === 'approve_current' || proposal.intent === 'reject_current'
+        ? '我不会代替你审批方案或启动训练；这些操作必须由你显式确认。'
+        : '我可以提供建议和只读分析，但不会代替你审批方案或启动训练。',
+      currentState: workflowContext?.status.currentState,
+      currentQuestion: workflowContext?.status.pendingActionRef === THETA_APPROVAL_KEYS.researchClarification
+        ? activeResearchQuestion(workflowContext).question.question
+        : undefined,
+      memory: this.store.getMemory(context.sessionId),
+      requestDataset: !runId && proposal.intent === 'needs_dataset',
+    };
+    const grounding = toolSteps.length === 0
+      ? safeGrounding(null, contextualResult)
+      : {
+          facts: { ...contextualResult, toolSteps: toolSteps.map((step) => ({ toolId: step.toolId, ...step.grounding.facts })) },
+          evidence: toolSteps.flatMap((step) => step.grounding.evidence).slice(0, 5),
+        };
+    this.activityMessage(context, runId, 'thinking', '正在核对证据并组织最终回答', toolSteps.length + 1);
     const composed = await this.language(
       {
         schemaVersion: NATURAL_LANGUAGE_CONTRACT_VERSION,
         task: 'compose_grounded_response',
         userText: text,
-        toolId: proposal.toolId,
+        toolId: toolSteps.at(-1)?.toolId ?? null,
         facts: grounding.facts,
         evidence: grounding.evidence,
         recentMessages: recent(this.store, context.sessionId, runId).slice(-6),
@@ -979,7 +996,8 @@ export class ThetaTurnOrchestrator {
       value: {
         kind: 'conversation.turn',
         proposal,
-        result: toolResult,
+        steps: toolSteps.map((step) => ({ toolId: step.toolId, result: step.result })),
+        result: toolSteps.length === 1 ? toolSteps[0]?.result : toolSteps.map((step) => step.result),
         response,
         hasActiveRun: Boolean(runId),
         evidenceRefs:
@@ -1178,6 +1196,25 @@ export class ThetaTurnOrchestrator {
     return message;
   }
 
+  private activityMessage(
+    context: TurnContext,
+    runId: string | undefined,
+    phase: 'thinking' | 'tool',
+    label: string,
+    step = 1,
+    toolId?: string,
+  ): ConversationMessage {
+    return this.store.appendMessage({
+      messageId: `message.${randomUUID()}`,
+      sessionId: context.sessionId,
+      ...(runId ? { runId } : {}),
+      role: 'assistant',
+      messageKind: 'activity.agent.progress',
+      content: JSON.stringify({ phase, label, status: 'ongoing', step, ...(toolId ? { toolId } : {}) }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+
   private startTurn(
     context: TurnContext,
     runId: string,
@@ -1322,6 +1359,7 @@ const recent = (
       ): message is ConversationMessage & { role: 'user' | 'assistant' } =>
         message.role === 'user' || message.role === 'assistant',
     )
+    .filter((message) => !message.messageKind.startsWith('activity.'))
     .map(({ role, content }) => ({ role, content }));
 
 const questionAttempt = (

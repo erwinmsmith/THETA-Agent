@@ -7,8 +7,9 @@ import css from '../styles/app.module.css'
 interface AgentActivityTraceProps {
   interaction?: WebAgentInteraction
   reasoning?: WebReasoning
-  workspaceActivity?: { proposal?: unknown; result?: unknown; evidenceRefs?: unknown }
+  workspaceActivity?: { proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
   working?: boolean
+  currentProgress?: { phase: 'thinking' | 'tool'; label: string; step: number; toolId?: string }
 }
 
 interface ToolActivity {
@@ -105,6 +106,7 @@ export const AgentActivityTrace = ({
   reasoning,
   workspaceActivity,
   working = false,
+  currentProgress,
 }: AgentActivityTraceProps): React.ReactElement | null => {
   const { locale } = usePreferences()
   const [expanded, setExpanded] = useState<string>()
@@ -131,7 +133,10 @@ export const AgentActivityTrace = ({
       {working && (
         <div className={css.activityRow}>
           <span className={css.activitySpinner} />
-          <span>{locale === 'zh-CN' ? '正在分析请求并选择下一步能力' : 'Analyzing the request and selecting the next capability'}</span>
+          <span className={css.activityToolText}>
+            <strong>{currentProgress?.phase === 'tool' ? (locale === 'zh-CN' ? 'Tool · 正在调用工具' : 'Tool · Running') : 'Thinking'}</strong>
+            <small>{currentProgress?.label ?? (locale === 'zh-CN' ? '正在分析请求并选择下一步能力' : 'Analyzing the request and selecting the next capability')}</small>
+          </span>
         </div>
       )}
       {reasoningEvents.length > 0 && (

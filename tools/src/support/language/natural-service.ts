@@ -112,7 +112,9 @@ const maxTokensForTask = (task: NaturalLanguageRequest['task']): number => {
     case 'classify_conversation_intent':
       return 180;
     case 'propose_readonly_tool':
-      return 220;
+      // Reasoning-capable providers count hidden reasoning tokens against this
+      // budget. Leave enough room for the complete validated decision object.
+      return 1000;
     case 'generate_grilling_question':
       return 420;
     case 'compose_grounded_response':
@@ -169,14 +171,16 @@ const shape = (request: NaturalLanguageRequest): string => {
       ].join(' ');
     case 'propose_readonly_tool':
       return [
-        'Shape: {"task":"propose_readonly_tool","intent":"...","toolId":"one supplied allowedToolIds or null","arguments":{},"reason":"...","confidence":0.0,"requiresConfirmation":false}.',
+        'Shape: {"task":"propose_readonly_tool","intent":"read_status|read_evidence|search_evidence|list_models|explain_current|approve_current|reject_current|help|chat|needs_dataset|research_answer|unknown","toolId":"one supplied allowedToolIds or null","arguments":{},"reason":"...","confidence":0.0,"requiresConfirmation":false}.',
         'Select a Tool by semantic reasoning over the complete request and current FSM state, never by keyword or substring matching.',
         'Use intent needs_dataset when the user wants analysis of their own data but no active dataset context exists. Do not use it for questions about capabilities, setup, examples, models, or how the system works.',
         'Use only a supplied allowedToolId, and return toolId null when the allowlist is empty, the request can be answered from supplied context, or confidence is below 0.75.',
+        'toolHistory contains read-only tools already completed for this turn. Do not repeat them. Select another tool only when its result is necessary to resolve a remaining part of the request.',
+        'When the request asks for concrete model availability, use theta.model.catalog. When it asks for THETA facts, documentation, or research guidance that is not already supplied, use theta.rag.search. For a request with multiple unresolved parts, choose the most useful remaining tool now; a later decision will evaluate whether another tool is needed.',
         'For theta.rag.search include a concise semantic search query in arguments.query. Never propose a write, approval, or training Tool.',
       ].join(' ');
     case 'compose_grounded_response':
-      return 'Shape: {"task":"compose_grounded_response","text":"...","evidenceIds":[]}. Act as the THETA research-training assistant. Answer directly about THETA capabilities, the active research workflow, datasets, models, evidence, and safe next steps. Use only supplied facts and evidence; never claim an action was executed unless facts prove it. End with the current research question when one is supplied and still needs an answer.';
+      return 'Shape: {"task":"compose_grounded_response","text":"...","evidenceIds":[]}. Act as the THETA research-training assistant. Answer directly about THETA capabilities, the active research workflow, datasets, models, evidence, and safe next steps. Use only supplied facts and evidence; never claim an action was executed unless facts prove it. Only repeat a pending research question when facts.currentQuestion is a non-empty string and it still needs an answer; never repeat userText as a pending question after answering it.';
   }
 };
 

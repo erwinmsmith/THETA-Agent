@@ -1430,6 +1430,8 @@ textarea:focus-visible {
   cursor: help;
   font-size: 21px;
   font-weight: 300;
+  border: 0;
+  background: transparent;
 }
 .addButton:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .sendButton { min-width: 58px; border-radius: 10px; }
@@ -1494,6 +1496,7 @@ textarea:focus-visible {
 .tokenUsage b { color: var(--dsw-alias-label-secondary); font-weight: 500; }
 .tokenUsage i { color: var(--dsw-alias-border-l2); font-style: normal; }
 .quickModelPicker select:nth-of-type(2) { max-width: 160px; font-family: var(--ds-font-family-code); }
+.quickModelPicker select:nth-of-type(4) { max-width: 94px; }
 .quickModelPicker select:hover, .quickModelPicker select:focus { color: var(--dsw-alias-label-primary); background: transparent; }
 .quickModelBusy { width: 6px; height: 6px; margin: 0 4px; border-radius: 50%; background: var(--dsw-alias-state-business-primary); animation: pulse 1s ease-in-out infinite; }
 .typewriterLive::after { display: inline-block; width: 1px; height: 1em; margin-left: 2px; content: ''; vertical-align: -0.12em; background: currentColor; animation: pulse 700ms ease-in-out infinite; }
@@ -1642,17 +1645,32 @@ textarea:focus-visible {
   border-radius: 50%;
   animation: spin 800ms linear infinite;
 }
-.queuedMessage {
-  align-self: flex-end;
-  max-width: 70%;
-  padding: 8px 11px;
-  border: 1px dashed var(--dsw-alias-border-l2);
-  border-radius: 11px;
-  color: var(--dsw-alias-label-caption);
-  background: var(--dsw-alias-bg-layer-1);
+.queueDock {
+  display: flex;
+  width: min(824px, calc(100% - 26px));
+  max-height: 116px;
+  box-sizing: border-box;
+  margin: 0 auto -7px;
+  padding: 7px 10px 13px;
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-bottom: 0;
+  border-radius: 13px 13px 0 0;
+  color: var(--dsw-alias-label-tertiary);
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 94%, transparent);
+  font-size: 9px;
 }
-.queuedMessage span { font-family: var(--ds-font-family-code); font-size: 8px; text-transform: uppercase; }
-.queuedMessage p { margin: 3px 0 0; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.queueItem { display: flex; min-height: 22px; align-items: center; gap: 7px; }
+.queueItem p { min-width: 0; flex: 1; margin: 0; overflow: hidden; color: var(--dsw-alias-label-secondary); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.queueItem button { padding: 2px 6px; border: 0; border-radius: 6px; color: var(--theta-accent); background: transparent; cursor: pointer; font-size: 9px; }
+.queueItem button:hover { background: var(--theta-accent-soft); }
+.queueItemActive { color: var(--theta-accent); }
+.queueIndex { display: inline-flex; width: 14px; height: 14px; align-items: center; justify-content: center; border-radius: 50%; background: var(--dsw-alias-bg-layer-3); font-size: 8px; }
+.composerWrapDragging .composer { border-color: var(--theta-accent); background: color-mix(in srgb, var(--theta-accent-soft) 50%, var(--dsw-alias-bg-layer-1)); }
+.composerUploadError { width: min(850px, 100%); margin: 5px auto 0; color: var(--dsw-alias-state-error-primary); font-size: 10px; }
+.visuallyHidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 
 .artifactActivity {
   display: grid;
