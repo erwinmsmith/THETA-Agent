@@ -35,6 +35,7 @@ import {
   plannerInputV2Schema,
   plannerValidationResultV2Schema,
 } from "@theta-agent/domain/planner/v2-contracts.js";
+import { resolveThetaComputeDevice } from '../../compute-policy.js';
 
 export interface CreateTrainingPlanRecordInput {
   validatedPlan: Record<string, unknown>;
@@ -235,7 +236,7 @@ export const createTrainingPlanRecord = (
       deduplicate: false,
     },
     resources: {
-      device: brief.hardwareLimit.device,
+      device: resolveThetaComputeDevice(brief.hardwareLimit.device),
       memoryGb: brief.hardwareLimit.memoryGb ?? null,
       networkAllowed: !brief.offlineOnly,
     },
@@ -383,7 +384,7 @@ export const createTrainingPlanRecordV2 = (
       deduplicate: decision.preprocessing.some((item) => /dedup|去重/iu.test(item)),
     },
     resources: {
-      device: intent.resourceBudget.device,
+      device: resolveThetaComputeDevice(intent.resourceBudget.device),
       memoryGb: intent.resourceBudget.memoryGb ?? null,
       networkAllowed: !plannerInput.hardware.offlineOnly,
     },

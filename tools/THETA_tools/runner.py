@@ -113,6 +113,7 @@ def run_command(
 
     kwargs: dict[str, Any] = {
         "cwd": str(cwd),
+        "env": compute_environment_for_argv(argv),
         "stdout": subprocess.PIPE,
         "stderr": subprocess.STDOUT,
         "stdin": subprocess.DEVNULL,
@@ -153,6 +154,27 @@ def command_argv(command: dict[str, Any]) -> list[str]:
     if argv and argv[0] == "python":
         argv[0] = sys.executable
     return argv
+
+
+def compute_environment_for_argv(argv: list[str]) -> dict[str, str]:
+    """Build an isolated local compute environment for a THETA subprocess."""
+    env = os.environ.copy()
+    gpu_value = option_value(argv, "--gpu")
+    cpu_selected = gpu_value in {None, "-1"}
+    env["THETA_COMPUTE_BACKEND"] = "local"
+    env["THETA_COMPUTE_DEVICE"] = "cpu" if cpu_selected else "gpu"
+    if cpu_selected:
+        # Prevent upstream auto-detection from re-enabling an accelerator.
+        env["CUDA_VISIBLE_DEVICES"] = "-1"
+        env["NVIDIA_VISIBLE_DEVICES"] = "none"
+    return env
+
+
+def option_value(argv: list[str], flag: str) -> str | None:
+    if flag not in argv:
+        return None
+    index = argv.index(flag) + 1
+    return argv[index] if index < len(argv) else None
 
 
 def model_id_from_commands(commands: Any) -> str:

@@ -49,6 +49,21 @@ ignored THETA checkout. Hypha provides framework contracts to these layers.
 Neither upstream checkout imports project code, and `domain` never depends on
 tool implementations.
 
+## Compute execution boundary
+
+The Agent resolves an unspecified device through one compute policy before a
+plan reaches THETA. The current policy is `local` execution with `cpu` as the
+default. Canonical plans store the resolved device, and the Python runner
+explicitly hides accelerators for CPU commands so upstream auto-detection
+cannot change the approved plan. `GET /api/v2/runtime` exposes this safe
+profile together with registry counts; the web UI only renders it.
+
+Future scheduling belongs behind the compute backend boundary. A scheduler
+adapter must own dispatch, cancellation, status, and artifact transport while
+preserving the existing plan, approval, tool audit, and result contracts. An
+unknown `THETA_COMPUTE_BACKEND` currently fails closed instead of silently
+falling back to local execution.
+
 New generic behavior is named for research concepts rather than THETA. A new
 execution backend is added through registered tools and skills instead of by
 expanding the CLI.

@@ -115,6 +115,21 @@ export interface ThetaWebApiHealth {
   }>;
 }
 
+export interface ThetaWebRuntimeProfile {
+  service: 'theta-agent-runtime';
+  version: 'v2';
+  compute: {
+    backend: 'local';
+    defaultDevice: 'cpu' | 'gpu';
+    scheduler: { supported: false; enabled: false };
+  };
+  capabilities: {
+    domains: number;
+    tools: number;
+    skills: number;
+  };
+}
+
 export interface ThetaWebRunSummary {
   runId: string;
   updatedAt: string;

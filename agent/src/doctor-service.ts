@@ -23,6 +23,7 @@ import {
   thetaUpstreamRoot,
   upstreamLockPath,
 } from '@theta-agent/tools/support/repository-paths.js';
+import { resolveThetaComputeProfile } from '@theta-agent/tools/compute-policy.js';
 
 export type DoctorCheckStatus = 'PASS' | 'WARN' | 'FAIL';
 
@@ -69,7 +70,7 @@ export class DoctorService {
     checks.push(await this.pythonAndModelCheck());
     checks.push(await this.capabilityRegistryCheck());
     checks.push(await this.structuredKnowledgeCheck());
-    checks.push(gpuCheck());
+    checks.push(computePolicyCheck());
     checks.push(inferenceProviderCheck());
 
     return {
@@ -409,16 +410,34 @@ const nodeCheck = (): DoctorCheck => {
       );
 };
 
-const gpuCheck = (): DoctorCheck => {
-  const visible =
-    process.env.CUDA_VISIBLE_DEVICES ?? process.env.NVIDIA_VISIBLE_DEVICES;
-  return visible && visible !== '-1' && visible.toLowerCase() !== 'none'
-    ? pass('gpu.visibility', `GPU visibility is configured as ${visible}.`)
-    : warn(
-        'gpu.visibility',
-        'No explicit GPU visibility is configured; CPU-safe commands remain available.',
-        'Set CUDA_VISIBLE_DEVICES when GPU training is required.',
+const computePolicyCheck = (): DoctorCheck => {
+  try {
+    const profile = resolveThetaComputeProfile();
+    if (profile.defaultDevice === 'cpu') {
+      return pass(
+        'compute.policy',
+        'Local CPU execution is the active default; scheduler dispatch is disabled.',
       );
+    }
+    const visible =
+      process.env.CUDA_VISIBLE_DEVICES ?? process.env.NVIDIA_VISIBLE_DEVICES;
+    return visible && visible !== '-1' && visible.toLowerCase() !== 'none'
+      ? pass(
+          'compute.policy',
+          `Local GPU execution is configured with visible devices ${visible}.`,
+        )
+      : warn(
+          'compute.policy',
+          'GPU is the requested default, but no visible device is configured.',
+          'Set CUDA_VISIBLE_DEVICES or restore THETA_COMPUTE_DEVICE=cpu.',
+        );
+  } catch (error) {
+    return fail(
+      'compute.policy',
+      `Compute policy is invalid: ${message(error)}`,
+      'Use THETA_COMPUTE_BACKEND=local and THETA_COMPUTE_DEVICE=cpu.',
+    );
+  }
 };
 
 const inferenceProviderCheck = (): DoctorCheck => {

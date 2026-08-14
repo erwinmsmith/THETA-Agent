@@ -5,6 +5,7 @@ import {
   getEvents,
   getReasoning,
   getRun,
+  getRuntimeProfile,
   listRuns,
   openRunStream,
   postMessage,
@@ -13,6 +14,7 @@ import {
   type WebRunEvent,
   type WebRunStatus,
   type WebRunSummary,
+  type WebRuntimeProfile,
 } from './api/client.ts'
 import {
   BrandWordmark,
@@ -62,6 +64,7 @@ export const AppRoot = (): React.ReactElement => {
   const [sending, setSending] = useState(false)
   const [loadError, setLoadError] = useState<string>()
   const [streamState, setStreamState] = useState<StreamState>('idle')
+  const [runtimeProfile, setRuntimeProfile] = useState<WebRuntimeProfile>()
   const [newRunOpen, setNewRunOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(true)
@@ -86,6 +89,12 @@ export const AppRoot = (): React.ReactElement => {
   useEffect(() => {
     void refreshRuns()
   }, [refreshRuns])
+
+  useEffect(() => {
+    void getRuntimeProfile()
+      .then(setRuntimeProfile)
+      .catch(() => setRuntimeProfile(undefined))
+  }, [])
 
   useEffect(() => {
     const narrow = window.matchMedia('(max-width: 900px)')
@@ -268,6 +277,17 @@ export const AppRoot = (): React.ReactElement => {
           <span className={css.topbarSubtitle}>{selectedRun?.identity?.datasetName ?? 'THETA autonomous research agent'}</span>
         </div>
         <div className={css.topbarActions}>
+          <div
+            className={css.computeState}
+            title={runtimeProfile == null
+              ? '正在读取 Agent 计算运行时'
+              : `${runtimeProfile.capabilities.tools} tools · ${runtimeProfile.capabilities.skills} skills`}
+          >
+            <span />
+            {runtimeProfile == null
+              ? 'RUNTIME'
+              : `${runtimeProfile.compute.defaultDevice.toUpperCase()} · ${runtimeProfile.compute.backend.toUpperCase()}`}
+          </div>
           <InferenceSelector />
           <div className={`${css.connectionState} ${css[`connection_${streamState}`]}`}>
             <span />

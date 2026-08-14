@@ -124,6 +124,21 @@ export interface WebInferenceCatalog {
   selection: { providerId: string; model: string; source: string } | null;
 }
 
+export interface WebRuntimeProfile {
+  service: 'theta-agent-runtime';
+  version: 'v2';
+  compute: {
+    backend: 'local';
+    defaultDevice: 'cpu' | 'gpu';
+    scheduler: { supported: false; enabled: false };
+  };
+  capabilities: {
+    domains: number;
+    tools: number;
+    skills: number;
+  };
+}
+
 export interface WebEnvelope<T> {
   ok: boolean;
   data?: T;
@@ -178,6 +193,9 @@ export const uploadDataset = async (file: File): Promise<WebDataset> => {
 
 export const getInferenceCatalog = (): Promise<WebInferenceCatalog> =>
   request('/api/v2/inference');
+
+export const getRuntimeProfile = (): Promise<WebRuntimeProfile> =>
+  request('/api/v2/runtime');
 
 export const selectInferenceModel = (providerId: string, model: string): Promise<unknown> =>
   request('/api/v2/inference', {

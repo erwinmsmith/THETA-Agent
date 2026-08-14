@@ -10,6 +10,7 @@ import type { CapabilityCatalogModel } from '@theta-agent/domain/capabilities/co
 import { datasetFactsSchema, researchIntentSchema } from '@theta-agent/domain/dataset-understanding/contracts.js';
 import { callThetaTools } from './theta-tools.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
+import { resolveThetaComputeDevice } from './compute-policy.js';
 
 export interface ThetaPlanCreateInput extends Omit<CreateTrainingPlanRecordV2Input, 'createdAt'> {
   createdAt?: string;
@@ -110,7 +111,7 @@ export const thetaPlanCreateHandler: ToolHandler<unknown, ThetaPlanCreateOutput>
       qualityWarnings: facts.qualityWarnings,
     },
     offlineOnly: !intent.constraints.some((item) => /允许联网|network allowed/iu.test(item)),
-    device: intent.resourceBudget.device,
+    device: resolveThetaComputeDevice(intent.resourceBudget.device),
   });
   if (!validated.valid) {
     throw new Error(`Validator V2 rejected plan.create: ${validated.errors.join('; ')}`);

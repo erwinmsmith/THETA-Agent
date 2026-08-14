@@ -29,6 +29,7 @@ import {
 import { resolveDatasetFile } from '@theta-agent/agent';
 import { runThetaModelCatalog } from '@theta-agent/agent';
 import { runThetaTrainingStatus } from '@theta-agent/agent';
+import { getThetaRuntimeProfile } from '@theta-agent/agent';
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
@@ -125,6 +126,12 @@ const routeRequest = async (
       ...report,
     };
     writeJson(response, 200, { ok: true, data: health });
+    return;
+  }
+
+  if (url.pathname === '/api/v2/runtime') {
+    if (method !== 'GET') return methodNotAllowed(response);
+    writeJson(response, 200, { ok: true, data: await getThetaRuntimeProfile() });
     return;
   }
 

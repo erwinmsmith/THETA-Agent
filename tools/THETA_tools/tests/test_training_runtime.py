@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from THETA_tools import tools
+from THETA_tools import runner, tools
 
 
 class TrainingRuntimeRecoveryTest(unittest.TestCase):
@@ -200,6 +200,28 @@ class TrainingRuntimeRecoveryTest(unittest.TestCase):
         self.assertEqual(phase["phaseContext"]["seed"], 42)
         self.assertEqual(phase["phaseContext"]["runIndex"], 1)
         self.assertEqual(phase["phaseContext"]["totalRuns"], 2)
+
+    def test_cpu_commands_hide_accelerators_in_child_environment(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"CUDA_VISIBLE_DEVICES": "0", "NVIDIA_VISIBLE_DEVICES": "all"},
+            clear=False,
+        ):
+            env = runner.compute_environment_for_argv(
+                ["python", "main.py", "--gpu", "-1"]
+            )
+        self.assertEqual(env["THETA_COMPUTE_BACKEND"], "local")
+        self.assertEqual(env["THETA_COMPUTE_DEVICE"], "cpu")
+        self.assertEqual(env["CUDA_VISIBLE_DEVICES"], "-1")
+        self.assertEqual(env["NVIDIA_VISIBLE_DEVICES"], "none")
+
+    def test_gpu_commands_keep_explicit_visibility_configuration(self) -> None:
+        with patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": "2"}, clear=False):
+            env = runner.compute_environment_for_argv(
+                ["python", "main.py", "--gpu", "0"]
+            )
+        self.assertEqual(env["THETA_COMPUTE_DEVICE"], "gpu")
+        self.assertEqual(env["CUDA_VISIBLE_DEVICES"], "2")
 
     def test_quality_reassessment_receipts_are_append_only(self) -> None:
         artifacts = [{"path": "result/topics.csv", "sha256": "a" * 64}]

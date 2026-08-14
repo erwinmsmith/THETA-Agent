@@ -24,6 +24,9 @@ runtime layers without being coupled to THETA-specific model code.
   `third_party/` directory and is never committed to this repository.
 - **Local by default:** datasets, model assets, credentials, and run artifacts
   remain outside version control.
+- **CPU by default:** unspecified plans execute on the local CPU. The compute
+  backend is isolated so a future scheduler can be added without moving policy
+  into the CLI, API, or web adapters.
 
 ## Repository map
 
@@ -132,6 +135,12 @@ npm run env:import:hypha
 ```
 
 `.env` is ignored and must never be committed.
+
+Local computation defaults to `THETA_COMPUTE_BACKEND=local` and
+`THETA_COMPUTE_DEVICE=cpu`. A plan may explicitly request GPU, but training
+subprocesses otherwise hide accelerator devices to prevent upstream automatic
+detection. Distributed scheduling is not implemented yet; `local` is the
+current execution backend and the extension boundary for that later work.
 
 Set `THETA_LLM_PROVIDER` and `THETA_LLM_MODEL` in `.env` for an environment
 default, or switch models without editing the file:

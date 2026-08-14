@@ -24,9 +24,10 @@ pnpm --filter @theta-agent/web run typecheck
 
 ## Layout
 
-- **Top** — current task, live-stream health, and the global inference provider
-  and model selector. DeepSeek is selected when the default environment is
-  configured; unavailable providers are visible but disabled.
+- **Top** — current task, compute backend/device, live-stream health, and the
+  global inference provider and model selector. DeepSeek is selected when the
+  default environment is configured; unavailable providers are visible but
+  disabled.
 - **Left** — research run catalog with automatic restoration, status, current
   state, relative update time, create, and delete actions.
 - **Center** — conversational thread: user messages and assistant responses
@@ -55,6 +56,8 @@ reconnects.
 
 | Endpoint | Purpose |
 | --- | --- |
+| `GET /api/v2/health` | full Agent, registry, upstream, Python, and storage diagnostics |
+| `GET /api/v2/runtime` | safe compute policy and registered capability counts |
 | `GET /api/v2/runs` | run catalog |
 | `POST /api/v2/runs` | create a governed research run |
 | `GET /api/v2/runs/:id` | detail bundle (status, identity, plan, results) |

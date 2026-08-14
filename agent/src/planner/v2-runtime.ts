@@ -8,6 +8,7 @@ import {
   plannerInputV2Schema,
   type PlannerInputV2,
 } from '@theta-agent/domain/planner/v2-contracts.js';
+import { resolveThetaComputeDevice } from '@theta-agent/tools/compute-policy.js';
 
 type Scalar = string | number | boolean | null;
 
@@ -35,9 +36,10 @@ export const buildPlannerInputV2 = (
   );
   const hasRuntimeCatalog = catalogModels.size > 0;
   const constrainedDevice = context.constraints?.device;
-  const device = constrainedDevice === 'cpu' || constrainedDevice === 'gpu' || constrainedDevice === 'unknown'
+  const requestedDevice = constrainedDevice === 'cpu' || constrainedDevice === 'gpu' || constrainedDevice === 'unknown'
     ? constrainedDevice
     : context.intent.resourceBudget.device;
+  const device = resolveThetaComputeDevice(requestedDevice);
   const constrainedMemory = context.constraints?.memoryGb;
   const memoryGb = typeof constrainedMemory === 'number' && constrainedMemory > 0
     ? constrainedMemory
