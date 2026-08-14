@@ -118,7 +118,7 @@ export const AppRoot = (): React.ReactElement => {
       setRuns(data.runs)
       setSelectedRunId((current) => {
         if (current != null && data.runs.some((run) => run.runId === current)) return current
-        return data.runs[0]?.runId
+        return undefined
       })
       setLoadError(undefined)
     } catch (error) {
@@ -325,8 +325,9 @@ export const AppRoot = (): React.ReactElement => {
     })()
   }, [queued, sending, selectedRunId, workspaceSessionId, mergeMessages, refreshRuns, refreshWorkspaceSessions])
 
-  const startNewConversation = useCallback(async () => {
+  const startNewConversation = useCallback(() => {
     setSelectedRunId(undefined)
+    setWorkspaceSessionId(undefined)
     setMessages([])
     setEvents([])
     setReasoning(undefined)
@@ -337,14 +338,8 @@ export const AppRoot = (): React.ReactElement => {
     setWorkspaceInteraction(undefined)
     setAttachments([])
     setLiveAssistantMessageId(undefined)
+    setLoadError(undefined)
     knownMessageIds.current.clear()
-    try {
-      const created = await createWorkspaceSession()
-      setWorkspaceSessionId(created.sessionId)
-      setWorkspaceInteraction(created.interaction)
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error))
-    }
   }, [])
 
   const selectWorkspaceHistory = async (sessionId: string): Promise<void> => {
@@ -480,7 +475,7 @@ export const AppRoot = (): React.ReactElement => {
               variant="primary"
               className={css.newRunButton}
               icon={<IconNewChatOutline16 />}
-              onClick={() => void startNewConversation()}
+              onClick={startNewConversation}
             >
               {t('newChat')}
             </Button>

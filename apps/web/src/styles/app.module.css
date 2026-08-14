@@ -1369,20 +1369,20 @@ textarea:focus-visible {
   min-height: 46px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
+  padding: 0 3px;
+  border: 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 0;
   color: var(--dsw-alias-label-secondary);
-  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 84%, transparent);
+  background: transparent;
   cursor: pointer;
   font-size: 12px;
   text-align: left;
-  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 .promptGrid button:hover {
   border-color: color-mix(in srgb, var(--theta-accent) 35%, var(--dsw-alias-border-l2));
-  background: var(--theta-accent-soft);
-  transform: translateY(-1px);
+  color: var(--dsw-alias-label-primary);
 }
 .promptGrid button span { color: var(--theta-accent); }
 

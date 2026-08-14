@@ -274,7 +274,7 @@ export const ConversationPane = ({
         <div ref={bottomRef} />
       </div>
 
-      {activeInteraction?.card?.kind === 'dataset_upload' && (
+      {!showStarter && activeInteraction?.card?.kind === 'dataset_upload' && (
         <div className={css.approvalDock}>
           <DatasetIntakeCard
             interaction={activeInteraction}
