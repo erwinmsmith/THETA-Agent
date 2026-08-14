@@ -162,6 +162,20 @@ try {
   assert.equal(store.listWorkspaceSessions()[0]?.pinned, true);
   assert.equal(store.deleteSession(workspaceSessionId), true);
   assert.equal(store.listWorkspaceSessions().length, 0);
+  const promotedWorkspaceSessionId = 'theta-web-workspace-promoted-test';
+  store.getOrCreateSession(promotedWorkspaceSessionId, { activeRunId: 'theta-run-promoted-test' });
+  store.appendMessage({
+    messageId: 'message.workspace.promoted.1',
+    sessionId: promotedWorkspaceSessionId,
+    role: 'user',
+    messageKind: 'conversation.text',
+    content: 'Analyze the attached dataset.',
+    createdAt: new Date().toISOString(),
+  });
+  assert.equal(
+    store.listWorkspaceSessions().some((session) => session.sessionId === promotedWorkspaceSessionId),
+    false,
+  );
   store.close();
 
   const database = new DatabaseSync(runtimeDb);

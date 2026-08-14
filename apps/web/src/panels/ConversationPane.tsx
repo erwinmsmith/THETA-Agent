@@ -186,13 +186,50 @@ export const ConversationPane = ({
   const activeInteraction = runId ? status?.interaction : entryInteraction
 
   useEffect(() => {
-    if (followTail.current) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages.length, sending, queued.length, status?.pendingActionRef])
+    if (!followTail.current) return
+    const frame = window.requestAnimationFrame(() => {
+      const thread = threadRef.current
+      if (thread == null) return
+      thread.scrollTo({
+        top: thread.scrollHeight,
+        behavior: sending ? 'smooth' : 'auto',
+      })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [messages.length, sending, queued.length, status?.pendingActionRef, reasoning?.toolCalls.length, reasoning?.reasoningEvents.length])
 
   useEffect(() => {
     setDraft('')
     followTail.current = true
   }, [runId, workspaceSessionId])
+
+  useEffect(() => {
+    const thread = threadRef.current
+    if (thread == null) return
+    let frame: number | undefined
+    const scrollTail = (): void => {
+      if (!followTail.current) return
+      window.cancelAnimationFrame(frame ?? 0)
+      frame = window.requestAnimationFrame(() => {
+        thread.scrollTop = thread.scrollHeight
+      })
+    }
+    const resizeObserver = new ResizeObserver(scrollTail)
+    const observeChildren = (): void => {
+      for (const child of thread.children) resizeObserver.observe(child)
+    }
+    const mutationObserver = new MutationObserver(() => {
+      observeChildren()
+      scrollTail()
+    })
+    observeChildren()
+    mutationObserver.observe(thread, { childList: true, subtree: true })
+    return () => {
+      window.cancelAnimationFrame(frame ?? 0)
+      mutationObserver.disconnect()
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   const submitText = (value = draft): void => {
     const text = value.trim()

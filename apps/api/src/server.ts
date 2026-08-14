@@ -1842,6 +1842,7 @@ const promoteWorkspaceConversation = (
   const store = new SQLiteConversationStore(runtimeDb);
   try {
     if (!store.getSession(sourceSessionId)) return;
+    store.updateSession(sourceSessionId, { activeRunId: runId });
     const targetSessionId = `theta-web-${runId}`;
     store.getOrCreateSession(targetSessionId, { activeRunId: runId });
     for (const message of store.listRecentMessages(sourceSessionId, 100)) {

@@ -346,6 +346,7 @@ export class SQLiteConversationStore implements ConversationStore {
              ON m.session_id = s.session_id
             AND m.message_kind NOT LIKE 'activity.%'
           WHERE s.session_id LIKE 'theta-web-workspace-%'
+            AND s.active_run_id IS NULL
           GROUP BY s.session_id
          HAVING COUNT(m.message_id) > 0
           ORDER BY COALESCE(s.pinned, 0) DESC, s.updated_at DESC
@@ -512,6 +513,48 @@ export class SQLiteConversationStore implements ConversationStore {
          VALUES (2, datetime('now'))`,
       )
       .run();
+    const promotedLinkMigration = this.database
+      .prepare('SELECT 1 AS found FROM theta_conversation_migrations WHERE version = 3')
+      .get() as Row | undefined;
+    if (!promotedLinkMigration) {
+      this.database.exec(`
+        UPDATE theta_conversation_sessions AS source
+           SET active_run_id = (
+             SELECT target.active_run_id
+               FROM theta_conversation_messages AS source_message
+               JOIN theta_conversation_messages AS target_message
+                 ON target_message.role = 'user'
+                AND target_message.content = source_message.content
+                AND target_message.created_at = source_message.created_at
+               JOIN theta_conversation_sessions AS target
+                 ON target.session_id = target_message.session_id
+              WHERE source_message.session_id = source.session_id
+                AND source_message.role = 'user'
+                AND target.session_id LIKE 'theta-web-theta-run-%'
+                AND target.active_run_id IS NOT NULL
+              ORDER BY source_message.sequence_number ASC, target.updated_at DESC
+              LIMIT 1
+           )
+         WHERE source.session_id LIKE 'theta-web-workspace-%'
+           AND source.active_run_id IS NULL
+           AND EXISTS (
+             SELECT 1
+               FROM theta_conversation_messages AS source_message
+               JOIN theta_conversation_messages AS target_message
+                 ON target_message.role = 'user'
+                AND target_message.content = source_message.content
+                AND target_message.created_at = source_message.created_at
+               JOIN theta_conversation_sessions AS target
+                 ON target.session_id = target_message.session_id
+              WHERE source_message.session_id = source.session_id
+                AND source_message.role = 'user'
+                AND target.session_id LIKE 'theta-web-theta-run-%'
+                AND target.active_run_id IS NOT NULL
+           );
+        INSERT INTO theta_conversation_migrations(version, applied_at)
+        VALUES (3, datetime('now'));
+      `);
+    }
   }
 }
 
