@@ -116,6 +116,25 @@ export const AppRoot = (): React.ReactElement => {
     [selectedRunId, sending, mergeMessages, refreshRuns],
   )
 
+  const refreshRun = useCallback(async () => {
+    if (!selectedRunId) return
+    try {
+      const [detail, conversation, eventData, reasoningData] = await Promise.all([
+        getRun(selectedRunId),
+        getConversation(selectedRunId),
+        getEvents(selectedRunId, { limit: 300 }),
+        getReasoning(selectedRunId),
+      ])
+      setStatus(detail.status)
+      mergeMessages(conversation.messages)
+      setEvents(eventData.events)
+      setReasoning(reasoningData)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error))
+    }
+    void refreshRuns()
+  }, [selectedRunId, mergeMessages, refreshRuns])
+
   const selectedRun = runs.find((run) => run.runId === selectedRunId)
 
   return (
@@ -169,7 +188,14 @@ export const AppRoot = (): React.ReactElement => {
           ))}
         </aside>
         <main className={css.center}>
-          <ConversationPane messages={messages} sending={sending} onSend={send} />
+          <ConversationPane
+            messages={messages}
+            sending={sending}
+            onSend={send}
+            runId={selectedRunId}
+            status={status}
+            onApproved={() => void refreshRun()}
+          />
         </main>
         <DetailPane
           runId={selectedRunId}

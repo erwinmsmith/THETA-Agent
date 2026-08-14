@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import type { WebMessage } from '../api/client.ts'
+import type { WebMessage, WebRunStatus } from '../api/client.ts'
 import { Button, Input, MarkdownText } from '../ui/index.ts'
+import { ApprovalPanel } from './ApprovalPanel.tsx'
 import css from '../styles/app.module.css'
 
 const HUMAN_KINDS: ReadonlySet<string> = new Set([
@@ -16,9 +17,19 @@ interface ConversationPaneProps {
   messages: WebMessage[]
   sending: boolean
   onSend: (text: string) => void
+  runId?: string
+  status?: WebRunStatus
+  onApproved?: () => void
 }
 
-export const ConversationPane = ({ messages, sending, onSend }: ConversationPaneProps): React.ReactElement => {
+export const ConversationPane = ({
+  messages,
+  sending,
+  onSend,
+  runId,
+  status,
+  onApproved,
+}: ConversationPaneProps): React.ReactElement => {
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -59,6 +70,11 @@ export const ConversationPane = ({ messages, sending, onSend }: ConversationPane
         ))}
         <div ref={bottomRef} />
       </div>
+      {runId != null && status != null && onApproved != null && (
+        <div style={{ padding: '0 16px 8px' }}>
+          <ApprovalPanel runId={runId} status={status} onApproved={onApproved} />
+        </div>
+      )}
       <div className={css.composer}>
         <Input
           id="theta-composer"

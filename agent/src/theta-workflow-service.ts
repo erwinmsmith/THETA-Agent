@@ -1696,6 +1696,7 @@ const executeThetaState = async (
             await invoke(THETA_TOOL_IDS.planPropose, {
               plannerInput: plannerInputV2,
               evidenceBundle,
+              enabled: isProviderPlannerMode(nativeInput.plannerMode),
             }),
           );
           const plannerValidationV2 = validatePlannerDecisionV2(

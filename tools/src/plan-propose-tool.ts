@@ -2,6 +2,7 @@ import type { JsonSchema } from '@codesoul-co/hypha-core';
 import type { ToolHandler, ToolSpec } from '@codesoul-co/hypha-tools';
 import { evidenceBundleSchema, type EvidenceBundle } from './support/rag/evidence-bundle.js';
 import { NativePlannerV2Service } from './support/planner/native-service.js';
+import { buildDeterministicPlannerDecisionV2 } from './support/planner/deterministic-v2.js';
 import {
   plannerDecisionV2Schema,
   plannerInputV2Schema,
@@ -14,6 +15,8 @@ import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
 export interface ThetaPlanProposeInput {
   plannerInput: PlannerInputV2;
   evidenceBundle: EvidenceBundle;
+  /** false selects the offline deterministic planner. */
+  enabled?: boolean;
 }
 export type ThetaPlanProposeOutput = PlannerDecisionV2;
 
@@ -23,6 +26,7 @@ const inputSchema: JsonSchema = {
   properties: {
     plannerInput: { type: 'object', additionalProperties: true },
     evidenceBundle: { type: 'object', additionalProperties: true },
+    enabled: { type: 'boolean' },
   },
   additionalProperties: false,
 };
@@ -80,8 +84,13 @@ export const thetaPlanProposeHandler: ToolHandler<unknown, ThetaPlanProposeOutpu
   const value = input as Record<string, unknown>;
   const plannerInput = plannerInputV2Schema.parse(value.plannerInput);
   const evidenceBundle = evidenceBundleSchema.parse(value.evidenceBundle);
+  if (value.enabled === false) {
+    return buildDeterministicPlannerDecisionV2(plannerInput, evidenceBundle);
+  }
   const provider = createInferenceProviderFromEnv({ timeoutMs: plannerTimeoutMs() });
-  if (!provider) throw new Error('A configured inference provider is required by Planner V2.');
+  if (!provider) {
+    throw new Error('A configured inference provider is required by Planner V2.');
+  }
   return plannerDecisionV2Schema.parse(
     await new NativePlannerV2Service(provider).propose(plannerInput, evidenceBundle),
   );
