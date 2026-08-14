@@ -182,6 +182,11 @@ Start the optional local HTTP API with:
 npm run start:api
 ```
 
+The API server also serves the conversational web interface (built from
+`apps/web` by `npm run build`) at `http://127.0.0.1:4318/` — run list,
+conversational thread, approval forms, tool-call trace, reasoning panel, and
+live SSE updates. See [docs/WEB.md](docs/WEB.md).
+
 Example first session:
 
 ```text

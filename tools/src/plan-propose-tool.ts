@@ -87,7 +87,13 @@ export const thetaPlanProposeHandler: ToolHandler<unknown, ThetaPlanProposeOutpu
   if (value.enabled === false) {
     return buildDeterministicPlannerDecisionV2(plannerInput, evidenceBundle);
   }
-  const provider = createInferenceProviderFromEnv({ timeoutMs: plannerTimeoutMs() });
+  // Reasoning-style models may leave `content` empty on long planning
+  // prompts; THETA_LLM_PLANNER_MODEL pins the planner to a chat-style model.
+  const plannerModel = process.env.THETA_LLM_PLANNER_MODEL?.trim();
+  const provider = createInferenceProviderFromEnv({
+    timeoutMs: plannerTimeoutMs(),
+    ...(plannerModel ? { model: plannerModel } : {}),
+  });
   if (!provider) {
     throw new Error('A configured inference provider is required by Planner V2.');
   }

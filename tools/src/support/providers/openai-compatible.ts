@@ -102,6 +102,12 @@ export class OpenAICompatibleInferenceProvider implements InferenceProvider {
         );
       }
       const payload = await responseJson(response);
+      if (process.env.THETA_DEBUG_PROVIDER_RESPONSES === '1') {
+        console.error(
+          `[theta-provider-debug] ${this.id} response:`,
+          JSON.stringify(payload).slice(0, 6000),
+        );
+      }
       const toolCalls = responseToolCalls(payload);
       const output = toolCalls.length
         ? { kind: 'tool_calls', toolCalls }
@@ -238,13 +244,23 @@ const responseContent = (payload: Record<string, unknown>): string => {
   const choices = Array.isArray(payload.choices) ? payload.choices : [];
   const first = record(choices[0]);
   const message = record(first.message);
-  if (typeof message.content !== 'string' || !message.content.trim()) {
-    throw new InferenceProviderError(
-      'non_json_response',
-      'Provider response did not contain message content.',
-    );
+  if (typeof message.content === 'string' && message.content.trim()) {
+    return message.content;
   }
-  return message.content;
+  // Reasoning-capable providers (the deepseek-reasoner family) may emit the
+  // final answer only through the reasoning channel while leaving `content`
+  // empty. Reuse that text so the structured parsers below can extract the
+  // JSON payload.
+  if (
+    typeof message.reasoning_content === 'string' &&
+    message.reasoning_content.trim()
+  ) {
+    return message.reasoning_content;
+  }
+  throw new InferenceProviderError(
+    'non_json_response',
+    'Provider response did not contain message content.',
+  );
 };
 
 const responseToolCalls = (

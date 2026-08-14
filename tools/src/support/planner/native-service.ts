@@ -170,6 +170,7 @@ const plannerMessages = (
   role: 'system',
   content: [
     'You are the native THETA Planner V2. Create the complete executable research plan; do not choose from a pre-generated plan.',
+    'Write the FINAL JSON answer in your response content body; never end your turn with only reasoning and an empty content field.',
     'Select only runnable candidates and obey parameterConstraints, confirmed columns, hardware, and user overrides.',
     'Treat comparisonPurpose=display as post-training grouping, never as a training covariate. Only comparisonPurpose=model may require metadata effects.',
     'Treat temporalPurpose=display_trend as post-training aggregation and charts; it does not require a temporal topic model. Only temporalPurpose=topic_evolution requires native temporal_topics.',

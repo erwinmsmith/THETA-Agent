@@ -11,7 +11,7 @@ the application.
 ## Layer model
 
 ```text
-CLI / API adapters
+CLI / API / Web adapters
         |
 Agent bootstrap, conversation, and research orchestration
         |
@@ -35,7 +35,8 @@ The repository has seven ownership areas:
 4. `skills` owns project skill definitions. The skill registry also loads
    Hypha built-ins from the shipped `@codesoul-co/hypha-skills` package data.
 5. `knowledge` owns evidence manifests and model capability cards.
-6. `apps/cli` and `apps/api` are thin input/output adapters.
+6. `apps/cli`, `apps/api`, and `apps/web` are thin input/output adapters;
+   the web UI renders only what the API exposes and never decides policy.
 7. `third_party/THETA` is the single standard upstream checkout and remains
    ignored. Hypha is consumed through the published `@codesoul-co/hypha-*` npm
    release line; no Hypha source is copied into the project.
