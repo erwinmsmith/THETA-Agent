@@ -17,7 +17,7 @@
     "build:domain": "pnpm --filter @theta-agent/domain run build",
     "build:tools": "pnpm --filter @theta-agent/tools run build",
     "build:agent": "pnpm --filter @theta-agent/agent run build",
-    "build:apps": "pnpm --filter @theta-agent/cli run build && pnpm --filter @theta-agent/api run build",
+    "build:apps": "pnpm --filter @theta-agent/cli run build && pnpm --filter @theta-agent/api run build && pnpm --filter @theta-agent/web run build",
     "build": "npm run build:domain && npm run build:tools && npm run build:agent && npm run build:apps",
     "test:python": "pnpm --filter @theta-agent/tools run test:python",
     "test:registries": "node scripts/check-registries.mjs",
@@ -31,7 +31,8 @@
     "prestart": "npm run deps:ensure",
     "start": "npm run cli -- repl",
     "start:api": "pnpm --filter @theta-agent/api run start",
-    "validate": "node scripts/validate-repository.mjs && npm run test:docs"
+    "validate": "node scripts/validate-repository.mjs && npm run test:docs",
+    "build:web": "pnpm --filter @theta-agent/web run build"
   },
   "engines": {
     "node": ">=22.5.0"

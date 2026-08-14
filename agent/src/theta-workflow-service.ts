@@ -94,6 +94,7 @@ import {
   THETA_DOMAIN_PACK_VERSION,
   THETA_WORKFLOW_STATES,
   compileThetaTrainingDomain,
+  compileThetaWorkflowFSM,
   resolveThetaStateToolScope,
 } from "@theta-agent/domain/domain.js";
 import {
@@ -386,14 +387,15 @@ export class ThetaWorkflowService {
 
   compileSummary(): Record<string, unknown> {
     const compilation = compileThetaTrainingDomain(thetaHyphaToolSpecs);
+    const workflowFsm = compileThetaWorkflowFSM(compilation.bindings.workflow);
     return {
       domainPack: `${compilation.domainPack.id}@${compilation.domainPack.version}`,
       workflow: `${compilation.workflowRef.id}@${compilation.workflowRef.version}`,
       processHash: compilation.processHash,
       compilationHash: compilation.audit.compilationHash,
-      initialState: compilation.fsmProcess.initialState,
-      terminalStates: compilation.fsmProcess.terminalStates,
-      stateCount: compilation.fsmProcess.states.length,
+      initialState: workflowFsm.initialState,
+      terminalStates: workflowFsm.terminalStates,
+      stateCount: workflowFsm.states.length,
       toolRefs: compilation.dependencySnapshot.toolRefs.map((ref) => ref.id),
     };
   }
@@ -1075,12 +1077,13 @@ export class ThetaWorkflowService {
     tools: ThetaWorkflowToolPort,
   ): Promise<BoundedFSMDriverResult> {
     const compilation = compileThetaTrainingDomain(thetaHyphaToolSpecs);
+    const process = compileThetaWorkflowFSM(compilation.bindings.workflow);
     const driver = runtime.createDriver((input) =>
       executeThetaState(input, runtime.events, tools, this.now),
     );
     return driver.run({
       scope,
-      process: compilation.fsmProcess,
+      process,
       ownerId: DRIVER_OWNER,
       maxSteps: MAX_STEPS,
       leaseTtlMs: LEASE_TTL_MS,

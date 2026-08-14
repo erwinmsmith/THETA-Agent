@@ -25,7 +25,8 @@
     "@codesoul-co/hypha-core": "1.0.1",
     "@codesoul-co/hypha-domain": "1.0.1",
     "@codesoul-co/hypha-tools": "1.0.1",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "@codesoul-co/hypha-fsm": "1.0.1"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

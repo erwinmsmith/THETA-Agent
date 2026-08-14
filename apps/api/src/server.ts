@@ -31,11 +31,16 @@ import { runThetaTrainingStatus } from '@theta-agent/agent';
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
+  thetaWebPostMessageSchema,
   thetaWebRunActionSchema,
   type ThetaWebApiEnvelope,
   type ThetaWebApiHealth,
   type ThetaWebConversationMessage,
+  type ThetaWebReasoning,
+  type ThetaWebReasoningToolCall,
   type ThetaWebRunAction,
+  type ThetaWebRunEvent,
+  type ThetaWebStreamEvent,
   type ThetaWebTimelineEntry,
 } from '@theta-agent/agent/api/contracts.js';
 
@@ -200,7 +205,7 @@ const routeRequest = async (
 
   const compatibilityRunDeleteMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/delete$/);
   const runMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)$/);
-  if (compatibilityRunDeleteMatch || runMatch) {
+  if ((compatibilityRunDeleteMatch || runMatch) && method !== 'GET') {
     if (compatibilityRunDeleteMatch ? method !== 'POST' : method !== 'DELETE') {
       return methodNotAllowed(response);
     }
@@ -342,6 +347,109 @@ const routeRequest = async (
     } finally {
       store.close();
     }
+    return;
+  }
+
+  const messageMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/messages$/);
+  if (messageMatch) {
+    if (method !== 'POST') return methodNotAllowed(response);
+    const runId = decodeURIComponent(messageMatch[1]);
+    const input = thetaWebPostMessageSchema.parse(await readJsonBody(request));
+    const store = new SQLiteConversationStore(options.runtimeDb);
+    try {
+      const sessionId = `theta-web-${runId}`;
+      const before = new Set(
+        store.listRecentMessages(sessionId, 200).map((message) => message.messageId),
+      );
+      store.getOrCreateSession(sessionId, { activeRunId: runId });
+      store.updateSession(sessionId, {
+        languageConsent: languageProviderEnabled(input),
+        providerMode: languageProviderEnabled(input) ? 'provider' : 'deterministic',
+      });
+      const orchestrator = new ThetaTurnOrchestrator(store, workflow);
+      const result = await orchestrator.execute(
+        { kind: 'natural', text: input.text },
+        { sessionId, activeRunId: runId, runtimeDb: options.runtimeDb },
+      );
+      const activeRunId = typeof result.activeRunId === 'string' && result.activeRunId
+        ? result.activeRunId
+        : runId;
+      const messages = store
+        .listRecentMessages(sessionId, 200)
+        .filter((message) => !before.has(message.messageId) && message.runId === activeRunId)
+        .filter((message) => message.role === 'user' || message.role === 'assistant')
+        .map(presentConversationMessage);
+      const status = await workflow.status(activeRunId, options.runtimeDb);
+      writeJson(response, 200, {
+        ok: true,
+        data: { runId, activeRunId, messages, status: presentRun(status) },
+      });
+    } finally {
+      store.close();
+    }
+    return;
+  }
+
+  const eventsMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/events$/);
+  if (eventsMatch) {
+    if (method !== 'GET') return methodNotAllowed(response);
+    const runId = decodeURIComponent(eventsMatch[1]);
+    const after = url.searchParams.get('after') ?? undefined;
+    const limit = boundedLimit(url.searchParams.get('limit'));
+    const evidence = await workflow.evidence(runId, options.runtimeDb);
+    const all = normalizeRunEvents(evidence);
+    let events = all;
+    if (after) {
+      const index = events.findIndex((event) => event.id === after);
+      if (index >= 0) events = events.slice(index + 1);
+    }
+    events = events.slice(-limit);
+    writeJson(response, 200, {
+      ok: true,
+      data: { runId, events, count: events.length, total: all.length },
+    });
+    return;
+  }
+
+  const reasoningMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/reasoning$/);
+  if (reasoningMatch) {
+    if (method !== 'GET') return methodNotAllowed(response);
+    const runId = decodeURIComponent(reasoningMatch[1]);
+    writeJson(response, 200, {
+      ok: true,
+      data: await buildReasoning(runId, options.runtimeDb, workflow),
+    });
+    return;
+  }
+
+  const streamMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/stream$/);
+  if (streamMatch) {
+    if (method !== 'GET') return methodNotAllowed(response);
+    const runId = decodeURIComponent(streamMatch[1]);
+    void runStream(response, runId, options, workflow);
+    return;
+  }
+
+  const runDetailMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)$/);
+  if (runDetailMatch && method === 'GET') {
+    const runId = decodeURIComponent(runDetailMatch[1]);
+    const [status, plan, results] = await Promise.all([
+      workflow.status(runId, options.runtimeDb),
+      workflow.plan(runId, options.runtimeDb).catch(() => undefined),
+      new ResultService(workflow).overview(runId, options.runtimeDb).catch(() => undefined),
+    ]);
+    writeJson(response, 200, {
+      ok: true,
+      data: {
+        runId,
+        status: presentRun(status),
+        identity: plan ? buildRunIdentity(plan) : undefined,
+        ...(plan
+          ? { plan: { ...plan, runtimeDb: undefined, presentation: buildHumanResponse(plan) } }
+          : {}),
+        ...(results ? { results } : {}),
+      },
+    });
     return;
   }
 
@@ -771,6 +879,314 @@ const executeRunAction = async (
   }
 };
 
+const EVENT_TITLES: Record<string, string> = {
+  'run.started': '研究任务已创建',
+  'run.completed': '研究训练已完成',
+  'run.failed': '研究任务运行失败',
+  'run.waiting_human': '等待你的确认',
+  'run.waiting_timer': '等待下一次训练状态检查',
+  'fsm.state.entered': '进入下一阶段',
+  'fsm.state.exited': '完成当前阶段',
+  'fsm.transition.accepted': 'FSM 已确认状态迁移',
+  'timer.fired': '训练监控定时器已触发',
+  'tool.call.requested': '请求执行受治理工具',
+  'tool.call.started': '开始执行受治理工具',
+  'tool.call.completed': '受治理工具执行完成',
+  'tool.call.failed': '受治理工具执行失败',
+  'tool.call.approved': '工具调用已获批',
+  'tool.call.rejected': '工具调用被拒绝',
+  'tool.policy.checked': '已完成工具权限校验',
+  'tool.output.validated': '工具输出已通过契约校验',
+  'tool.invocation.state.changed': '工具调用状态已更新',
+  'thinking.started': '开始思考',
+  'thinking.completed': '思考完成',
+  'agent.deliberation.started': '开始规划',
+  'agent.deliberation.completed': '规划完成',
+  'agent.reasoning.started': '开始推理',
+  'agent.reasoning.completed': '推理完成',
+  'reasoning.decision.recorded': '记录推理决策',
+  'agent.action.selected': '选定下一步动作',
+  'inference.requested': '发起语言推理',
+  'inference.completed': '语言推理完成',
+  'inference.failed': '语言推理失败',
+  'model.call.completed': '模型调用完成',
+  'human.review.requested': '等待人工审批',
+  'human.review.approved': '人工审批通过',
+  'human.review.rejected': '人工审批驳回',
+  'human.review.resolved': '人工审批已处理',
+};
+
+const REASONING_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'thinking.started',
+  'thinking.completed',
+  'agent.deliberation.started',
+  'agent.deliberation.completed',
+  'agent.reasoning.started',
+  'agent.reasoning.completed',
+  'reasoning.decision.recorded',
+  'agent.action.selected',
+  'inference.requested',
+  'inference.completed',
+  'inference.failed',
+  'model.call.completed',
+  'human.review.requested',
+  'human.review.approved',
+  'human.review.rejected',
+  'human.review.resolved',
+]);
+
+const presentConversationMessage = (message: {
+  messageId: string;
+  role: string;
+  messageKind: string;
+  content: string;
+  sequenceNumber: number;
+  createdAt: string;
+}): ThetaWebConversationMessage => ({
+  messageId: message.messageId,
+  role: message.role as 'user' | 'assistant',
+  messageKind: message.messageKind,
+  content: message.content,
+  sequenceNumber: message.sequenceNumber,
+  createdAt: message.createdAt,
+});
+
+const sanitizeEventPayload = (payload: unknown): unknown => {
+  if (payload === undefined || payload === null) return undefined;
+  try {
+    const json = JSON.stringify(payload);
+    if (json.length <= 12_000) return JSON.parse(json) as unknown;
+    return {
+      truncated: true,
+      preview: json.slice(0, 12_000),
+    };
+  } catch {
+    const text = String(payload);
+    return text.length <= 12_000 ? text : `${text.slice(0, 12_000)}…`;
+  }
+};
+
+const eventDetail = (payload: Record<string, unknown> | undefined): string | undefined => {
+  const state = stringField(payload, 'stateId') ?? stringField(payload, 'toStateId');
+  const toolId = stringField(payload, 'toolId');
+  if (state) return `状态：${humanState(state)}`;
+  if (toolId) return `工具：${toolId}`;
+  return undefined;
+};
+
+const normalizeRunEvents = (evidence: {
+  orchestrationEvents: Array<{ id: string; type: string; timestamp: string; payload: unknown }>;
+  toolEvents: Array<{ id: string; type: string; timestamp: string; payload: unknown }>;
+}): ThetaWebRunEvent[] => [
+  ...evidence.orchestrationEvents.map((event) => ({
+    id: event.id,
+    source: 'orchestration' as const,
+    type: event.type,
+    title: EVENT_TITLES[event.type] ?? event.type,
+    ...(eventDetail(asRecord(event.payload)) ? { detail: eventDetail(asRecord(event.payload)) } : {}),
+    timestamp: event.timestamp,
+    ...(event.payload !== undefined ? { payload: sanitizeEventPayload(event.payload) } : {}),
+  })),
+  ...evidence.toolEvents.map((event) => ({
+    id: event.id,
+    source: 'tool' as const,
+    type: event.type,
+    title: EVENT_TITLES[event.type] ?? event.type,
+    ...(eventDetail(asRecord(event.payload)) ? { detail: eventDetail(asRecord(event.payload)) } : {}),
+    timestamp: event.timestamp,
+    ...(event.payload !== undefined ? { payload: sanitizeEventPayload(event.payload) } : {}),
+  })),
+].sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+
+const buildReasoning = async (
+  runId: string,
+  runtimeDb: string,
+  workflow: ThetaWorkflowService,
+): Promise<ThetaWebReasoning> => {
+  const [context, plan, evidence] = await Promise.all([
+    workflow.conversationContext(runId, runtimeDb),
+    workflow.plan(runId, runtimeDb).catch(() => undefined),
+    workflow.evidence(runId, runtimeDb),
+  ]);
+
+  const store = new SQLiteConversationStore(runtimeDb);
+  let decisionGaps: ThetaWebReasoning['decisionGaps'] = [];
+  try {
+    const messages = store
+      .listRecentMessages(`theta-web-${runId}`, 400)
+      .filter((message) => message.runId === runId)
+      .sort((left, right) => left.sequenceNumber - right.sequenceNumber);
+    let current: ThetaWebReasoning['decisionGaps'][number] | undefined;
+    for (const message of messages) {
+      if (message.messageKind === 'research.decision-gap') {
+        current = { question: message.content, answers: [], resolved: false };
+        decisionGaps.push(current);
+      } else if (message.messageKind === 'research.decision-answer' && current) {
+        current.answers.push({ content: message.content, createdAt: message.createdAt });
+      }
+    }
+    const openQuestion = context.decisionGap?.question;
+    decisionGaps = decisionGaps.map((gap) => ({
+      ...gap,
+      resolved: gap.question !== openQuestion && gap.answers.length > 0,
+    }));
+  } finally {
+    store.close();
+  }
+
+  const toolPhases: Record<string, ThetaWebReasoningToolCall['phase']> = {
+    'tool.call.requested': 'requested',
+    'tool.call.started': 'started',
+    'tool.policy.checked': 'policy',
+    'tool.call.completed': 'completed',
+    'tool.call.failed': 'failed',
+    'tool.output.validated': 'validated',
+  };
+  const toolCalls: ThetaWebReasoningToolCall[] = evidence.toolEvents
+    .filter((event) => Object.prototype.hasOwnProperty.call(toolPhases, event.type))
+    .map((event) => {
+      const record = asRecord(event.payload);
+      const toolId = stringField(record, 'toolId') ?? 'unknown-tool';
+      return {
+        eventId: event.id,
+        toolId,
+        phase: toolPhases[event.type],
+        label: EVENT_TITLES[event.type] ?? event.type,
+        timestamp: event.timestamp,
+        payload: sanitizeEventPayload(event.payload),
+      };
+    });
+
+  const recommendationEvent = evidence.toolEvents
+    .filter((event) => event.type === 'tool.call.completed')
+    .map((event) => asRecord(event.payload))
+    .find((payload) => stringField(payload, 'toolId') === 'theta.model.recommend');
+
+  return {
+    runId,
+    ...(context.researchIntent
+      ? { researchIntent: context.researchIntent as Record<string, unknown> }
+      : context.researchBrief
+        ? { researchIntent: context.researchBrief as unknown as Record<string, unknown> }
+        : {}),
+    ...(context.researchIntentSummary
+      ? { intentSummary: context.researchIntentSummary as unknown as Record<string, unknown> }
+      : {}),
+    ...(context.decisionGap ? { currentDecisionGap: context.decisionGap.question } : {}),
+    decisionGaps,
+    ...(recommendationEvent ? { recommendation: sanitizeEventPayload(recommendationEvent) as Record<string, unknown> } : {}),
+    ...(plan
+      ? {
+          plan: {
+            state: context.status.currentState ?? 'unknown',
+            presentation: buildHumanResponse(plan) as NonNullable<ThetaWebReasoning['plan']>['presentation'],
+          },
+        }
+      : {}),
+    toolCalls,
+    reasoningEvents: normalizeRunEvents(evidence).filter((event) =>
+      REASONING_EVENT_TYPES.has(event.type)),
+  };
+};
+
+const runStream = (
+  response: ServerResponse,
+  runId: string,
+  options: Required<ThetaWebApiOptions>,
+  workflow: ThetaWorkflowService,
+): void => {
+  writeCors(response);
+  response.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  let sequence = 0;
+  let lastEventId: string | undefined;
+  let lastMessageSeq = -1;
+  let lastStatusKey = '';
+  let lastTrainingKey = '';
+  const send = (kind: ThetaWebStreamEvent['kind'], data: unknown): void => {
+    response.write(`event: ${kind}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  const tick = async (): Promise<void> => {
+    try {
+      const evidence = await workflow.evidence(runId, options.runtimeDb);
+      const events = normalizeRunEvents(evidence);
+      if (lastEventId === undefined) {
+        lastEventId = events.at(-1)?.id;
+        const status = await workflow.status(runId, options.runtimeDb);
+        lastStatusKey = `${status.status}|${status.currentState}|${status.lastEventAt}`;
+        send('snapshot', {
+          runId,
+          status: presentRun(status),
+          lastEventId,
+        });
+      } else {
+        const index = events.findIndex((event) => event.id === lastEventId);
+        const fresh = index >= 0 ? events.slice(index + 1) : events;
+        if (fresh.length > 0) {
+          lastEventId = fresh.at(-1)?.id;
+          send('events', { events: fresh });
+        }
+      }
+      const status = await workflow.status(runId, options.runtimeDb);
+      const statusKey = `${status.status}|${status.currentState}|${status.lastEventAt}`;
+      if (statusKey !== lastStatusKey) {
+        lastStatusKey = statusKey;
+        send('status', { status: presentRun(status) });
+      }
+      const store = new SQLiteConversationStore(options.runtimeDb);
+      try {
+        const messages = store
+          .listRecentMessages(`theta-web-${runId}`, 100)
+          .filter((message) => message.runId === runId);
+        const fresh = messages.filter((message) => message.sequenceNumber > lastMessageSeq);
+        if (fresh.length > 0) {
+          lastMessageSeq = Math.max(...fresh.map((message) => message.sequenceNumber));
+          send('messages', {
+            messages: fresh
+              .filter((message) => message.role === 'user' || message.role === 'assistant')
+              .map(presentConversationMessage),
+          });
+        } else if (messages.length > 0) {
+          lastMessageSeq = Math.max(...messages.map((message) => message.sequenceNumber));
+        }
+      } finally {
+        store.close();
+      }
+      const trainingRunId = stringField(status.trainingReceipt, 'trainingRunId');
+      if (trainingRunId) {
+        const observed = await runThetaTrainingStatus({ trainingRunId, logLimit: 20 });
+        const receipt = observed.output?.found ? observed.output.receipt : undefined;
+        const key = JSON.stringify(receipt ?? observed.status);
+        if (key !== lastTrainingKey) {
+          lastTrainingKey = key;
+          send('training', {
+            trainingRunId,
+            ...(receipt ? { receipt } : { status: observed.status }),
+            logs: observed.output?.logs.filter((line) => line.trim()).slice(-8) ?? [],
+          });
+        }
+      }
+      response.write(': keep-alive\n\n');
+    } catch (error) {
+      send('heartbeat', {
+        error: error instanceof Error ? error.message : String(error),
+        sequence: ++sequence,
+      });
+    }
+  };
+  const timer = setInterval(() => {
+    void tick();
+  }, 1500);
+  void tick();
+  response.on('close', () => {
+    clearInterval(timer);
+  });
+};
+
 const toTimelineEntry = (event: {
   id: string;
   type: string;
@@ -780,28 +1196,11 @@ const toTimelineEntry = (event: {
   const payload = asRecord(event.payload);
   const state = stringField(payload, 'stateId') ?? stringField(payload, 'toStateId');
   const toolId = stringField(payload, 'toolId');
-  const labels: Record<string, string> = {
-    'run.started': '研究任务已创建',
-    'run.completed': '研究训练已完成',
-    'run.failed': '研究任务运行失败',
-    'run.waiting_human': '等待你的确认',
-    'run.waiting_timer': '等待下一次训练状态检查',
-    'fsm.state.entered': state ? `进入 ${humanState(state)}` : '进入下一阶段',
-    'fsm.state.exited': state ? `完成 ${humanState(state)}` : '完成当前阶段',
-    'fsm.transition.accepted': 'FSM 已确认状态迁移',
-    'timer.fired': '训练监控定时器已触发',
-    'tool.call.started': toolId ? `开始执行 ${toolId}` : '开始执行受治理工具',
-    'tool.call.completed': toolId ? `${toolId} 执行完成` : '受治理工具执行完成',
-    'tool.call.failed': toolId ? `${toolId} 执行失败` : '受治理工具执行失败',
-    'tool.policy.checked': toolId ? `已校验 ${toolId} 权限` : '已完成工具权限校验',
-    'tool.output.validated': '工具输出已通过契约校验',
-    'tool.invocation.state.changed': '工具调用状态已更新',
-  };
   return {
     id: event.id,
     source: event.type.startsWith('tool.') ? 'tool' : 'workflow',
     type: event.type,
-    title: labels[event.type] ?? event.type,
+    title: EVENT_TITLES[event.type] ?? event.type,
     ...(state ? { detail: `状态：${humanState(state)}` } : toolId ? { detail: `工具：${toolId}` } : {}),
     timestamp: event.timestamp,
   };

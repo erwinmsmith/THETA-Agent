@@ -5,8 +5,10 @@ import {
   validateDomainPackSpec,
   type DomainCompilationResult,
   type DomainPackSpec,
+  type WorkflowSpec,
   type WorkflowStateSpec,
 } from "@codesoul-co/hypha-domain";
+import { parseFSMProcessSpec, type FSMProcessSpec } from "@codesoul-co/hypha-fsm";
 import type { ToolExecutionScope, ToolSpec } from "@codesoul-co/hypha-tools";
 
 export const THETA_TOOL_IDS = {
@@ -788,6 +790,44 @@ export const compileResearchAgentDomain = (
   });
 
 export const compileThetaTrainingDomain = compileResearchAgentDomain;
+
+/**
+ * Compiles the domain workflow into the custom FSM process spec the bounded
+ * FSM driver executes, per the Hypha npm release guidance: the harness-owned
+ * ReAct FSM (`compilation.fsmProcess`) is framework-owned, while applications
+ * derive their governed workflow topology from the compiled workflow binding.
+ */
+export const compileThetaWorkflowFSM = (
+  workflow: WorkflowSpec,
+): FSMProcessSpec =>
+  parseFSMProcessSpec({
+    id: workflow.id,
+    version: workflow.version,
+    name: workflow.name,
+    initialState: workflow.initialState,
+    terminalStates: workflow.terminalStates,
+    states: workflow.states.map((state) => ({
+      id: state.id,
+      kind: workflow.terminalStates.includes(state.id)
+        ? state.id.toLowerCase().includes("fail")
+          ? "failed"
+          : state.id.toLowerCase().includes("cancel")
+            ? "cancelled"
+            : state.id.toLowerCase().includes("quarantin")
+              ? "quarantined"
+              : "completed"
+        : "domain",
+      timeoutPolicy: state.timeoutPolicy,
+      retryPolicy: state.retryPolicy,
+      policyRefs: state.policyRefs,
+    })),
+    transitions: workflow.transitions.map((transition) => ({
+      from: transition.from,
+      to: transition.to,
+      guard: transition.guard,
+      description: transition.description,
+    })),
+  });
 
 export const resolveThetaStateToolScope = (
   compilation: DomainCompilationResult,

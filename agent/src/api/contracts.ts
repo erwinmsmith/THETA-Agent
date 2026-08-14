@@ -71,9 +71,17 @@ export const thetaResultAnalysisRequestSchema = z.object({
   }).strict()).max(8).default([]),
 }).strict();
 
+export const thetaWebPostMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+  useLanguageProvider: z.boolean().optional(),
+  /** @deprecated Use useLanguageProvider. */
+  useMiniMax: z.boolean().optional(),
+}).strict();
+
 export type ThetaWebRunAction = z.infer<typeof thetaWebRunActionSchema>;
 export type ThetaWebCreateRun = z.infer<typeof thetaWebCreateRunSchema>;
 export type ThetaResultAnalysisRequest = z.infer<typeof thetaResultAnalysisRequestSchema>;
+export type ThetaWebPostMessage = z.infer<typeof thetaWebPostMessageSchema>;
 
 export const thetaWebApiEnvelopeSchema = z.object({
   ok: z.boolean(),
@@ -142,4 +150,62 @@ export interface ThetaWebConversationMessage {
   content: string;
   sequenceNumber: number;
   createdAt: string;
+}
+
+export interface ThetaWebRunEvent {
+  id: string;
+  source: 'orchestration' | 'tool';
+  type: string;
+  title: string;
+  detail?: string;
+  timestamp: string;
+  /** Sanitized and size-capped event payload (tool inputs/outputs, decisions). */
+  payload?: unknown;
+}
+
+export interface ThetaWebReasoningDecisionGap {
+  question: string;
+  answers: Array<{ content: string; createdAt: string }>;
+  resolved: boolean;
+}
+
+export interface ThetaWebReasoningToolCall {
+  eventId: string;
+  toolId: string;
+  phase: 'requested' | 'started' | 'policy' | 'completed' | 'failed' | 'validated';
+  label: string;
+  timestamp: string;
+  payload: unknown;
+}
+
+export interface ThetaWebReasoning {
+  runId: string;
+  researchIntent?: Record<string, unknown>;
+  intentSummary?: Record<string, unknown>;
+  currentDecisionGap?: string;
+  decisionGaps: ThetaWebReasoningDecisionGap[];
+  recommendation?: Record<string, unknown>;
+  plan?: {
+    state: string;
+    presentation?: {
+      title: string;
+      summary: string;
+      progress?: { current: number; total: number; label: string; percent?: number };
+      nextActions: Array<{
+        id: string;
+        label: string;
+        description: string;
+        recommended?: boolean;
+        destructive?: boolean;
+      }>;
+    };
+  };
+  toolCalls: ThetaWebReasoningToolCall[];
+  reasoningEvents: ThetaWebRunEvent[];
+}
+
+export interface ThetaWebStreamEvent {
+  kind: 'snapshot' | 'status' | 'events' | 'messages' | 'training' | 'heartbeat';
+  sequence: number;
+  data: unknown;
 }
