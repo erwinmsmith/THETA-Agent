@@ -125,7 +125,7 @@ npm run model -- use --provider openai --model <model-id>
 npm run model -- current
 ```
 
-当前供应商和模型会保存到已忽略的 `.theta_agent/inference-selection.json`，API Key 仍然只保留在 `.env` 中。已保存的选择优先级高于 `THETA_LLM_PROVIDER`；清除后会恢复环境默认值：
+当前供应商和模型会保存到已忽略的 `.theta_agent/inference-selection.json`。Web 设置中心也可以将供应商覆盖配置与只写 API Key 保存到 `.theta_agent/` 下权限为 `0600` 的私有忽略文件；API 永远不会返回密钥。环境变量仍然受支持，没有私有覆盖时继续生效。已保存的选择优先级高于 `THETA_LLM_PROVIDER`；清除后会恢复环境默认值：
 
 ```bash
 npm run model -- reset
@@ -157,7 +157,9 @@ npm run start:api
 
 API 服务器同时托管对话式 Web 前端（`npm run build` 会构建 `apps/web`）：
 访问 `http://127.0.0.1:4318/` 即可使用研究列表、对话流、审批表单、工具调用
-轨迹、推理面板与 SSE 实时更新。详见 [docs/WEB.md](docs/WEB.md)。
+轨迹、推理面板与 SSE 实时更新。输入框旁可选择供应商、模型与推理类型；设置
+按钮可配置 LLM API、生成参数、流式输出、打字机效果，以及独立的可选 Embedding
+API。这些设置不会修改 THETA 训练模型或训练参数。详见 [docs/WEB.md](docs/WEB.md)。
 当前已经交付的能力和明确的实现缺口统一记录在
 [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) 中。
 

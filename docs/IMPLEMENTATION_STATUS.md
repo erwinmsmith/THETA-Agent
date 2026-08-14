@@ -8,7 +8,12 @@ reference for product claims in the CLI and Web UI.
 - Conversation-first Web and CLI adapters backed by one Agent orchestration
   layer.
 - DeepSeek as the default provider, with runtime switching among configured
-  providers and models.
+  provider categories, models, and chat/reasoning modes. OpenAI-compatible
+  adapters support SSE streaming; the UI adds reduced-motion-aware typewriter
+  rendering for newly validated answers.
+- A local settings center for LLM endpoints, write-only API keys, reasoning and
+  generation parameters, plus an isolated optional embedding API configuration.
+  It does not modify THETA training models or trigger provider calls on save.
 - SQLite conversation history, rename/delete operations, working-memory
   summaries, structured research interview revisions, and Run promotion.
 - Semantic pre-Run routing with schema validation. Dataset upload appears only

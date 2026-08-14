@@ -12,6 +12,7 @@ interface AgentActivityTraceProps {
 }
 
 interface ToolActivity {
+  key: string
   toolId: string
   calls: WebReasoningToolCall[]
   latest: WebReasoningToolCall
@@ -113,7 +114,8 @@ export const AgentActivityTrace = ({
       const key = call.invocationId ?? call.toolId
       grouped.set(key, [...(grouped.get(key) ?? []), call])
     }
-    return [...grouped.values()].map((calls): ToolActivity => ({
+    return [...grouped.entries()].map(([key, calls]): ToolActivity => ({
+      key,
       toolId: calls[0]?.toolId ?? 'unknown-tool',
       calls,
       latest: calls.at(-1) as WebReasoningToolCall,
@@ -175,7 +177,7 @@ export const AgentActivityTrace = ({
         </details>
       )}
       {toolActivities.map((activity) => {
-        const key = `${activity.toolId}-${activity.firstTimestamp}`
+        const key = activity.key
         const kind = toolKind(activity.toolId)
         return (
           <div key={key} className={css.activityDisclosure}>

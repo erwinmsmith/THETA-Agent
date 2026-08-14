@@ -38,6 +38,7 @@ import {
 } from './ui/index.ts'
 import { ConversationPane, type QueuedChatMessage } from './panels/ConversationPane.tsx'
 import { DetailPane } from './panels/DetailPane.tsx'
+import { SettingsDialog } from './panels/SettingsDialog.tsx'
 import { usePreferences } from './preferences.tsx'
 import './styles/base.css'
 import css from './styles/app.module.css'
@@ -101,6 +102,8 @@ export const AppRoot = (): React.ReactElement => {
   const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; result?: unknown; evidenceRefs?: unknown }>()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [liveAssistantMessageId, setLiveAssistantMessageId] = useState<string>()
   const knownMessageIds = useRef(new Set<string>())
 
   const refreshRuns = useCallback(async () => {
@@ -248,7 +251,11 @@ export const AppRoot = (): React.ReactElement => {
         })
         scheduleReasoningRefresh()
       },
-      onMessages: (data) => mergeMessages(data.messages),
+      onMessages: (data) => {
+        const latest = [...data.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
+        if (latest) setLiveAssistantMessageId(latest.messageId)
+        mergeMessages(data.messages)
+      },
       onError: () => setStreamState('reconnecting'),
     })
     return () => {
@@ -279,6 +286,8 @@ export const AppRoot = (): React.ReactElement => {
           const result = await postMessage(next.runId, next.text, true, next.attachments)
           if (selectedRunId === next.runId) {
             setStatus(result.status)
+            const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
+            if (latest) setLiveAssistantMessageId(latest.messageId)
             mergeMessages(result.messages)
           }
           void refreshRuns()
@@ -292,6 +301,8 @@ export const AppRoot = (): React.ReactElement => {
           }
           const result = await postWorkspaceMessage(sessionId, next.text)
           if (selectedRunId == null) {
+            const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
+            if (latest) setLiveAssistantMessageId(latest.messageId)
             mergeMessages(result.messages)
             setWorkspaceInteraction(result.interaction)
             setWorkspaceActivity(result.activity)
@@ -319,6 +330,7 @@ export const AppRoot = (): React.ReactElement => {
     setWorkspaceActivity(undefined)
     setWorkspaceInteraction(undefined)
     setAttachments([])
+    setLiveAssistantMessageId(undefined)
     knownMessageIds.current.clear()
     try {
       const created = await createWorkspaceSession()
@@ -448,6 +460,9 @@ export const AppRoot = (): React.ReactElement => {
           <button type="button" className={css.preferenceButton} onClick={() => setLocale(locale === 'zh-CN' ? 'en' : 'zh-CN')}>
             {locale === 'zh-CN' ? 'EN' : '中'}
           </button>
+          <button type="button" className={css.preferenceButton} onClick={() => setSettingsOpen(true)} title={locale === 'zh-CN' ? '模型与 API 设置' : 'Model & API settings'} aria-label={locale === 'zh-CN' ? '打开模型与 API 设置' : 'Open model and API settings'}>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.9 1.5h2.2l.4 1.6c.4.1.8.3 1.1.5l1.5-.8 1.5 1.5-.8 1.5c.2.3.4.7.5 1.1l1.7.4v2.2l-1.7.4c-.1.4-.3.8-.5 1.1l.8 1.5-1.5 1.5-1.5-.8c-.3.2-.7.4-1.1.5l-.4 1.7H6.9l-.4-1.7c-.4-.1-.8-.3-1.1-.5l-1.5.8-1.5-1.5.8-1.5c-.2-.3-.4-.7-.5-1.1L1 9.5V7.3l1.7-.4c.1-.4.3-.8.5-1.1l-.8-1.5 1.5-1.5 1.5.8c.3-.2.7-.4 1.1-.5l.4-1.6ZM8 5.5a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" /></svg>
+          </button>
           {selectedRunId != null && (
             <Button
               size="sm"
@@ -573,6 +588,7 @@ export const AppRoot = (): React.ReactElement => {
                 onApproved={() => void refreshRun()}
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
+                liveAssistantMessageId={liveAssistantMessageId}
               />
             )}
         </main>
@@ -592,6 +608,7 @@ export const AppRoot = (): React.ReactElement => {
           />
         )}
       </div>
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

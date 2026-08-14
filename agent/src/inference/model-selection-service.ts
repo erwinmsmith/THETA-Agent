@@ -1,15 +1,28 @@
 import {
+  configureInferenceSettings,
+  getInferenceSettingsView,
   listInferenceProviders,
   resetInferenceSelection,
   resolveInferenceSelection,
   selectInferenceModel,
 } from '@theta-agent/tools/support/providers/registry.js';
+import type { InferenceSettingsUpdate } from '@theta-agent/tools/support/providers/settings.js';
 
 export type ModelSelectionAction =
   | { action: 'list' | 'current' | 'reset' }
   | { action: 'use'; providerId: string; model: string };
 
 export class ModelSelectionService {
+  settings(): unknown {
+    return getInferenceSettingsView();
+  }
+
+  configure(input: InferenceSettingsUpdate & {
+    llm?: InferenceSettingsUpdate['llm'] & { model?: string };
+  }): unknown {
+    return configureInferenceSettings(input);
+  }
+
   execute(input: ModelSelectionAction): unknown {
     if (input.action === 'use') {
       const selection = selectInferenceModel(input.providerId, input.model);

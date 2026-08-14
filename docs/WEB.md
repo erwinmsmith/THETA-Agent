@@ -28,8 +28,9 @@ origins explicitly with `THETA_WEB_ALLOWED_ORIGINS`; do not use a wildcard.
 
 - **Start page:** begins with a question and suggested prompts. Upload is shown
   only after the Agent's schema-validated semantic decision requests data.
-- **Composer:** keeps provider/model selection beside the message field. New
-  messages can queue while the active turn is being processed.
+- **Composer:** keeps grouped provider, model, and reasoning-type selection
+  beside the message field. New messages can queue while the active turn is
+  being processed.
 - **History:** draft conversations and research Runs persist in SQLite and can
   be reopened, renamed, or deleted.
 - **Human checks:** dataset, intent, plan, and training approvals appear as a
@@ -42,6 +43,25 @@ origins explicitly with `THETA_WEB_ALLOWED_ORIGINS`; do not use a wildcard.
   sidecar. They can be attached to a follow-up question or downloaded together
   as a `tar.gz` archive.
 - **Preferences:** Chinese/English and light/dark/system themes persist locally.
+- **Model settings:** the top-bar settings center configures the LLM endpoint,
+  write-only API key, reasoning effort, token/temperature limits, timeout,
+  provider streaming, and typewriter rendering. Optional embedding settings
+  are a separate section and are never confused with THETA training models.
+
+## Model streaming and secrets
+
+OpenAI-compatible providers implement real SSE response parsing and expose
+streaming/reasoning capabilities in the provider catalog. Supported text call
+paths may consume those deltas; schema-constrained Agent decisions remain
+buffered until validation. The conversation UI incrementally reveals each new,
+governance-validated answer. FSM decisions and Tool events stream independently
+through the Run event channel; private model chain-of-thought is never displayed.
+
+Web-saved settings live in ignored `.theta_agent/inference-settings.json` and
+secrets in `.theta_agent/inference-secrets.json`. Both use private `0600`
+permissions. The API returns only `apiKeyConfigured`; it never returns a key.
+Leaving a key field blank preserves the saved value. Saving settings does not
+test or call the provider.
 
 ## Persistence and memory
 
@@ -60,6 +80,7 @@ local application memory; semantic/vector long-term memory is not yet shipped.
 | `GET /api/v2/workspace/sessions/:id/conversation` | messages, memory, interaction |
 | `POST /api/v2/workspace/sessions/:id/messages` | semantic pre-Run conversation |
 | `GET/POST /api/v2/runs` | list or create governed Runs |
+| `GET/PATCH /api/v2/inference/settings` | read safe model settings or update private local configuration |
 | `PATCH/DELETE /api/v2/runs/:id` | rename or delete a Run |
 | `GET /api/v2/runs/:id/conversation` | read Run messages and memory |
 | `POST /api/v2/runs/:id/messages` | continue a Run or analyze attached results |

@@ -36,6 +36,7 @@ import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
   thetaWebInferenceSelectionSchema,
+  thetaWebInferenceSettingsSchema,
   thetaWebPostMessageSchema,
   thetaWebRenameRunSchema,
   thetaWebRunActionSchema,
@@ -437,6 +438,20 @@ const routeRequest = async (
     if (method === 'POST') {
       const input = thetaWebInferenceSelectionSchema.parse(await readJsonBody(request));
       writeJson(response, 200, { ok: true, data: selection.execute(input) });
+      return;
+    }
+    return methodNotAllowed(response);
+  }
+
+  if (url.pathname === '/api/v2/inference/settings') {
+    const selection = new ModelSelectionService();
+    if (method === 'GET') {
+      writeJson(response, 200, { ok: true, data: selection.settings() });
+      return;
+    }
+    if (method === 'PATCH') {
+      const input = thetaWebInferenceSettingsSchema.parse(await readJsonBody(request));
+      writeJson(response, 200, { ok: true, data: selection.configure(input) });
       return;
     }
     return methodNotAllowed(response);

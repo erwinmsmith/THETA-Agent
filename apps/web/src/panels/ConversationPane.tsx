@@ -8,6 +8,7 @@ import type {
 } from '../api/client.ts'
 import { Button, JsonTree, StateDot, ThetaMark } from '../ui/index.ts'
 import { usePreferences } from '../preferences.tsx'
+import { useInferenceSettings } from '../inference-settings.tsx'
 import { AgentActivityTrace } from './AgentActivityTrace.tsx'
 import { ApprovalPanel } from './ApprovalPanel.tsx'
 import { DatasetIntakeCard } from './DatasetIntakeCard.tsx'
@@ -42,6 +43,7 @@ interface ConversationPaneProps {
   onApproved?: () => void
   attachments: WebAttachment[]
   onAttachmentsChange: (attachments: WebAttachment[]) => void
+  liveAssistantMessageId?: string
 }
 
 const messageTime = (value: string, locale: string): string => {
@@ -103,8 +105,10 @@ export const ConversationPane = ({
   onApproved,
   attachments,
   onAttachmentsChange,
+  liveAssistantMessageId,
 }: ConversationPaneProps): React.ReactElement => {
   const { locale, t } = usePreferences()
+  const { settings } = useInferenceSettings()
   const [draft, setDraft] = useState('')
   const threadRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -241,7 +245,11 @@ export const ConversationPane = ({
                 </div>
                 <div className={`${css.bubble} ${human ? css.bubbleUser : css.bubbleAssistant}`}>
                   <Suspense fallback={<div className={css.markdownFallback}>{message.content}</div>}>
-                    <MarkdownText text={message.content} />
+                    <TypewriterMarkdown
+                      text={message.content}
+                      active={message.messageId === liveAssistantMessageId && settings?.llm.typewriter === true}
+                      speedMs={settings?.llm.typewriterSpeedMs ?? 18}
+                    />
                   </Suspense>
                 </div>
               </div>
@@ -325,5 +333,34 @@ export const ConversationPane = ({
         </div>
       </div>
     </div>
+  )
+}
+
+const TypewriterMarkdown = ({ text, active, speedMs }: { text: string; active: boolean; speedMs: number }): React.ReactElement => {
+  const [visible, setVisible] = useState(active ? 0 : Number.POSITIVE_INFINITY)
+  const characters = Array.from(text)
+
+  useEffect(() => {
+    if (!active || window.matchMedia('(prefers-reduced-motion: reduce)').matches || speedMs === 0) {
+      setVisible(Number.POSITIVE_INFINITY)
+      return
+    }
+    setVisible(0)
+    const chunkSize = Math.max(1, Math.ceil(24 / Math.max(speedMs, 1)))
+    const timer = window.setInterval(() => {
+      setVisible((current) => {
+        const next = current + chunkSize
+        if (next >= characters.length) window.clearInterval(timer)
+        return next
+      })
+    }, Math.max(8, speedMs))
+    return () => window.clearInterval(timer)
+  }, [active, speedMs, text, characters.length])
+
+  const complete = visible >= characters.length
+  return (
+    <span className={!complete ? css.typewriterLive : undefined}>
+      <MarkdownText text={complete ? text : characters.slice(0, visible).join('')} />
+    </span>
   )
 }

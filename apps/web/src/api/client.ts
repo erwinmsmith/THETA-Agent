@@ -202,12 +202,61 @@ export interface WebInferenceProvider {
   configuredModel: string | null;
   selected: boolean;
   local: boolean;
+  category: 'direct' | 'router' | 'local' | 'compatible';
+  models: string[];
+  capabilities: {
+    streaming: boolean;
+    reasoning: boolean;
+    reasoningEffort: boolean;
+  };
 }
 
 export interface WebInferenceCatalog {
   kind: 'inference.provider.list';
   providers: WebInferenceProvider[];
   selection: { providerId: string; model: string; source: string } | null;
+}
+
+export type WebReasoningMode = 'auto' | 'chat' | 'reasoning';
+export type WebReasoningEffort = 'low' | 'medium' | 'high';
+
+export interface WebInferenceSettings {
+  llm: {
+    providerId: string | null;
+    model: string;
+    baseUrl: string;
+    apiKeyConfigured: boolean;
+    reasoningMode: WebReasoningMode;
+    reasoningEffort: WebReasoningEffort;
+    reasoningBudgetTokens: number | null;
+    temperature: number;
+    maxTokens: number;
+    timeoutMs: number;
+    streaming: boolean;
+    typewriter: boolean;
+    typewriterSpeedMs: number;
+  };
+  embedding: {
+    enabled: boolean;
+    providerId: string;
+    model: string;
+    baseUrl: string;
+    dimensions: number | null;
+    apiKeyConfigured: boolean;
+  };
+}
+
+export interface WebInferenceSettingsUpdate {
+  llm?: Partial<Omit<WebInferenceSettings['llm'], 'apiKeyConfigured'>> & {
+    providerId?: string;
+    apiKey?: string;
+    clearApiKey?: boolean;
+    models?: string[];
+  };
+  embedding?: Partial<Omit<WebInferenceSettings['embedding'], 'apiKeyConfigured'>> & {
+    apiKey?: string;
+    clearApiKey?: boolean;
+  };
 }
 
 export interface WebRuntimeProfile {
@@ -315,6 +364,16 @@ export const uploadDataset = async (file: File): Promise<WebDataset> => {
 
 export const getInferenceCatalog = (): Promise<WebInferenceCatalog> =>
   request('/api/v2/inference');
+
+export const getInferenceSettings = (): Promise<WebInferenceSettings> =>
+  request('/api/v2/inference/settings');
+
+export const updateInferenceSettings = (
+  input: WebInferenceSettingsUpdate,
+): Promise<WebInferenceSettings> => request('/api/v2/inference/settings', {
+  method: 'PATCH',
+  body: JSON.stringify(input),
+});
 
 export const getRuntimeProfile = (): Promise<WebRuntimeProfile> =>
   request('/api/v2/runtime');

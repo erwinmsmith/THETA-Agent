@@ -153,7 +153,10 @@ npm run model -- current
 ```
 
 The selected provider and model are saved in the ignored
-`.theta_agent/inference-selection.json`; credentials remain only in `.env`.
+`.theta_agent/inference-selection.json`. The Web settings center can also save
+provider overrides and write-only API keys to private, ignored files under
+`.theta_agent/` (mode `0600`); keys are never returned by the API. Environment
+variables remain supported and take effect when no private override exists.
 A saved choice takes precedence over `THETA_LLM_PROVIDER`. Reset it to return
 to the environment default:
 
@@ -194,7 +197,10 @@ npm run start:api
 The API server also serves the conversational web interface (built from
 `apps/web` by `npm run build`) at `http://127.0.0.1:4318/` — run list,
 conversational thread, approval forms, tool-call trace, reasoning panel, and
-live SSE updates. See [docs/WEB.md](docs/WEB.md).
+live SSE updates. The composer selects provider, model, and reasoning type;
+the settings button controls LLM API, generation, streaming, and typewriter
+behavior plus a separate optional embedding API. These controls never modify
+THETA training-model parameters. See [docs/WEB.md](docs/WEB.md).
 Current shipped capabilities and explicit limitations are tracked in
 [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
 

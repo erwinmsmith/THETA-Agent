@@ -19,6 +19,12 @@ export interface OpenAICompatibleProviderConfig {
   headers?: Record<string, string>;
   maxTokensField?: 'max_tokens' | 'max_completion_tokens';
   allowInsecureLocalhost?: boolean;
+  defaultTemperature?: number;
+  defaultMaxTokens?: number;
+  reasoningMode?: 'auto' | 'chat' | 'reasoning';
+  reasoningEffort?: 'low' | 'medium' | 'high';
+  reasoningBudgetTokens?: number;
+  supportsReasoningEffort?: boolean;
 }
 
 interface OpenAICompatibleProviderInput {
@@ -35,6 +41,12 @@ export class OpenAICompatibleInferenceProvider implements InferenceProvider {
   private readonly fetchImpl: typeof fetch;
   private readonly headers: Record<string, string>;
   private readonly maxTokensField: 'max_tokens' | 'max_completion_tokens';
+  private readonly defaultTemperature: number;
+  private readonly defaultMaxTokens: number;
+  private readonly reasoningMode: 'auto' | 'chat' | 'reasoning';
+  private readonly reasoningEffort: 'low' | 'medium' | 'high';
+  private readonly reasoningBudgetTokens?: number;
+  private readonly supportsReasoningEffort: boolean;
 
   constructor(config: OpenAICompatibleProviderConfig) {
     this.id = required(config.id, 'Provider ID');
@@ -52,6 +64,12 @@ export class OpenAICompatibleInferenceProvider implements InferenceProvider {
     this.fetchImpl = config.fetchImpl ?? fetch;
     this.headers = { ...config.headers };
     this.maxTokensField = config.maxTokensField ?? 'max_tokens';
+    this.defaultTemperature = config.defaultTemperature ?? 0.1;
+    this.defaultMaxTokens = config.defaultMaxTokens ?? 800;
+    this.reasoningMode = config.reasoningMode ?? 'auto';
+    this.reasoningEffort = config.reasoningEffort ?? 'medium';
+    this.reasoningBudgetTokens = config.reasoningBudgetTokens;
+    this.supportsReasoningEffort = config.supportsReasoningEffort ?? false;
   }
 
   async infer(request: InferenceRequest): Promise<InferenceResponse> {
@@ -68,30 +86,7 @@ export class OpenAICompatibleInferenceProvider implements InferenceProvider {
             'Content-Type': 'application/json',
             ...this.headers,
           },
-          body: JSON.stringify({
-            model: this.model,
-            messages: input.messages.map(apiMessage),
-            ...(request.tools?.length
-              ? {
-                  tools: request.tools.map((tool) => ({
-                    type: 'function',
-                    function: {
-                      name: tool.name,
-                      description: tool.description,
-                      parameters: tool.inputSchema,
-                    },
-                  })),
-                  tool_choice: compatibleToolChoice(
-                    request.options?.extra?.toolChoice,
-                  ),
-                }
-              : {}),
-            temperature: request.options?.temperature ?? 0.2,
-            [this.maxTokensField]: Math.min(
-              request.options?.maxTokens ?? 800,
-              4096,
-            ),
-          }),
+          body: JSON.stringify(this.requestBody(request, input, false)),
           signal: controller.signal,
         },
       );
@@ -144,6 +139,113 @@ export class OpenAICompatibleInferenceProvider implements InferenceProvider {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async *stream(request: InferenceRequest): AsyncIterable<InferenceResponse> {
+    const input = providerInput(request.input);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let fullContent = '';
+    let usage: InferenceResponse['usage'];
+    try {
+      const response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+          'Content-Type': 'application/json',
+          ...this.headers,
+        },
+        body: JSON.stringify(this.requestBody(request, input, true)),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new InferenceProviderError(
+          'provider_error',
+          `${this.displayName} stream failed with HTTP ${response.status}.`,
+        );
+      }
+      if (!response.body) {
+        throw new InferenceProviderError('non_json_response', 'Provider stream has no response body.');
+      }
+      let buffer = '';
+      const decoder = new TextDecoder();
+      for await (const bytes of response.body) {
+        buffer += decoder.decode(bytes, { stream: true });
+        const events = buffer.split(/\r?\n\r?\n/u);
+        buffer = events.pop() ?? '';
+        for (const event of events) {
+          const parsed = streamEvent(event);
+          if (!parsed || parsed.done) continue;
+          if (parsed.usage) usage = parsed.usage;
+          if (!parsed.content) continue;
+          fullContent += parsed.content;
+          yield {
+            id: parsed.id ?? `${this.id}-${Date.now()}`,
+            output: { kind: 'text_delta', text: parsed.content },
+            metadata: { providerId: this.id, model: this.model, stream: true, done: false },
+          };
+        }
+      }
+      buffer += decoder.decode();
+      const finalEvent = streamEvent(buffer);
+      if (finalEvent?.usage) usage = finalEvent.usage;
+      yield {
+        id: finalEvent?.id ?? `${this.id}-${Date.now()}-done`,
+        output: { kind: 'stream_done', content: fullContent },
+        usage,
+        metadata: { providerId: this.id, model: this.model, stream: true, done: true },
+      };
+    } catch (error) {
+      if (error instanceof InferenceProviderError) throw error;
+      if (isAbortError(error)) {
+        throw new InferenceProviderError('timeout', `${this.displayName} stream exceeded ${this.timeoutMs} ms.`);
+      }
+      throw new InferenceProviderError(
+        'network_failure',
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private requestBody(
+    request: InferenceRequest,
+    input: OpenAICompatibleProviderInput,
+    stream: boolean,
+  ): Record<string, unknown> {
+    const extra = record(request.options?.extra);
+    const reasoningMode = extra.reasoningMode === 'chat' || extra.reasoningMode === 'reasoning'
+      ? extra.reasoningMode
+      : this.reasoningMode;
+    const reasoningEffort = extra.reasoningEffort === 'low' || extra.reasoningEffort === 'high'
+      ? extra.reasoningEffort
+      : this.reasoningEffort;
+    const reasoning = reasoningMode === 'reasoning';
+    return {
+      model: this.model,
+      messages: input.messages.map(apiMessage),
+      ...(request.tools?.length
+        ? {
+            tools: request.tools.map((tool) => ({
+              type: 'function',
+              function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.inputSchema,
+              },
+            })),
+            tool_choice: compatibleToolChoice(request.options?.extra?.toolChoice),
+          }
+        : {}),
+      ...(!reasoning ? { temperature: request.options?.temperature ?? this.defaultTemperature } : {}),
+      [this.maxTokensField]: Math.min(request.options?.maxTokens ?? this.defaultMaxTokens, 131_072),
+      ...(reasoning && this.supportsReasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      ...(reasoning && this.reasoningBudgetTokens
+        ? { metadata: { theta_reasoning_budget_tokens: this.reasoningBudgetTokens } }
+        : {}),
+      ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
+    };
   }
 }
 
@@ -261,6 +363,42 @@ const responseContent = (payload: Record<string, unknown>): string => {
     'non_json_response',
     'Provider response did not contain message content.',
   );
+};
+
+const streamEvent = (event: string): {
+  id?: string;
+  content?: string;
+  usage?: InferenceResponse['usage'];
+  done: boolean;
+} | undefined => {
+  const data = event
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trim())
+    .join('\n');
+  if (!data) return undefined;
+  if (data === '[DONE]') return { done: true };
+  try {
+    const payload = record(JSON.parse(data));
+    const choices = Array.isArray(payload.choices) ? payload.choices : [];
+    const delta = record(record(choices[0]).delta);
+    const providerUsage = record(payload.usage);
+    const usage = Object.keys(providerUsage).length > 0
+      ? {
+          inputTokens: optionalNumber(providerUsage.prompt_tokens),
+          outputTokens: optionalNumber(providerUsage.completion_tokens),
+          totalTokens: optionalNumber(providerUsage.total_tokens),
+        }
+      : undefined;
+    return {
+      ...(typeof payload.id === 'string' ? { id: payload.id } : {}),
+      ...(typeof delta.content === 'string' && delta.content ? { content: delta.content } : {}),
+      ...(usage ? { usage } : {}),
+      done: false,
+    };
+  } catch {
+    return undefined;
+  }
 };
 
 const responseToolCalls = (

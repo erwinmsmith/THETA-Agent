@@ -1273,6 +1273,7 @@ textarea:focus-visible {
 }
 
 .preferenceButton:hover { border-color: var(--dsw-alias-border-l1); background: var(--dsw-alias-interactive-bg-hover); }
+.preferenceButton svg { width: 14px; height: 14px; }
 
 .runRow { position: relative; }
 .runRow .runItem { width: 100%; padding-right: 52px; }
@@ -1471,6 +1472,14 @@ textarea:focus-visible {
   background: var(--dsw-alias-bg-base);
   font-size: 11px;
 }
+
+.modelPickerLoading { color: var(--dsw-alias-label-caption); font-size: 10px; }
+.quickModelPicker { position: relative; display: flex; min-width: 0; align-items: center; gap: 3px; padding: 2px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 9px; background: var(--dsw-alias-bg-layer-1); }
+.quickModelPicker select { min-width: 0; max-width: 132px; height: 25px; padding: 0 20px 0 6px; overflow: hidden; border: 0; border-radius: 6px; outline: 0; color: var(--dsw-alias-label-secondary); background: transparent; font-size: 10px; text-overflow: ellipsis; }
+.quickModelPicker select:nth-of-type(2) { max-width: 160px; font-family: var(--ds-font-family-code); }
+.quickModelPicker select:hover, .quickModelPicker select:focus { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }
+.quickModelBusy { width: 6px; height: 6px; margin: 0 4px; border-radius: 50%; background: var(--dsw-alias-state-business-primary); animation: pulse 1s ease-in-out infinite; }
+.typewriterLive::after { display: inline-block; width: 1px; height: 1em; margin-left: 2px; content: ''; vertical-align: -0.12em; background: currentColor; animation: pulse 700ms ease-in-out infinite; }
 
 .composerAttachments { display: flex; gap: 6px; overflow-x: auto; }
 .composerAttachments button {

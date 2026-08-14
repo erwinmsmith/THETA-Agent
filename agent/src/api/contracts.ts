@@ -97,11 +97,48 @@ export const thetaWebInferenceSelectionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reset') }).strict(),
 ]);
 
+const thetaWebLlmSettingsSchema = z.object({
+  providerId: z.string().trim().min(1).max(80).optional(),
+  model: z.string().trim().min(1).max(200).optional(),
+  baseUrl: z.string().trim().url().max(500).optional(),
+  apiKey: z.string().trim().min(1).max(8192).optional(),
+  clearApiKey: z.boolean().optional(),
+  reasoningMode: z.enum(['auto', 'chat', 'reasoning']).optional(),
+  reasoningEffort: z.enum(['low', 'medium', 'high']).optional(),
+  reasoningBudgetTokens: z.number().int().min(256).max(131_072).nullable().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().min(64).max(131_072).optional(),
+  timeoutMs: z.number().int().min(1_000).max(600_000).optional(),
+  streaming: z.boolean().optional(),
+  typewriter: z.boolean().optional(),
+  typewriterSpeedMs: z.number().int().min(0).max(100).optional(),
+  models: z.array(z.string().trim().min(1).max(200)).max(40).optional(),
+}).strict();
+
+const thetaWebEmbeddingSettingsSchema = z.object({
+  enabled: z.boolean().optional(),
+  providerId: z.string().trim().min(1).max(80).optional(),
+  model: z.string().trim().max(200).optional(),
+  baseUrl: z.string().trim().url().max(500).optional(),
+  dimensions: z.number().int().min(1).max(65_536).nullable().optional(),
+  apiKey: z.string().trim().min(1).max(8192).optional(),
+  clearApiKey: z.boolean().optional(),
+}).strict();
+
+export const thetaWebInferenceSettingsSchema = z.object({
+  llm: thetaWebLlmSettingsSchema.optional(),
+  embedding: thetaWebEmbeddingSettingsSchema.optional(),
+}).strict().refine(
+  (input) => input.llm !== undefined || input.embedding !== undefined,
+  { message: 'At least one inference settings section is required.' },
+);
+
 export type ThetaWebRunAction = z.infer<typeof thetaWebRunActionSchema>;
 export type ThetaWebCreateRun = z.infer<typeof thetaWebCreateRunSchema>;
 export type ThetaResultAnalysisRequest = z.infer<typeof thetaResultAnalysisRequestSchema>;
 export type ThetaWebPostMessage = z.infer<typeof thetaWebPostMessageSchema>;
 export type ThetaWebInferenceSelection = z.infer<typeof thetaWebInferenceSelectionSchema>;
+export type ThetaWebInferenceSettings = z.infer<typeof thetaWebInferenceSettingsSchema>;
 export type ThetaWebRenameRun = z.infer<typeof thetaWebRenameRunSchema>;
 
 export const thetaWebApiEnvelopeSchema = z.object({

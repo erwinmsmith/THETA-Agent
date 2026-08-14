@@ -7,6 +7,15 @@ import {
 import path from 'node:path';
 import { repositoryRoot } from '../repository-paths.js';
 import { OpenAICompatibleInferenceProvider } from './openai-compatible.js';
+import {
+  readInferenceSecrets,
+  readInferenceSettings,
+  updateInferenceSettings,
+  type InferenceReasoningEffort,
+  type InferenceReasoningMode,
+  type InferenceSettingsFiles,
+  type InferenceSettingsUpdate,
+} from './settings.js';
 
 export const INFERENCE_PROVIDER_IDS = [
   'deepseek',
@@ -35,6 +44,39 @@ export interface InferenceProviderStatus {
   configuredModel: string | null;
   selected: boolean;
   local: boolean;
+  category: 'direct' | 'router' | 'local' | 'compatible';
+  models: string[];
+  capabilities: {
+    streaming: boolean;
+    reasoning: boolean;
+    reasoningEffort: boolean;
+  };
+}
+
+export interface InferenceSettingsView {
+  llm: {
+    providerId: InferenceProviderId | null;
+    model: string;
+    baseUrl: string;
+    apiKeyConfigured: boolean;
+    reasoningMode: InferenceReasoningMode;
+    reasoningEffort: InferenceReasoningEffort;
+    reasoningBudgetTokens: number | null;
+    temperature: number;
+    maxTokens: number;
+    timeoutMs: number;
+    streaming: boolean;
+    typewriter: boolean;
+    typewriterSpeedMs: number;
+  };
+  embedding: {
+    enabled: boolean;
+    providerId: string;
+    model: string;
+    baseUrl: string;
+    dimensions: number | null;
+    apiKeyConfigured: boolean;
+  };
 }
 
 export interface InferenceProviderFactoryOptions {
@@ -43,6 +85,8 @@ export interface InferenceProviderFactoryOptions {
   timeoutMs?: number;
   selectionFile?: string;
   fetchImpl?: typeof fetch;
+  settingsFile?: string;
+  secretsFile?: string;
 }
 
 interface ProviderPreset {
@@ -55,6 +99,9 @@ interface ProviderPreset {
   local: boolean;
   maxTokensField: 'max_tokens' | 'max_completion_tokens';
   headers?: () => Record<string, string>;
+  category: InferenceProviderStatus['category'];
+  reasoning: boolean;
+  reasoningEffort: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -70,6 +117,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_tokens',
+    category: 'direct',
+    reasoning: true,
+    reasoningEffort: false,
   },
   {
     id: 'minimax',
@@ -80,6 +130,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_completion_tokens',
+    category: 'direct',
+    reasoning: true,
+    reasoningEffort: false,
   },
   {
     id: 'openai',
@@ -90,6 +143,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_completion_tokens',
+    category: 'direct',
+    reasoning: true,
+    reasoningEffort: true,
   },
   {
     id: 'openrouter',
@@ -100,6 +156,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_tokens',
+    category: 'router',
+    reasoning: true,
+    reasoningEffort: true,
     headers: () => ({
       ...(value(process.env.OPENROUTER_HTTP_REFERER)
         ? { 'HTTP-Referer': value(process.env.OPENROUTER_HTTP_REFERER)! }
@@ -116,6 +175,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: false,
     local: true,
     maxTokensField: 'max_tokens',
+    category: 'local',
+    reasoning: true,
+    reasoningEffort: false,
   },
   {
     id: 'custom',
@@ -126,6 +188,9 @@ const presets: readonly ProviderPreset[] = [
     apiKeyRequired: false,
     local: false,
     maxTokensField: 'max_tokens',
+    category: 'compatible',
+    reasoning: true,
+    reasoningEffort: true,
   },
 ];
 
@@ -140,14 +205,23 @@ export const inferenceSelectionFile = (): string =>
 
 export const listInferenceProviders = (
   selectionFile = inferenceSelectionFile(),
+  files: InferenceSettingsFiles = {},
 ): InferenceProviderStatus[] => {
   const active = resolveInferenceSelection({ selectionFile });
+  const settings = readInferenceSettings(files);
+  const secrets = readInferenceSecrets(files);
   return presets.map((preset) => {
-    const baseUrl = preset.baseUrl() ?? '';
+    const override = settings.llm.providerOverrides[preset.id];
+    const baseUrl = override?.baseUrl ?? preset.baseUrl() ?? '';
     const selectedModel =
       active?.providerId === preset.id ? active.model : preset.model();
     const credentialConfigured =
-      !preset.apiKeyRequired || Boolean(preset.apiKey());
+      !preset.apiKeyRequired || Boolean(secrets.llmApiKeys[preset.id] ?? preset.apiKey());
+    const models = [...new Set([
+      ...(override?.models ?? []),
+      ...(selectedModel ? [selectedModel] : []),
+      ...(preset.model() ? [preset.model()!] : []),
+    ])];
     return {
       id: preset.id,
       displayName: preset.displayName,
@@ -158,8 +232,62 @@ export const listInferenceProviders = (
       configuredModel: selectedModel ?? null,
       selected: active?.providerId === preset.id,
       local: preset.local,
+      category: preset.category,
+      models,
+      capabilities: {
+        streaming: true,
+        reasoning: preset.reasoning,
+        reasoningEffort: preset.reasoningEffort,
+      },
     };
   });
+};
+
+export const getInferenceSettingsView = (
+  files: InferenceSettingsFiles & { selectionFile?: string } = {},
+): InferenceSettingsView => {
+  const settings = readInferenceSettings(files);
+  const secrets = readInferenceSecrets(files);
+  const selection = resolveInferenceSelection({ selectionFile: files.selectionFile });
+  const preset = selection ? requirePreset(selection.providerId) : undefined;
+  const override = preset ? settings.llm.providerOverrides[preset.id] : undefined;
+  return {
+    llm: {
+      providerId: selection?.providerId ?? null,
+      model: selection?.model ?? '',
+      baseUrl: override?.baseUrl ?? preset?.baseUrl() ?? '',
+      apiKeyConfigured: Boolean(
+        preset && (!preset.apiKeyRequired || secrets.llmApiKeys[preset.id] || preset.apiKey()),
+      ),
+      reasoningMode: settings.llm.reasoningMode,
+      reasoningEffort: settings.llm.reasoningEffort,
+      reasoningBudgetTokens: settings.llm.reasoningBudgetTokens,
+      temperature: settings.llm.temperature,
+      maxTokens: settings.llm.maxTokens,
+      timeoutMs: settings.llm.timeoutMs,
+      streaming: settings.llm.streaming,
+      typewriter: settings.llm.typewriter,
+      typewriterSpeedMs: settings.llm.typewriterSpeedMs,
+    },
+    embedding: {
+      ...settings.embedding,
+      apiKeyConfigured: Boolean(
+        secrets.embeddingApiKey || embeddingEnvironmentKey(settings.embedding.providerId),
+      ),
+    },
+  };
+};
+
+export const configureInferenceSettings = (
+  update: InferenceSettingsUpdate & { llm?: InferenceSettingsUpdate['llm'] & { model?: string } },
+  files: InferenceSettingsFiles & { selectionFile?: string } = {},
+): InferenceSettingsView => {
+  if (update.llm?.providerId) requirePreset(update.llm.providerId);
+  updateInferenceSettings(update, files);
+  if (update.llm?.providerId && update.llm.model) {
+    selectInferenceModel(update.llm.providerId, update.llm.model, files.selectionFile, files);
+  }
+  return getInferenceSettingsView(files);
 };
 
 export const resolveInferenceSelection = (
@@ -190,15 +318,18 @@ export const selectInferenceModel = (
   providerId: string,
   model: string,
   selectionFile = inferenceSelectionFile(),
+  files: InferenceSettingsFiles = {},
 ): InferenceSelection => {
   const preset = requirePreset(providerId);
+  const settings = readInferenceSettings(files);
+  const secrets = readInferenceSecrets(files);
   const normalizedModel = requiredModel(model);
-  if (!preset.baseUrl()) {
+  if (!(settings.llm.providerOverrides[preset.id]?.baseUrl ?? preset.baseUrl())) {
     throw new Error(`${preset.displayName} requires its API base URL environment variable.`);
   }
-  if (!credentialsAvailable(preset)) {
+  if (!credentialsAvailable(preset, secrets, settings)) {
     throw new Error(
-      `${preset.displayName} credentials are not configured. Add the provider API key to .env without committing it.`,
+      `${preset.displayName} credentials are not configured. Add the API key in local model settings or .env; never commit it.`,
     );
   }
   const selection = { providerId: preset.id, model: normalizedModel };
@@ -229,16 +360,19 @@ export const createInferenceProviderFromEnv = (
       : resolveInferenceSelection({ selectionFile: options.selectionFile });
   if (!selection) return undefined;
   const preset = requirePreset(selection.providerId);
-  const baseUrl = preset.baseUrl();
-  if (!baseUrl || !credentialsAvailable(preset)) return undefined;
+  const files = { settingsFile: options.settingsFile, secretsFile: options.secretsFile };
+  const settings = readInferenceSettings(files);
+  const secrets = readInferenceSecrets(files);
+  const baseUrl = settings.llm.providerOverrides[preset.id]?.baseUrl ?? preset.baseUrl();
+  if (!baseUrl || !credentialsAvailable(preset, secrets, settings)) return undefined;
   return new OpenAICompatibleInferenceProvider({
     id: preset.id,
     displayName: preset.displayName,
     baseUrl,
-    apiKey: preset.apiKey(),
+    apiKey: secrets.llmApiKeys[preset.id] ?? preset.apiKey(),
     model: selection.model,
     timeoutMs:
-      options.timeoutMs ??
+      options.timeoutMs ?? settings.llm.timeoutMs ??
       environmentTimeout(
         process.env[`${preset.id.toUpperCase()}_TIMEOUT_MS`] ??
           process.env.THETA_LLM_TIMEOUT_MS,
@@ -247,6 +381,12 @@ export const createInferenceProviderFromEnv = (
     headers: preset.headers?.(),
     maxTokensField: preset.maxTokensField,
     allowInsecureLocalhost: preset.local || preset.id === 'custom',
+    defaultTemperature: settings.llm.temperature,
+    defaultMaxTokens: settings.llm.maxTokens,
+    reasoningMode: settings.llm.reasoningMode,
+    reasoningEffort: settings.llm.reasoningEffort,
+    reasoningBudgetTokens: settings.llm.reasoningBudgetTokens ?? undefined,
+    supportsReasoningEffort: preset.reasoningEffort,
   });
 };
 
@@ -305,8 +445,18 @@ const requirePreset = (providerId: string): ProviderPreset => {
   return preset;
 };
 
-const credentialsAvailable = (preset: ProviderPreset): boolean =>
-  (!preset.apiKeyRequired || Boolean(preset.apiKey())) && Boolean(preset.baseUrl());
+const credentialsAvailable = (
+  preset: ProviderPreset,
+  secrets: ReturnType<typeof readInferenceSecrets> = readInferenceSecrets(),
+  settings: ReturnType<typeof readInferenceSettings> = readInferenceSettings(),
+): boolean =>
+  (!preset.apiKeyRequired || Boolean(secrets.llmApiKeys[preset.id] ?? preset.apiKey())) &&
+  Boolean(settings.llm.providerOverrides[preset.id]?.baseUrl ?? preset.baseUrl());
+
+const embeddingEnvironmentKey = (providerId: string): string | undefined => {
+  const preset = presets.find((candidate) => candidate.id === providerId);
+  return preset?.apiKey();
+};
 
 const requiredModel = (model: string): string => {
   const normalized = model.trim();
