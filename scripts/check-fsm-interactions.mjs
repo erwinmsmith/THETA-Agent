@@ -9,6 +9,7 @@ import {
 } from '../agent/dist/interaction-service.js';
 import { SQLiteConversationStore } from '../agent/dist/storage/sqlite-conversation-store.js';
 import { listLocalRuns, pinLocalRun, renameLocalRun } from '../agent/dist/storage/run-catalog.js';
+import { buildDatasetFacts, buildDeterministicUnderstanding } from '../agent/dist/dataset-understanding/service.js';
 import { ThetaNaturalLanguageService } from '../tools/dist/support/language/natural-service.js';
 import { runThetaModelCatalog } from '../tools/dist/hypha-runner.js';
 
@@ -52,6 +53,50 @@ const deterministic = await new ThetaNaturalLanguageService().generate({
 assert.equal(deterministic.output.task, 'propose_readonly_tool');
 assert.equal(deterministic.output.toolId, null);
 assert.equal(deterministic.output.confidence, 0);
+
+const exploredDataset = {
+  datasetRef: 'dataset.content-test',
+  datasetHash: 'a'.repeat(64),
+  fileName: 'content.csv',
+  format: 'csv',
+  sizeBytes: 120,
+  encoding: 'utf-8',
+  delimiter: ',',
+  sheets: [],
+  selectedSheet: null,
+  rowCount: 3,
+  columns: ['id', 'text'],
+  columnProfiles: [
+    { name: 'id', inferredType: 'number', missingRatio: 0, uniqueCount: 3, uniqueRatio: 1, averageLength: 1, maximumLength: 1, parseSuccessRatio: 1, sampleValues: ['1', '2', '3'] },
+    { name: 'text', inferredType: 'text', missingRatio: 0, uniqueCount: 3, uniqueRatio: 1, averageLength: 32, maximumLength: 45, parseSuccessRatio: 0, sampleValues: [] },
+  ],
+  sampleRows: [
+    { id: 1, text: 'Climate policy expands renewable energy investment.' },
+    { id: 2, text: 'Schools discuss digital learning and teacher support.' },
+    { id: 3, text: 'Renewable energy projects reduce urban emissions.' },
+  ],
+  sampleSeed: 'content-test',
+  samplePolicy: { method: 'deterministic_reservoir', requestedRows: 10, returnedRows: 3, profileRows: 3, profileTruncated: false },
+  sampleTruncated: false,
+  outputTruncated: false,
+  redactionSummary: { applied: false, redactedValueCount: 0, rules: [] },
+  candidateRoles: {
+    text: [{ name: 'text', score: 0.92, reason: 'Long natural-language values.' }],
+    time: [], id: [{ name: 'id', score: 0.9, reason: 'Unique identifier.' }],
+    group: [], covariate: [], evaluation: [], metadata: [], ignored: [],
+  },
+  languageDistribution: [{ language: 'en', ratio: 1 }],
+  duplicateRatio: 0,
+  timeCoverage: { start: null, end: null },
+  inferredDomain: { label: 'public policy and education', confidence: 0.7, evidence: ['sample text'] },
+  qualityWarnings: [],
+};
+const contentFacts = buildDatasetFacts(exploredDataset);
+const contentUnderstanding = buildDeterministicUnderstanding(contentFacts, exploredDataset);
+assert.equal(contentUnderstanding.contentSummary.sampledDocumentCount, 3);
+assert.equal(contentUnderstanding.contentSummary.sampleExcerpts[0]?.text, exploredDataset.sampleRows[0].text);
+assert.ok(contentUnderstanding.contentSummary.candidateTopics.length >= 2);
+assert.ok(contentUnderstanding.evidenceReferences.some((entry) => entry.kind === 'sample_row'));
 
 let capturedToolTrace = [];
 const catalogResult = await runThetaModelCatalog({}, {

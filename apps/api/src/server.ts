@@ -1799,8 +1799,21 @@ const persistInitialDatasetConversation = (
       content: [
         `我已检查数据：共 ${facts.rowCount} 行、${facts.columns.length} 列。`,
         `列名：${facts.columns.map((column) => column.name).join('、')}。`,
-        `初步判断这是${understanding.domain.label}数据；分析单位是${understanding.analysisUnit}。`,
+        `初步判断这是${understanding.domain.label}数据；分析单位是${understanding.analysisUnit.replace(/[。.!?]+$/u, '')}。`,
         `建议正文列为 ${understanding.textColumns.map((item) => item.column).join('、') || '尚未确定'}。`,
+        understanding.contentSummary.sampleExcerpts.length > 0
+          ? `已读取的脱敏原始内容样本：${understanding.contentSummary.sampleExcerpts
+              .slice(0, 5)
+              .map((sample, index) => `${index + 1}. “${sample.text}”`)
+              .join('；')}。`
+          : '当前样本中没有可展示的正文内容。',
+        understanding.contentSummary.candidateTopics.length > 0
+          ? `基于原始样本初步识别的候选主题：${understanding.contentSummary.candidateTopics
+              .slice(0, 5)
+              .map((topic) => `${topic.label}（${topic.keywords.join('、')}）`)
+              .join('；')}。`
+          : '当前样本不足以形成可靠的候选主题。',
+        understanding.contentSummary.caveat,
         '请确认以上理解；如有错误，可以直接用自然语言指出。',
       ].join(' '),
       createdAt: new Date().toISOString(),

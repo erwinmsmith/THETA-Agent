@@ -196,6 +196,14 @@ const workflow = (
     state === 'AwaitDatasetUnderstandingConfirmation' &&
     text(record.pendingReason)
   ) {
+    const understanding = asRecord(record.datasetUnderstanding);
+    const contentSummary = asRecord(understanding?.contentSummary);
+    const excerpts = Array.isArray(contentSummary?.sampleExcerpts)
+      ? contentSummary.sampleExcerpts.map(asRecord).filter(Boolean)
+      : [];
+    const candidateTopics = Array.isArray(contentSummary?.candidateTopics)
+      ? contentSummary.candidateTopics.map(asRecord).filter(Boolean)
+      : [];
     sections.push({
       title: '需要确认',
       lines: [
@@ -203,6 +211,23 @@ const workflow = (
         '确认无误后继续；如果领域、分析单位或列角色不正确，请直接用自然语言指出。',
       ],
     });
+    if (excerpts.length > 0) {
+      sections.push({
+        title: '脱敏原始内容样本',
+        lines: excerpts.slice(0, 5).map((sample, index) =>
+          `${index + 1}. ${human(sample?.text)}`,
+        ),
+      });
+    }
+    if (candidateTopics.length > 0) {
+      sections.push({
+        title: '初步候选主题',
+        lines: candidateTopics.slice(0, 5).map((topic) => {
+          const keywords = strings(topic?.keywords);
+          return `${human(topic?.label)}${keywords.length > 0 ? `：${keywords.join('、')}` : ''}`;
+        }),
+      });
+    }
   }
   if (
     state === 'ResearchIntentInterview' &&

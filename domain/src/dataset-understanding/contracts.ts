@@ -72,6 +72,34 @@ export const datasetEvidenceReferenceSchema = z.object({
   claim: z.string().min(1),
 });
 
+export const datasetContentSampleSchema = z.object({
+  sampleIndex: z.number().int().nonnegative(),
+  column: z.string().min(1),
+  text: z.string().min(1).max(500),
+});
+
+export const datasetCandidateTopicSchema = z.object({
+  label: z.string().min(1).max(120),
+  keywords: z.array(z.string().min(1).max(60)).min(1).max(8),
+  evidenceSampleIndexes: z.array(z.number().int().nonnegative()).min(1).max(10),
+  confidence: z.number().min(0).max(1),
+  rationale: z.string().min(1).max(300),
+});
+
+export const datasetContentSummarySchema = z.object({
+  sampledDocumentCount: z.number().int().nonnegative(),
+  sampleExcerpts: z.array(datasetContentSampleSchema).max(10),
+  candidateTopics: z.array(datasetCandidateTopicSchema).max(8),
+  method: z.enum(['local_lexical', 'provider_semantic', 'hybrid']),
+  caveat: z.string().min(1),
+}).default({
+  sampledDocumentCount: 0,
+  sampleExcerpts: [],
+  candidateTopics: [],
+  method: 'local_lexical',
+  caveat: '候选主题仅基于受控样本，用于确认数据理解，不代表正式主题模型结果。',
+});
+
 const roleColumnsSchema = {
   textColumns: z.array(datasetColumnRoleSchema),
   timeColumns: z.array(datasetColumnRoleSchema),
@@ -93,6 +121,7 @@ export const datasetUnderstandingDraftSchema = z.object({
     evidence: z.array(z.string().min(1)).max(8),
   }),
   analysisUnit: z.string().min(1),
+  contentSummary: datasetContentSummarySchema,
   evidenceReferences: z.array(datasetEvidenceReferenceSchema).max(24).default([]),
   ...roleColumnsSchema,
   qualityWarnings: z.array(z.string()),
