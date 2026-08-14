@@ -99,6 +99,31 @@ export interface WebPostMessageResult {
   status: WebRunStatus;
 }
 
+export interface WebDataset {
+  datasetRef: string;
+  name: string;
+  sizeBytes: number;
+  suffix: string;
+  createdAt: string;
+}
+
+export interface WebInferenceProvider {
+  id: string;
+  displayName: string;
+  baseUrl: string;
+  credentialConfigured: boolean;
+  configured: boolean;
+  configuredModel: string | null;
+  selected: boolean;
+  local: boolean;
+}
+
+export interface WebInferenceCatalog {
+  kind: 'inference.provider.list';
+  providers: WebInferenceProvider[];
+  selection: { providerId: string; model: string; source: string } | null;
+}
+
 export interface WebEnvelope<T> {
   ok: boolean;
   data?: T;
@@ -110,23 +135,55 @@ const BASE_URL =
   `${window.location.protocol}//${window.location.hostname}:4318`;
 
 const request = async <T>(route: string, init: RequestInit = {}): Promise<T> => {
+  const isFormData = init.body instanceof FormData;
   const response = await fetch(`${BASE_URL}${route}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(init.headers ?? {}),
     },
   });
-  const payload = (await response.json()) as WebEnvelope<T>;
+  const payload = await response.json().catch(() => undefined) as WebEnvelope<T> | undefined;
+  if (payload === undefined) throw new Error(`API returned an invalid response (HTTP ${response.status}).`);
   if (!response.ok || !payload.ok) {
     throw new Error(payload.error?.message ?? `HTTP ${response.status}`);
   }
-  if (payload.data === undefined) throw new Error('API 响应缺少 data 字段。');
+  if (payload.data === undefined) throw new Error('API response is missing the data field.');
   return payload.data;
 };
 
 export const listRuns = (): Promise<{ runs: WebRunSummary[] }> =>
   request('/api/v2/runs?limit=30');
+
+export const createRun = (input: {
+  datasetRef: string;
+  researchGoal?: string;
+  useLanguageProvider?: boolean;
+}): Promise<{ runId: string }> => request('/api/v2/runs', {
+  method: 'POST',
+  body: JSON.stringify(input),
+});
+
+export const deleteRun = (runId: string): Promise<{ runId: string }> =>
+  request(`/api/v2/runs/${encodeURIComponent(runId)}`, { method: 'DELETE' });
+
+export const listDatasets = (): Promise<{ datasets: WebDataset[] }> =>
+  request('/api/v2/datasets');
+
+export const uploadDataset = async (file: File): Promise<WebDataset> => {
+  const body = new FormData();
+  body.append('file', file);
+  return request('/api/v2/datasets/upload', { method: 'POST', body });
+};
+
+export const getInferenceCatalog = (): Promise<WebInferenceCatalog> =>
+  request('/api/v2/inference');
+
+export const selectInferenceModel = (providerId: string, model: string): Promise<unknown> =>
+  request('/api/v2/inference', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'use', providerId, model }),
+  });
 
 export const getRun = (runId: string): Promise<WebRunDetail> =>
   request(`/api/v2/runs/${encodeURIComponent(runId)}`);
@@ -171,6 +228,7 @@ export const postAction = <T = unknown>(
   });
 
 export interface StreamHandlers {
+  onOpen?: () => void;
   onSnapshot?: (data: { runId: string; status: WebRunStatus; lastEventId?: string }) => void;
   onStatus?: (data: { status: WebRunStatus }) => void;
   onEvents?: (data: { events: WebRunEvent[] }) => void;
@@ -198,6 +256,7 @@ export const openRunStream = (runId: string, handlers: StreamHandlers): EventSou
   wire('events', handlers.onEvents as never);
   wire('messages', handlers.onMessages as never);
   wire('training', handlers.onTraining as never);
+  source.onopen = () => handlers.onOpen?.();
   source.onerror = () => handlers.onError?.(new Error('实时流连接中断，将自动重连。'));
   return source;
 };

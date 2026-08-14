@@ -13,6 +13,7 @@ import type {
   DatasetUnderstandingDraft,
 } from '@theta-agent/agent';
 import { DoctorService } from '@theta-agent/agent';
+import { ModelSelectionService } from '@theta-agent/agent';
 import { loadThetaProjectEnvironment } from '@theta-agent/agent';
 import { buildHumanResponse } from '@theta-agent/agent';
 import { ResultAnalysisService } from '@theta-agent/agent';
@@ -31,6 +32,7 @@ import { runThetaTrainingStatus } from '@theta-agent/agent';
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
+  thetaWebInferenceSelectionSchema,
   thetaWebPostMessageSchema,
   thetaWebRunActionSchema,
   type ThetaWebApiEnvelope,
@@ -259,6 +261,20 @@ const routeRequest = async (
     }
     writeJson(response, 200, { ok: true, data: result.output });
     return;
+  }
+
+  if (url.pathname === '/api/v2/inference') {
+    const selection = new ModelSelectionService();
+    if (method === 'GET') {
+      writeJson(response, 200, { ok: true, data: selection.execute({ action: 'list' }) });
+      return;
+    }
+    if (method === 'POST') {
+      const input = thetaWebInferenceSelectionSchema.parse(await readJsonBody(request));
+      writeJson(response, 200, { ok: true, data: selection.execute(input) });
+      return;
+    }
+    return methodNotAllowed(response);
   }
 
   const statusMatch = url.pathname.match(/^\/api\/v2\/runs\/([^/]+)\/status$/);

@@ -1,9 +1,11 @@
 # Web Conversational Interface
 
-THETA Agent ships a conversational web frontend under `apps/web`, styled with
-the DeepSeek Harness UI framework (MIT, see `apps/web/THIRD_PARTY_NOTICES.md`).
-It is a thin presentation adapter: every action is submitted to the governed
-THETA 2.0 API and every approval gate stays enforced by the domain FSM.
+THETA Agent ships a conversational research workspace under `apps/web`. Its
+interaction patterns are adapted from the DeepSeek Harness UI framework (MIT,
+see `apps/web/THIRD_PARTY_NOTICES.md`), while all product branding and workflow
+behavior are THETA-specific. The app remains a thin presentation adapter:
+every action is submitted to the governed THETA 2.0 API and every approval
+gate stays enforced by the domain FSM.
 
 ## Run
 
@@ -17,11 +19,16 @@ The API server serves `apps/web/dist` on the same origin, so the UI and
 
 ```bash
 pnpm --filter @theta-agent/web run dev   # Vite dev server on 5173
+pnpm --filter @theta-agent/web run typecheck
 ```
 
 ## Layout
 
-- **Left** — research run list (status dot, current state).
+- **Top** — current task, live-stream health, and the global inference provider
+  and model selector. DeepSeek is selected when the default environment is
+  configured; unavailable providers are visible but disabled.
+- **Left** — research run catalog with automatic restoration, status, current
+  state, relative update time, create, and delete actions.
 - **Center** — conversational thread: user messages and assistant responses
   rendered as markdown (GFM + TeX math + code highlighting). The pending
   human gate renders inline above the composer as a structured form:
@@ -35,6 +42,11 @@ pnpm --filter @theta-agent/web run dev   # Vite dev server on 5173
     plan rationale, reasoning-typed events
   - `事件` full runtime event stream with expandable payloads
 
+`新建研究任务` can reuse a registered dataset or upload CSV, TSV, JSON,
+JSONL, TXT, Excel, or Parquet. The creation dialog accepts a research goal and
+can opt into deterministic planning. On narrow screens the catalog and run
+inspector become mutually exclusive drawers so the agent thread stays usable.
+
 Live updates arrive through the SSE stream
 (`GET /api/v2/runs/:id/stream`); the client falls back to polling after
 reconnects.
@@ -44,7 +56,12 @@ reconnects.
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/v2/runs` | run catalog |
+| `POST /api/v2/runs` | create a governed research run |
 | `GET /api/v2/runs/:id` | detail bundle (status, identity, plan, results) |
+| `DELETE /api/v2/runs/:id` | delete a local run and its result artifacts |
+| `GET /api/v2/datasets` | registered dataset catalog |
+| `POST /api/v2/datasets/upload` | validate, store, and register an upload |
+| `GET/POST /api/v2/inference` | inspect or update the inference selection |
 | `GET /api/v2/runs/:id/status` | status + dataset facts/understanding + research brief |
 | `GET /api/v2/runs/:id/conversation` | message history |
 | `POST /api/v2/runs/:id/messages` | natural-language turn (REPL orchestrator) |

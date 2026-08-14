@@ -78,10 +78,16 @@ export const thetaWebPostMessageSchema = z.object({
   useMiniMax: z.boolean().optional(),
 }).strict();
 
+export const thetaWebInferenceSelectionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('use'), providerId: z.string().trim().min(1), model: z.string().trim().min(1) }).strict(),
+  z.object({ action: z.literal('reset') }).strict(),
+]);
+
 export type ThetaWebRunAction = z.infer<typeof thetaWebRunActionSchema>;
 export type ThetaWebCreateRun = z.infer<typeof thetaWebCreateRunSchema>;
 export type ThetaResultAnalysisRequest = z.infer<typeof thetaResultAnalysisRequestSchema>;
 export type ThetaWebPostMessage = z.infer<typeof thetaWebPostMessageSchema>;
+export type ThetaWebInferenceSelection = z.infer<typeof thetaWebInferenceSelectionSchema>;
 
 export const thetaWebApiEnvelopeSchema = z.object({
   ok: z.boolean(),

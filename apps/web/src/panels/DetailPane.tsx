@@ -51,22 +51,33 @@ export const DetailPane = ({
   const [tab, setTab] = useState<TabId>('status')
   const [expandedEvent, setExpandedEvent] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string>()
 
   const poll = useCallback(async () => {
     if (!runId || busy) return
     setBusy(true)
+    setActionError(undefined)
     try {
       await postAction(runId, { action: 'poll' })
       onChanged()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : String(error))
     } finally {
       setBusy(false)
     }
   }, [runId, busy, onChanged])
 
   const presentation = status?.presentation
+  const statePath = status?.statePath?.filter(
+    (state, index, path) => index === 0 || state !== path[index - 1],
+  )
 
   return (
     <aside className={css.detail}>
+      <div className={css.detailHeader}>
+        <span>RUN INSPECTOR</span>
+        <strong>{events.length} events</strong>
+      </div>
       <div className={css.tabs}>
         {TABS.map((item) => (
           <Pill key={item.id} active={tab === item.id} onClick={() => setTab(item.id)}>
@@ -75,6 +86,7 @@ export const DetailPane = ({
         ))}
       </div>
       <div className={css.tabBody}>
+        {runId == null && <div className={css.empty}>选择一个研究任务以查看运行详情。</div>}
         {tab === 'status' && (
           <>
             {presentation != null && (
@@ -137,13 +149,16 @@ export const DetailPane = ({
             {status?.pendingReason != null && (
               <div className={css.banner}>等待你处理：{status.pendingReason}</div>
             )}
-            {status?.statePath != null && status.statePath.length > 0 && (
+            {statePath != null && statePath.length > 0 && (
               <div className={css.section}>
                 <span className={css.sectionTitle}>状态路径</span>
                 <div className={css.statePath}>
-                  {status.statePath.map((state, index) => (
+                  {statePath.map((state, index) => (
                     <span key={`${state}-${index}`} className={css.runMeta}>
-                      <StateDot size={8} state={stateOf(status)} />
+                      <StateDot
+                        size={8}
+                        state={index < statePath.length - 1 ? 'done' : stateOf(status)}
+                      />
                       {state}
                     </span>
                   ))}
@@ -153,6 +168,7 @@ export const DetailPane = ({
             <Button variant="outline" disabled={!runId || busy} onClick={() => void poll()}>
               同步运行状态
             </Button>
+            {actionError != null && <div className={css.formError}>{actionError}</div>}
           </>
         )}
 
@@ -247,7 +263,7 @@ export const DetailPane = ({
         {tab === 'events' && (
           <>
             {events.length === 0 && <div className={css.empty}>还没有运行时事件</div>}
-            {events.map((event) => (
+            {[...events].reverse().map((event) => (
               <div key={event.id} className={css.section}>
                 <button
                   type="button"

@@ -7,9 +7,12 @@ import react from '@vitejs/plugin-react'
  * highlight, markdown — change only on dependency bumps, so they stay in a
  * cached vendor chunk while workspace code rides the index chunk.
  */
-const VENDOR_PACKAGES: ReadonlySet<string> = new Set([
-  'katex',
+const HIGHLIGHT_PACKAGES: ReadonlySet<string> = new Set([
   'shiki',
+  '@shikijs/langs',
+])
+
+const MARKDOWN_PACKAGES: ReadonlySet<string> = new Set([
   'mdast-util-from-markdown',
   'mdast-util-gfm',
   'mdast-util-math',
@@ -45,6 +48,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     sourcemap: true,
+    // The 797 kB C++ grammar is a lazy optional chunk (about 56 kB gzip), not boot JavaScript.
+    chunkSizeWarningLimit: 850,
     rollupOptions: {
       output: {
         chunkFileNames(chunk): string {
@@ -61,9 +66,11 @@ export default defineConfig({
           const pkg = npmPackageOf(id)
           if (pkg === undefined) return undefined
           if (pkg === '@shikijs/langs') {
-            return BOOT_GRAMMAR_FILES.some(file => id.endsWith(`/${file}`)) ? 'vendor' : undefined
+            return BOOT_GRAMMAR_FILES.some(file => id.endsWith(`/${file}`)) ? 'highlight' : undefined
           }
-          return VENDOR_PACKAGES.has(pkg) ? 'vendor' : undefined
+          if (HIGHLIGHT_PACKAGES.has(pkg)) return 'highlight'
+          if (pkg === 'katex') return 'math'
+          return MARKDOWN_PACKAGES.has(pkg) ? 'markdown' : undefined
         },
       },
     },

@@ -1,0 +1,28 @@
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.mark > svg {
+  color: var(--dsw-static-blue-300);
+}
+
+.name {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.badge {
+  padding: 2px 5px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 3px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
