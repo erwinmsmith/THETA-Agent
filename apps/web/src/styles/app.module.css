@@ -1540,6 +1540,21 @@ textarea:focus-visible {
 }
 .activityTraceCompleted .activityToolText strong { font-size: 11px; font-weight: 500; }
 .activityTraceCompleted .activityToolIcon { font-size: 15px; }
+.activityWorking {
+  display: flex;
+  width: calc(100% + 35px);
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  margin-left: -35px;
+  padding: 3px 5px 3px 0;
+  box-sizing: border-box;
+}
+.activityAvatar {
+  margin-top: 0;
+  margin-right: 3px;
+  animation: activityAvatarPulse 1.8s ease-in-out infinite;
+}
 .activityRow,
 .activityDisclosure > summary,
 .activityDisclosure > button {
@@ -1830,6 +1845,14 @@ textarea:focus-visible {
   from { opacity: 0; transform: translateY(8px); }
 }
 
+@keyframes activityAvatarPulse {
+  0%, 100% { border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 34%, transparent); }
+  50% {
+    border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 62%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-business-primary) 8%, transparent);
+  }
+}
+
 @media (max-width: 760px) {
   .promptGrid { grid-template-columns: 1fr; }
   .startSurface > p { margin-bottom: 20px; }
@@ -1839,4 +1862,5 @@ textarea:focus-visible {
   .contextCardActions { flex-wrap: wrap; }
   .approvalBarActions { justify-content: flex-end; }
   .activityTrace { width: 100%; margin-left: 0; }
+  .activityWorking { width: 100%; margin-left: 0; }
 }

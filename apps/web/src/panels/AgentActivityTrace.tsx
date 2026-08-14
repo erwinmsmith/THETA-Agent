@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { WebAgentInteraction, WebReasoning, WebReasoningToolCall } from '../api/client.ts'
-import { JsonTree, StateDot } from '../ui/index.ts'
+import { JsonTree, StateDot, ThetaMark } from '../ui/index.ts'
 import { usePreferences } from '../preferences.tsx'
 import css from '../styles/app.module.css'
 
@@ -131,7 +131,10 @@ export const AgentActivityTrace = ({
   return (
     <div className={css.activityTrace} aria-label={locale === 'zh-CN' ? 'Agent 活动' : 'Agent activity'}>
       {working && (
-        <div className={css.activityRow}>
+        <div className={css.activityWorking}>
+          <div className={`${css.messageAvatar} ${css.activityAvatar}`} aria-hidden="true">
+            <ThetaMark size={17} />
+          </div>
           <span className={css.activitySpinner} />
           <span className={css.activityToolText}>
             <strong>{currentProgress?.phase === 'tool' ? (locale === 'zh-CN' ? 'Tool · 正在调用工具' : 'Tool · Running') : 'Thinking'}</strong>
