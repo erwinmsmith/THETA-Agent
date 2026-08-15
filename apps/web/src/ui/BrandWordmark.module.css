@@ -6,10 +6,6 @@
   color: var(--dsw-alias-label-primary);
 }
 
-.mark > svg {
-  color: var(--dsw-static-blue-300);
-}
-
 .name {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 16px;
