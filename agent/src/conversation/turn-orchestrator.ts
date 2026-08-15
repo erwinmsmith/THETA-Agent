@@ -862,6 +862,10 @@ export class ThetaTurnOrchestrator {
       workflowContext?.status.currentState,
     );
     const proposals: ReadonlyToolProposal[] = [];
+    let semanticDecision: Pick<
+      NaturalLanguageResult,
+      'source' | 'fallbackReason' | 'telemetry'
+    > | undefined;
     const toolSteps: Array<{
       toolId: 'theta.rag.search' | 'theta.model.catalog';
       result: unknown;
@@ -909,6 +913,11 @@ export class ThetaTurnOrchestrator {
             confidence: 0,
             requiresConfirmation: false,
           };
+      semanticDecision = {
+        source: routed.source,
+        ...(routed.fallbackReason ? { fallbackReason: routed.fallbackReason } : {}),
+        telemetry: routed.telemetry,
+      };
       proposals.push(proposal);
       if (!proposal.toolId || !remainingTools.includes(proposal.toolId)) break;
 
@@ -965,6 +974,12 @@ export class ThetaTurnOrchestrator {
         : undefined,
       memory: this.store.getMemory(context.sessionId),
       requestDataset: !runId && proposal.intent === 'needs_dataset',
+      ...(semanticDecision?.fallbackReason
+        ? {
+            inferenceIssue:
+              'The configured language provider could not complete semantic intent reasoning.',
+          }
+        : {}),
     };
     const grounding = toolSteps.length === 0
       ? safeGrounding(null, contextualResult)
@@ -1000,6 +1015,8 @@ export class ThetaTurnOrchestrator {
         result: toolSteps.length === 1 ? toolSteps[0]?.result : toolSteps.map((step) => step.result),
         response,
         hasActiveRun: Boolean(runId),
+        requestDataset: contextualResult.requestDataset,
+        ...(semanticDecision ? { semanticDecision } : {}),
         evidenceRefs:
           composed.output.task === 'compose_grounded_response'
             ? composed.output.evidenceIds

@@ -40,7 +40,7 @@ interface ConversationPaneProps {
   onCreated: (runId: string) => void
   workspaceSessionId?: string
   entryInteraction?: WebAgentInteraction
-  workspaceActivity?: { proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
+  workspaceActivity?: { proposal?: unknown; semanticDecision?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
   reasoning?: WebReasoning
   runId?: string
   status?: WebRunStatus

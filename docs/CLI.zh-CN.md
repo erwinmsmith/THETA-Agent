@@ -75,7 +75,7 @@ npm run env:import:hypha -- /absolute/path/to/Hypha/.env
 ```bash
 npm run cli -- model list
 npm run cli -- model current --json
-npm run cli -- model use --provider deepseek --model deepseek-v4-flash
+npm run cli -- model use --provider deepseek --model deepseek-chat
 npm run cli -- model reset
 ```
 
@@ -417,7 +417,7 @@ npm run cli -- demo --approve
 | `/llm on\|off` | 授予或撤销当前会话的供应商辅助权限。 |
 | `/model` | 显示当前供应商和模型。 |
 | `/model list` | 显示全部供应商及配置状态。 |
-| `/model use <provider> <model>` | 保存模型：`/model use deepseek deepseek-v4-flash`。 |
+| `/model use <provider> <model>` | 保存模型：`/model use deepseek deepseek-chat`。 |
 | `/model reset` | 恢复 `.env` 默认模型。 |
 | `/brief` | 查看当前持久化研究档案。 |
 | `/history` | 查看最近的持久化对话。 |

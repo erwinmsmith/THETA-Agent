@@ -24,10 +24,10 @@ const base = existsSync(target)
   : readFileSync(template, 'utf8');
 const updates = new Map([
   ['THETA_LLM_PROVIDER', 'deepseek'],
-  ['THETA_LLM_MODEL', sourceValues.get('DEEPSEEK_MODEL') ?? 'deepseek-v4-flash'],
+  ['THETA_LLM_MODEL', sourceValues.get('DEEPSEEK_MODEL') ?? 'deepseek-chat'],
   ['DEEPSEEK_API_KEY', deepseekKey],
   ['DEEPSEEK_BASE_URL', sourceValues.get('DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com/v1'],
-  ['DEEPSEEK_MODEL', sourceValues.get('DEEPSEEK_MODEL') ?? 'deepseek-v4-flash'],
+  ['DEEPSEEK_MODEL', sourceValues.get('DEEPSEEK_MODEL') ?? 'deepseek-chat'],
 ]);
 
 writeFileSync(target, mergeEnvironment(base, updates), {

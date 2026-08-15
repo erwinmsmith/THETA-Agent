@@ -174,6 +174,7 @@ export interface WebWorkspaceTurn {
   interaction: WebAgentInteraction;
   activity?: {
     proposal?: unknown;
+    semanticDecision?: unknown;
     steps?: unknown;
     result?: unknown;
     evidenceRefs?: unknown;

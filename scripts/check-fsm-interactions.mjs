@@ -7,6 +7,7 @@ import {
   buildThetaAgentInteraction,
   buildThetaWorkspaceInteraction,
 } from '../agent/dist/interaction-service.js';
+import { ThetaTurnOrchestrator } from '../agent/dist/conversation/turn-orchestrator.js';
 import { SQLiteConversationStore } from '../agent/dist/storage/sqlite-conversation-store.js';
 import { listLocalRuns, pinLocalRun, renameLocalRun } from '../agent/dist/storage/run-catalog.js';
 import { buildDatasetFacts, buildDeterministicUnderstanding } from '../agent/dist/dataset-understanding/service.js';
@@ -53,6 +54,19 @@ const deterministic = await new ThetaNaturalLanguageService().generate({
 assert.equal(deterministic.output.task, 'propose_readonly_tool');
 assert.equal(deterministic.output.toolId, null);
 assert.equal(deterministic.output.confidence, 0);
+
+const unavailableInference = await new ThetaNaturalLanguageService().generate({
+  schemaVersion: '1.0.0',
+  task: 'compose_grounded_response',
+  userText: 'Analyze my dataset.',
+  toolId: null,
+  facts: {
+    inferenceIssue: 'The configured language provider could not complete semantic intent reasoning.',
+  },
+  evidence: [],
+  recentMessages: [],
+});
+assert.match(unavailableInference.output.text, /语言模型供应商不可用/);
 
 const exploredDataset = {
   datasetRef: 'dataset.content-test',
@@ -144,6 +158,52 @@ try {
     totalTokens: 155,
     calls: 1,
   });
+
+  const semanticSessionId = 'theta-web-workspace-semantic-dataset-test';
+  store.getOrCreateSession(semanticSessionId);
+  const semanticLanguage = {
+    async generate(input) {
+      const output = input.task === 'propose_readonly_tool'
+        ? {
+            task: input.task,
+            intent: 'needs_dataset',
+            toolId: null,
+            arguments: {},
+            reason: 'The user requested analysis of a dataset that is not registered.',
+            confidence: 0.98,
+            requiresConfirmation: false,
+          }
+        : {
+            task: 'compose_grounded_response',
+            text: '请添加需要分析的数据。',
+            evidenceIds: [],
+          };
+      return {
+        schemaVersion: '1.0.0',
+        source: 'provider',
+        factsHash: 'f'.repeat(64),
+        telemetry: {
+          providerId: 'test-provider',
+          model: 'test-model',
+          durationMs: 1,
+          fallback: false,
+        },
+        output,
+      };
+    },
+  };
+  const semanticTurn = await new ThetaTurnOrchestrator(
+    store,
+    undefined,
+    semanticLanguage,
+  ).execute(
+    { kind: 'natural', text: 'Analyze a dataset I will provide.' },
+    { sessionId: semanticSessionId, runtimeDb },
+  );
+  assert.equal(semanticTurn.value.requestDataset, true);
+  assert.equal(semanticTurn.value.proposal.intent, 'needs_dataset');
+  assert.equal(semanticTurn.value.semanticDecision.source, 'provider');
+  assert.equal(store.deleteSession(semanticSessionId), true);
 
   const workspaceSessionId = 'theta-web-workspace-history-test';
   store.getOrCreateSession(workspaceSessionId);

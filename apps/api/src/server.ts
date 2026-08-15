@@ -255,9 +255,8 @@ const routeRequest = async (
       );
       const value = asRecord(result.value) ?? {};
       if (before.size === 0) store.renameSession(sessionId, input.text.slice(0, 64));
-      const proposal = asRecord(value.proposal);
       const attachedDataset = input.attachments.some((attachment) => attachment.kind === 'dataset');
-      const requestDataset = proposal?.intent === 'needs_dataset' && !attachedDataset;
+      const requestDataset = value.requestDataset === true && !attachedDataset;
       const messages = store
         .listRecentMessages(sessionId, 100)
         .filter((message) => !before.has(message.messageId))
@@ -272,6 +271,7 @@ const routeRequest = async (
           tokenUsage: store.getTokenUsage(sessionId),
           activity: {
             proposal: value.proposal,
+            semanticDecision: value.semanticDecision,
             steps: value.steps,
             result: value.result,
             evidenceRefs: value.evidenceRefs,

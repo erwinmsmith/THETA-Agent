@@ -113,7 +113,7 @@ const presets: readonly ProviderPreset[] = [
     displayName: 'DeepSeek',
     baseUrl: () => value(process.env.DEEPSEEK_BASE_URL) ?? 'https://api.deepseek.com/v1',
     apiKey: () => value(process.env.DEEPSEEK_API_KEY),
-    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-v4-flash',
+    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-chat',
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_tokens',

@@ -7,7 +7,7 @@ import css from '../styles/app.module.css'
 interface AgentActivityTraceProps {
   interaction?: WebAgentInteraction
   reasoning?: WebReasoning
-  workspaceActivity?: { proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
+  workspaceActivity?: { proposal?: unknown; semanticDecision?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }
   working?: boolean
   currentProgress?: { phase: 'thinking' | 'tool'; label: string; step: number; toolId?: string }
 }

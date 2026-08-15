@@ -848,6 +848,9 @@ const deterministicGroundedResponse = (
     typeof facts.currentQuestion === 'string'
       ? facts.currentQuestion
       : undefined;
+  if (typeof facts.inferenceIssue === 'string') {
+    return '当前语言模型供应商不可用，Agent 无法完成语义意图判断，因此没有擅自调出上传卡片或执行工具。请在设置中检查模型、API Key 与账户额度后重试。';
+  }
   if (capabilities.length > 0) {
     return [
       `我是 THETA 专属研究训练助手。我可以${capabilities.join('；')}。`,

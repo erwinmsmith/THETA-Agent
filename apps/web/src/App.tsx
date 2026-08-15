@@ -118,7 +118,7 @@ export const AppRoot = (): React.ReactElement => {
   const [runtimeProfile, setRuntimeProfile] = useState<WebRuntimeProfile>()
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string>()
   const [workspaceInteraction, setWorkspaceInteraction] = useState<WebAgentInteraction>()
-  const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }>()
+  const [workspaceActivity, setWorkspaceActivity] = useState<{ proposal?: unknown; semanticDecision?: unknown; steps?: unknown; result?: unknown; evidenceRefs?: unknown }>()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
