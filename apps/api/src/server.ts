@@ -35,6 +35,7 @@ import { buildThetaAgentInteraction, buildThetaWorkspaceInteraction } from '@the
 import {
   thetaResultAnalysisRequestSchema,
   thetaWebCreateRunSchema,
+  thetaWebCreateWorkspaceSessionSchema,
   thetaWebInferenceSelectionSchema,
   thetaWebInferenceSettingsSchema,
   thetaWebPostMessageSchema,
@@ -158,13 +159,17 @@ const routeRequest = async (
       return;
     }
     if (method !== 'POST') return methodNotAllowed(response);
+    const input = thetaWebCreateWorkspaceSessionSchema.parse(await readJsonBody(request));
     const sessionId = `theta-web-workspace-${randomUUID()}`;
     const store = new SQLiteConversationStore(options.runtimeDb);
     try {
       store.getOrCreateSession(sessionId);
+      const session = input.displayName
+        ? store.renameSession(sessionId, input.displayName)
+        : undefined;
       writeJson(response, 201, {
         ok: true,
-        data: { sessionId, interaction: buildThetaWorkspaceInteraction() },
+        data: { sessionId, interaction: buildThetaWorkspaceInteraction(), session },
       });
     } finally {
       store.close();
@@ -1262,18 +1267,27 @@ const executeRunAction = async (
   }
   if (action.action === 'reject') {
     appendRunMessage(runtimeDb, runId, 'user', 'human.review.rejected', action.reason);
+    const status = await workflow.status(runId, runtimeDb);
+    const revisesResearchIntent =
+      status.pendingActionRef === THETA_APPROVAL_KEYS.researchIntentReview;
     const result = await workflow.resume({
       runId,
       runtimeDb,
       reject: true,
       approvedBy: 'local_user',
+      ...(revisesResearchIntent ? { decisionAnswer: action.reason } : {}),
     });
+    const context = await workflow.conversationContext(result.runId, runtimeDb);
     appendRunMessage(
       runtimeDb,
       runId,
       'assistant',
-      'human.review.rejection-recorded',
-      '已记录拒绝原因，Agent 不会继续执行该审批动作。',
+      revisesResearchIntent ? 'human.review.feedback-applied' : 'human.review.rejection-recorded',
+      revisesResearchIntent
+        ? context.researchIntentSummary
+          ? `已将反馈加入研究上下文，并结合数据内容重新形成研究意图：\n${formatWebIntentSummary(context.researchIntentSummary)}`
+          : context.decisionGap?.question ?? '已将反馈加入研究上下文，Agent 将结合数据内容继续确认研究意图。'
+        : '已记录拒绝原因，Agent 不会继续执行该审批动作。',
     );
     return result;
   }

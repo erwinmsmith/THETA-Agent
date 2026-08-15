@@ -110,7 +110,7 @@ export const AppRoot = (): React.ReactElement => {
     runId?: string
     workspaceSessionId?: string
     scopeKey: string
-    optimisticMessageId: string
+    optimisticMessageId?: string
   }>>([])
   const [attachments, setAttachments] = useState<WebAttachment[]>([])
   const [loadError, setLoadError] = useState<string>()
@@ -129,6 +129,7 @@ export const AppRoot = (): React.ReactElement => {
   const knownMessageIds = useRef(new Set<string>())
   const activeScopeRef = useRef(activeScopeKey)
   const processingMessageRef = useRef<string>()
+  const queuedSubmissionCountRef = useRef(0)
 
   const activateScope = useCallback((scopeKey: string): void => {
     activeScopeRef.current = scopeKey
@@ -309,23 +310,27 @@ export const AppRoot = (): React.ReactElement => {
 
   const enqueue = useCallback((text: string, nextAttachments: WebAttachment[]) => {
     const id = crypto.randomUUID()
-    const optimisticMessageId = `optimistic.${id}`
     const scopeKey = activeScopeRef.current
-    knownMessageIds.current.add(optimisticMessageId)
-    setMessages((current) => [...current, {
-      messageId: optimisticMessageId,
-      role: 'user',
-      messageKind: 'conversation.text',
-      content: text,
-      sequenceNumber: Math.max(0, ...current.map((message) => message.sequenceNumber)) + 1,
-      createdAt: new Date().toISOString(),
-    }])
+    const displayImmediately = processingMessageRef.current == null && queuedSubmissionCountRef.current === 0
+    queuedSubmissionCountRef.current += 1
+    const optimisticMessageId = displayImmediately ? `optimistic.${id}` : undefined
+    if (optimisticMessageId) {
+      knownMessageIds.current.add(optimisticMessageId)
+      setMessages((current) => [...current, {
+        messageId: optimisticMessageId,
+        role: 'user',
+        messageKind: 'conversation.text',
+        content: text,
+        sequenceNumber: Math.max(0, ...current.map((message) => message.sequenceNumber)) + 1,
+        createdAt: new Date().toISOString(),
+      }])
+    }
     setQueued((current) => [...current, {
       id,
       text,
       attachments: nextAttachments,
       scopeKey,
-      optimisticMessageId,
+      ...(optimisticMessageId ? { optimisticMessageId } : {}),
       ...(selectedRunId ? { runId: selectedRunId } : {}),
       ...(workspaceSessionId ? { workspaceSessionId } : {}),
     }])
@@ -338,13 +343,25 @@ export const AppRoot = (): React.ReactElement => {
     setProcessingMessageId(next.id)
     setSending(true)
     setLoadError(undefined)
+    const activeOptimisticMessageId = next.optimisticMessageId ?? `optimistic.${next.id}`
+    if (!next.optimisticMessageId && activeScopeRef.current === next.scopeKey) {
+      knownMessageIds.current.add(activeOptimisticMessageId)
+      setMessages((current) => [...current, {
+        messageId: activeOptimisticMessageId,
+        role: 'user',
+        messageKind: 'conversation.text',
+        content: next.text,
+        sequenceNumber: Math.max(0, ...current.map((message) => message.sequenceNumber)) + 1,
+        createdAt: new Date().toISOString(),
+      }])
+    }
     void (async () => {
       try {
         if (next.runId) {
           const result = await postMessage(next.runId, next.text, true, next.attachments)
           if (activeScopeRef.current === next.scopeKey) {
-            knownMessageIds.current.delete(next.optimisticMessageId)
-            setMessages((current) => current.filter((message) => message.messageId !== next.optimisticMessageId))
+            knownMessageIds.current.delete(activeOptimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== activeOptimisticMessageId))
             setStatus(result.status)
             const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
             if (latest) setLiveAssistantMessageId(latest.messageId)
@@ -355,15 +372,23 @@ export const AppRoot = (): React.ReactElement => {
         } else {
           let sessionId = next.workspaceSessionId ?? workspaceSessionId
           if (!sessionId) {
-            const created = await createWorkspaceSession()
+            const created = await createWorkspaceSession(next.text.slice(0, 120))
             sessionId = created.sessionId
-            setWorkspaceSessionId(sessionId)
-            setWorkspaceInteraction(created.interaction)
+            setQueued((current) => current.map((item) =>
+              item.scopeKey === next.scopeKey && !item.runId
+                ? { ...item, workspaceSessionId: created.sessionId }
+                : item,
+            ))
+            if (activeScopeRef.current === next.scopeKey) {
+              setWorkspaceSessionId(sessionId)
+              setWorkspaceInteraction(created.interaction)
+            }
+            await refreshWorkspaceSessions()
           }
           const result = await postWorkspaceMessage(sessionId, next.text, true, next.attachments)
           if (activeScopeRef.current === next.scopeKey) {
-            knownMessageIds.current.delete(next.optimisticMessageId)
-            setMessages((current) => current.filter((message) => message.messageId !== next.optimisticMessageId))
+            knownMessageIds.current.delete(activeOptimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== activeOptimisticMessageId))
             const latest = [...result.messages].reverse().find((message) => message.role === 'assistant' && !message.messageKind.startsWith('activity.'))
             if (latest) setLiveAssistantMessageId(latest.messageId)
             mergeMessages(result.messages)
@@ -378,6 +403,7 @@ export const AppRoot = (): React.ReactElement => {
         setLoadError(error instanceof Error ? error.message : String(error))
       } finally {
         setQueued((current) => current.filter((item) => item.id !== next.id))
+        queuedSubmissionCountRef.current = Math.max(0, queuedSubmissionCountRef.current - 1)
         processingMessageRef.current = undefined
         setProcessingMessageId(undefined)
         setSending(false)
@@ -395,8 +421,9 @@ export const AppRoot = (): React.ReactElement => {
           if (cancelled || activeScopeRef.current !== expectedScope) return
           const activeItem = queued.find((item) => item.id === processingMessageRef.current)
           if (activeItem && conversation.messages.some((message) => message.role === 'user' && message.content === activeItem.text)) {
-            knownMessageIds.current.delete(activeItem.optimisticMessageId)
-            setMessages((current) => current.filter((message) => message.messageId !== activeItem.optimisticMessageId))
+            const optimisticMessageId = activeItem.optimisticMessageId ?? `optimistic.${activeItem.id}`
+            knownMessageIds.current.delete(optimisticMessageId)
+            setMessages((current) => current.filter((message) => message.messageId !== optimisticMessageId))
           }
           mergeMessages(conversation.messages)
           setMemory(conversation.memory)

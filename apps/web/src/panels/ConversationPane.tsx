@@ -284,6 +284,7 @@ export const ConversationPane = ({
   const suggestions = [t('howStart'), t('capabilities'), t('modelAdvice'), t('analyzeData')]
   const currentProgress = [...messages].reverse().map(agentProgress).find(Boolean)
   const orderedMessages = useMemo(() => orderCompletedActivityAfterReply(messages), [messages])
+  const pendingQueued = queued.filter((item) => item.id !== processingMessageId)
 
   return (
     <div className={css.conversation}>
@@ -426,19 +427,16 @@ export const ConversationPane = ({
         onDragOver={(event) => event.preventDefault()}
         onDrop={dropAttachment}
       >
-        {queued.length > 0 && (
+        {pendingQueued.length > 0 && (
           <div className={css.queueDock} aria-label={locale === 'zh-CN' ? '消息队列' : 'Message queue'}>
-            {queued.map((item, index) => {
-              const processing = item.id === processingMessageId
-              return (
-                <div key={item.id} className={`${css.queueItem} ${processing ? css.queueItemActive : ''}`}>
-                  {processing ? <span className={css.activitySpinner} /> : <span className={css.queueIndex}>{index}</span>}
-                  <span>{processing ? (locale === 'zh-CN' ? '正在执行' : 'Running') : (locale === 'zh-CN' ? '已排队' : 'Queued')}</span>
-                  <p>{item.text}</p>
-                  {!processing && index > 1 && <button type="button" onClick={() => onPrioritize(item.id)}>{locale === 'zh-CN' ? '插队' : 'Prioritize'}</button>}
-                </div>
-              )
-            })}
+            {pendingQueued.map((item, index) => (
+              <div key={item.id} className={css.queueItem}>
+                <span className={css.queueIndex}>{index + 1}</span>
+                <span>{locale === 'zh-CN' ? '已排队' : 'Queued'}</span>
+                <p>{item.text}</p>
+                {index > 0 && <button type="button" onClick={() => onPrioritize(item.id)}>{locale === 'zh-CN' ? '插队' : 'Prioritize'}</button>}
+              </div>
+            ))}
           </div>
         )}
         <div className={css.composer}>

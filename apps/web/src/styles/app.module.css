@@ -1642,6 +1642,12 @@ textarea:focus-visible {
   color: var(--dsw-alias-text-tertiary);
 }
 
+.activityStage time {
+  margin-left: auto;
+  color: var(--dsw-alias-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 .activityStageDisclosure > summary {
   cursor: pointer;
   list-style: none;

@@ -88,6 +88,10 @@ export const thetaWebPostMessageSchema = z.object({
   }).strict()).max(12).default([]),
 }).strict();
 
+export const thetaWebCreateWorkspaceSessionSchema = z.object({
+  displayName: z.string().trim().min(1).max(120).optional(),
+}).strict();
+
 export const thetaWebRenameRunSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
 }).strict();

@@ -5,6 +5,7 @@ import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/provi
 import {
   researchIntentSchema,
   type DatasetConfirmation,
+  type DatasetUnderstandingDraft,
   type ResearchIntent,
 } from '@theta-agent/domain/dataset-understanding/contracts.js';
 import {
@@ -55,6 +56,7 @@ export class ResearchIntentInterpreter {
   async interpret(input: {
     current: ResearchIntent;
     confirmation: DatasetConfirmation;
+    understanding: DatasetUnderstandingDraft;
     gaps: DecisionGap[];
     currentGap: DecisionGap;
     memory: InterviewMemory;
@@ -159,6 +161,7 @@ export class ResearchIntentInterpreter {
   async revise(input: {
     current: ResearchIntent;
     confirmation: DatasetConfirmation;
+    understanding: DatasetUnderstandingDraft;
     answer: string;
   }): Promise<ResearchIntent> {
     const explicitPatch = extractExplicitPatch(input.answer, input.confirmation);
@@ -206,6 +209,7 @@ export class ResearchIntentInterpreter {
 const messages = (input: {
   current: ResearchIntent;
   confirmation: DatasetConfirmation;
+  understanding: DatasetUnderstandingDraft;
   gaps: DecisionGap[];
   currentGap: DecisionGap;
   answer: string;
@@ -214,6 +218,8 @@ const messages = (input: {
   content: [
     'Interpret the complete user answer into one THETA ResearchIntent patch.',
     'Extract every explicit intent, not only the currently asked decision.',
+    'Resolve the intent jointly from the user answer, the accumulated current intent, and the bounded dataset understanding.',
+    'The user answer controls research goals; dataset evidence grounds domain, analysis unit, content focus, and feasible comparisons.',
     'Return JSON only with patch, answeredDecisionIds, acceptedDefaultIds, evidenceSpans, contradictions, and needsClarification.',
     'Do not infer dataset columns outside the confirmed roles. Empty comparisonDimensions means no comparison.',
     'comparisonPurpose is display only when groups are post-training output, or model only when the user explicitly wants training covariates.',
@@ -225,6 +231,7 @@ const messages = (input: {
   content: JSON.stringify({
     currentIntent: input.current,
     confirmedData: input.confirmation,
+    datasetUnderstanding: buildResearchIntentInferenceContext(input.understanding),
     currentDecision: input.currentGap,
     openDecisions: input.gaps,
     answer: input.answer,
@@ -234,12 +241,14 @@ const messages = (input: {
 const revisionMessages = (input: {
   current: ResearchIntent;
   confirmation: DatasetConfirmation;
+  understanding: DatasetUnderstandingDraft;
   answer: string;
 }): PromptMessage[] => [{
   role: 'system',
   content: [
     'Convert the user correction into a partial THETA ResearchIntent JSON object.',
     'Return only fields that the user explicitly changes and return JSON only.',
+    'Interpret the correction together with the bounded dataset understanding; do not detach the revised goal from the actual corpus.',
     'Never mix researchQuestion, deliverables, successCriteria, constraints, or resourceBudget.',
     'Use only confirmed dataset columns. Do not guess comparisonPurpose or temporalPurpose.',
   ].join(' '),
@@ -248,9 +257,24 @@ const revisionMessages = (input: {
   content: JSON.stringify({
     currentIntent: input.current,
     confirmedData: input.confirmation,
+    datasetUnderstanding: buildResearchIntentInferenceContext(input.understanding),
     correction: input.answer,
   }),
 }];
+
+export const buildResearchIntentInferenceContext = (
+  understanding: DatasetUnderstandingDraft,
+): Record<string, unknown> => ({
+  domain: understanding.domain,
+  analysisUnit: understanding.analysisUnit,
+  contentSummary: understanding.contentSummary,
+  qualityWarnings: understanding.qualityWarnings,
+  textColumns: understanding.textColumns,
+  timeColumns: understanding.timeColumns,
+  groupColumns: understanding.groupColumns,
+  covariateColumns: understanding.covariateColumns,
+  metadataColumns: understanding.metadataColumns,
+});
 
 const unique = <T>(values: T[]): T[] => [...new Set(values)];
 const questionHash = (value: string): string =>

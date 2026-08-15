@@ -94,10 +94,18 @@ export const ApprovalPanel = ({
     setBusy('reject')
     setError(undefined)
     try {
-      await postAction(runId, {
-        action: 'reject',
-        reason: reason.trim() || (locale === 'zh-CN' ? '我拒绝当前建议，请重新评估并向我询问需要修正的信息。' : 'I reject this proposal. Re-evaluate it and ask what should be corrected.'),
-      })
+      const feedback = reason.trim() || (locale === 'zh-CN'
+        ? '我拒绝当前建议，请重新评估并向我询问需要修正的信息。'
+        : 'I reject this proposal. Re-evaluate it and ask what should be corrected.')
+      if (card.kind === 'dataset_review') {
+        await postAction(runId, { action: 'correctDataset', text: feedback })
+      } else if (card.kind === 'column_review') {
+        await postAction(runId, { action: 'message', text: feedback, useLanguageProvider: true })
+      } else if (card.kind === 'plan_review') {
+        await postAction(runId, { action: 'adjustPlan', text: feedback })
+      } else {
+        await postAction(runId, { action: 'reject', reason: feedback })
+      }
       onApproved()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : String(submitError))

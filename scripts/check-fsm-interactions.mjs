@@ -11,6 +11,7 @@ import { ThetaTurnOrchestrator } from '../agent/dist/conversation/turn-orchestra
 import { SQLiteConversationStore } from '../agent/dist/storage/sqlite-conversation-store.js';
 import { listLocalRuns, pinLocalRun, renameLocalRun } from '../agent/dist/storage/run-catalog.js';
 import { buildDatasetFacts, buildDeterministicUnderstanding } from '../agent/dist/dataset-understanding/service.js';
+import { buildResearchIntentInferenceContext } from '../agent/dist/research/research-intent-interpreter.js';
 import { ThetaNaturalLanguageService } from '../tools/dist/support/language/natural-service.js';
 import { runThetaModelCatalog } from '../tools/dist/hypha-runner.js';
 
@@ -112,6 +113,10 @@ assert.equal(contentUnderstanding.contentSummary.sampleExcerpts[0]?.text, explor
 assert.match(contentUnderstanding.contentSummary.summary, /已实际读取 3 条脱敏样本/);
 assert.ok(contentUnderstanding.contentSummary.contentKeywords.includes('renewable'));
 assert.ok(contentUnderstanding.evidenceReferences.some((entry) => entry.kind === 'sample_row'));
+const intentInferenceContext = buildResearchIntentInferenceContext(contentUnderstanding);
+assert.equal(intentInferenceContext.domain.label, 'public policy and education');
+assert.equal(intentInferenceContext.contentSummary.sampledDocumentCount, 3);
+assert.deepEqual(intentInferenceContext.textColumns.map((entry) => entry.column), ['text']);
 
 let capturedToolTrace = [];
 const catalogResult = await runThetaModelCatalog({}, {
@@ -207,6 +212,10 @@ try {
 
   const workspaceSessionId = 'theta-web-workspace-history-test';
   store.getOrCreateSession(workspaceSessionId);
+  assert.equal(store.renameSession(workspaceSessionId, 'Capability discussion').title, 'Capability discussion');
+  const pendingWorkspace = store.listWorkspaceSessions()[0];
+  assert.equal(pendingWorkspace?.sessionId, workspaceSessionId);
+  assert.equal(pendingWorkspace?.messageCount, 0);
   store.appendMessage({
     messageId: 'message.workspace.1',
     sessionId: workspaceSessionId,
@@ -217,7 +226,6 @@ try {
   });
   store.refreshMemory(workspaceSessionId);
   assert.equal(store.listWorkspaceSessions()[0]?.sessionId, workspaceSessionId);
-  assert.equal(store.renameSession(workspaceSessionId, 'Capability discussion').title, 'Capability discussion');
   assert.equal(store.pinSession(workspaceSessionId, true).pinned, true);
   assert.equal(store.listWorkspaceSessions()[0]?.pinned, true);
   assert.equal(store.deleteSession(workspaceSessionId), true);

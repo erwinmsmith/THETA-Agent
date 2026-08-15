@@ -344,8 +344,13 @@ export const pinRun = (runId: string, pinned: boolean): Promise<{ runId: string;
     body: JSON.stringify({ pinned }),
   });
 
-export const createWorkspaceSession = (): Promise<{ sessionId: string; interaction: WebAgentInteraction }> =>
-  request('/api/v2/workspace/sessions', { method: 'POST', body: JSON.stringify({}) });
+export const createWorkspaceSession = (
+  displayName?: string,
+): Promise<{ sessionId: string; interaction: WebAgentInteraction; session?: WebWorkspaceSummary }> =>
+  request('/api/v2/workspace/sessions', {
+    method: 'POST',
+    body: JSON.stringify(displayName ? { displayName } : {}),
+  });
 
 export const listWorkspaceSessions = (): Promise<{ sessions: WebWorkspaceSummary[] }> =>
   request('/api/v2/workspace/sessions?limit=30');

@@ -1472,6 +1472,7 @@ const executeThetaState = async (
           : await new ResearchIntentInterpreter().interpret({
               current: intent,
               confirmation,
+              understanding,
               gaps,
               currentGap: nextGap,
               memory,
@@ -1510,16 +1511,6 @@ const executeThetaState = async (
         ) {
           return researchIntentReviewWait(summary);
         }
-        if (resume.decision === 'rejected') {
-          return transition(THETA_WORKFLOW_STATES.researchIntentInterview, {
-            researchIntent: researchIntentSchema.parse({
-              ...intent,
-              unknowns: unique([...intent.unknowns, 'research_goal']),
-            }),
-            interviewMemory: emptyInterviewMemory(),
-            processedResearchIntentReviewCommandId: lastResume.commandId,
-          });
-        }
         if (
           stringValue(variables.decisionAnswerActionRef) ===
             THETA_APPROVAL_KEYS.researchIntentReview
@@ -1527,6 +1518,7 @@ const executeThetaState = async (
           const revisedIntent = await new ResearchIntentInterpreter().revise({
             current: intent,
             confirmation,
+            understanding,
             answer: requiredString(
               variables.decisionAnswer,
               'research intent correction',
@@ -1565,6 +1557,16 @@ const executeThetaState = async (
             researchIntentConfirmed: null,
             decisionAnswer: null,
             decisionAnswerActionRef: null,
+            processedResearchIntentReviewCommandId: lastResume.commandId,
+          });
+        }
+        if (resume.decision === 'rejected') {
+          return transition(THETA_WORKFLOW_STATES.researchIntentInterview, {
+            researchIntent: researchIntentSchema.parse({
+              ...intent,
+              unknowns: unique([...intent.unknowns, 'research_goal']),
+            }),
+            interviewMemory: emptyInterviewMemory(),
             processedResearchIntentReviewCommandId: lastResume.commandId,
           });
         }

@@ -348,7 +348,6 @@ export class SQLiteConversationStore implements ConversationStore {
           WHERE s.session_id LIKE 'theta-web-workspace-%'
             AND s.active_run_id IS NULL
           GROUP BY s.session_id
-         HAVING COUNT(m.message_id) > 0
           ORDER BY COALESCE(s.pinned, 0) DESC, s.updated_at DESC
           LIMIT ?`,
       )
