@@ -88,7 +88,7 @@ selection, or clear it and return to the `.env` default:
 ```bash
 npm run cli -- model list
 npm run cli -- model current --json
-npm run cli -- model use --provider deepseek --model deepseek-chat
+npm run cli -- model use --provider deepseek --model deepseek-v4-flash
 npm run cli -- model reset
 ```
 
@@ -479,7 +479,7 @@ state. Slash commands are deterministic controls.
 | `/llm on\|off` | Grant or revoke provider assistance for this conversation. |
 | `/model` | Show the current provider/model. |
 | `/model list` | Show all providers and readiness. |
-| `/model use <provider> <model>` | Persist a model: `/model use deepseek deepseek-chat`. |
+| `/model use <provider> <model>` | Persist a model: `/model use deepseek deepseek-v4-pro`. |
 | `/model reset` | Return to the `.env` default. |
 | `/brief` | Show the current persisted research brief. |
 | `/history` | Show recent persisted conversation messages. |

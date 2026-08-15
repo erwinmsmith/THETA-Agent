@@ -95,6 +95,7 @@ interface ProviderPreset {
   baseUrl: () => string | undefined;
   apiKey: () => string | undefined;
   model: () => string | undefined;
+  models?: readonly string[];
   apiKeyRequired: boolean;
   local: boolean;
   maxTokensField: 'max_tokens' | 'max_completion_tokens';
@@ -113,7 +114,8 @@ const presets: readonly ProviderPreset[] = [
     displayName: 'DeepSeek',
     baseUrl: () => value(process.env.DEEPSEEK_BASE_URL) ?? 'https://api.deepseek.com/v1',
     apiKey: () => value(process.env.DEEPSEEK_API_KEY),
-    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-chat',
+    model: () => value(process.env.DEEPSEEK_MODEL) ?? 'deepseek-v4-flash',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
     apiKeyRequired: true,
     local: false,
     maxTokensField: 'max_tokens',
@@ -219,6 +221,7 @@ export const listInferenceProviders = (
       !preset.apiKeyRequired || Boolean(secrets.llmApiKeys[preset.id] ?? preset.apiKey());
     const models = [...new Set([
       ...(override?.models ?? []),
+      ...(preset.models ?? []),
       ...(selectedModel ? [selectedModel] : []),
       ...(preset.model() ? [preset.model()!] : []),
     ])];

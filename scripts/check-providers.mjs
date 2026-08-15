@@ -49,6 +49,12 @@ try {
     listInferenceProviders(selectionFile).find((item) => item.id === 'openai')?.selected,
     true,
   );
+  assert.deepEqual(
+    listInferenceProviders(selectionFile)
+      .find((item) => item.id === 'deepseek')
+      ?.models.filter((model) => model.startsWith('deepseek-v4-')),
+    ['deepseek-v4-flash', 'deepseek-v4-pro'],
+  );
 
   const settings = configureInferenceSettings({
     llm: {
