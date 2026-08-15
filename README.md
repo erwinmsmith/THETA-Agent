@@ -2,20 +2,21 @@
 
 English | [简体中文](README.zh-CN.md)
 
-THETA Agent is an agent-first, conversational auto-research system for the
-command line. It helps a researcher understand a dataset, clarify a research
-question, select an evidence-backed model, review an executable plan, approve
-costly actions, monitor training, and interpret the resulting artifacts.
+THETA Agent is an agent-first system specialized in topic modeling, text
+mining, and data analysis. It helps researchers understand text corpora,
+clarify research questions, select evidence-backed topic models, review and
+approve executable training plans, monitor training, and interpret topics,
+metrics, tables, visualizations, and research limitations.
 
-THETA topic modeling is the first research domain, not the architectural
-boundary of the product. The repository is organized so that future research
-domains can reuse the conversation, planning, governance, tool, memory, and
-runtime layers without being coupled to THETA-specific model code.
+Topic modeling is the product's primary domain. Its layered architecture still
+keeps conversation, planning, governance, tools, memory, and runtime reusable
+without coupling application adapters to THETA-specific model code.
 
 ## Design principles
 
 - **Agent first:** conversation and research orchestration are the product.
-- **Domain adapters:** THETA is the first pluggable research capability.
+- **Specialized domain:** topic modeling, supporting text mining, and analysis
+  are the product identity; THETA provides the governed model implementation.
 - **Governed execution:** every external action is registered, permissioned,
   auditable, and guarded by explicit human approval where required.
 - **Reproducible dependencies:** upstream repositories are pinned to reviewed

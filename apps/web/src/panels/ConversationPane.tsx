@@ -314,7 +314,7 @@ export const ConversationPane = ({
           <div className={css.startSurface}>
             <div className={css.startMark}><ThetaMark size={42} /></div>
             <h1>{t('welcome')}</h1>
-            <p>{locale === 'zh-CN' ? '从问题开始。Agent 会判断是否需要数据、选择工具，并在关键步骤等待你确认。' : 'Start with a question. The Agent decides when data or tools are needed and pauses at governed review points.'}</p>
+            <p>{locale === 'zh-CN' ? '专注文本挖掘、数据分析、主题模型训练与结果解读，并在关键执行步骤等待你确认。' : 'Specialized in text mining, data analysis, topic-model training, and result interpretation, with confirmation at governed execution steps.'}</p>
             <div className={css.promptGrid}>
               {suggestions.map((suggestion) => (
                 <button key={suggestion} type="button" onClick={() => submitText(suggestion)}>{suggestion}<span>↗</span></button>

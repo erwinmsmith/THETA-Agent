@@ -5,6 +5,7 @@ export * from "./dataset-path-policy.js";
 export * from "./compute-policy.js";
 export * from "./support/providers/openai-compatible.js";
 export * from "./support/providers/registry.js";
+export * from "./support/language/agent-identity.js";
 export type { ThetaDatasetDetectColumnsOutput } from "./dataset-detect-columns-tool.js";
 export type {
   ThetaPlanProposeInput,

@@ -567,7 +567,7 @@ export const AppRoot = (): React.ReactElement => {
         <span className={css.workspaceDivider} />
         <div className={css.titleBlock}>
           <span className={css.topbarTitle}>{status?.presentation?.title ?? 'Research workspace'}</span>
-          <span className={css.topbarSubtitle}>{selectedRun?.identity?.datasetName ?? 'THETA autonomous research agent'}</span>
+          <span className={css.topbarSubtitle}>{selectedRun?.identity?.datasetName ?? 'Topic modeling · text mining · result analysis'}</span>
         </div>
         <div className={css.topbarActions}>
           <div className={`${css.connectionState} ${css[`connection_${streamState}`]}`} title={streamState}>

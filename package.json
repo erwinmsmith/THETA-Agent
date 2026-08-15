@@ -22,6 +22,7 @@
     "test:python": "pnpm --filter @theta-agent/tools run test:python",
     "test:registries": "node scripts/check-registries.mjs",
     "test:providers": "node scripts/check-providers.mjs",
+    "test:prompts": "node scripts/check-agent-prompts.mjs",
     "test:interactions": "node scripts/check-fsm-interactions.mjs",
     "test:docs": "node scripts/check-cli-docs.mjs",
     "cli": "node --disable-warning=ExperimentalWarning apps/cli/dist/cli.js",
@@ -32,7 +33,7 @@
     "prestart": "npm run deps:ensure",
     "start": "npm run cli -- repl",
     "start:api": "pnpm --filter @theta-agent/api run start",
-    "validate": "node scripts/validate-repository.mjs && npm run test:docs",
+    "validate": "node scripts/validate-repository.mjs && npm run test:docs && npm run test:prompts",
     "build:web": "pnpm --filter @theta-agent/web run build"
   },
   "engines": {

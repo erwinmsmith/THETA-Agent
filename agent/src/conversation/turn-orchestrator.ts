@@ -957,13 +957,13 @@ export class ThetaTurnOrchestrator {
       requiresConfirmation: false,
     };
     const contextualResult = {
-      assistant: 'THETA research-training assistant',
+      assistant: 'THETA topic-modeling, text-mining, and data-analysis Agent',
       capabilities: [
-        '解释 THETA 当前阶段和下一步操作',
-        '读取当前 Run 状态与审计证据',
-        '检索 THETA 本地知识库并说明模型能力',
-        '根据你的研究回答更新研究档案并调整后续问题',
-        '解释训练方案、参数取舍、结果和研究限制',
+        '理解文本数据、字段角色、语料内容和数据质量',
+        '协助文本挖掘、研究问题澄清与主题模型选择',
+        '检索 THETA 本地知识库并形成有证据支持的训练方案',
+        '在明确确认后通过注册工具执行和监控主题模型训练',
+        '分析主题、关键词、代表文本、指标、图表与研究限制',
       ],
       boundary: proposal.intent === 'approve_current' || proposal.intent === 'reject_current'
         ? '我不会代替你审批方案或启动训练；这些操作必须由你显式确认。'

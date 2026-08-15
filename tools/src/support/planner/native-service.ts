@@ -1,4 +1,5 @@
 import type { InferenceProvider, PromptMessage } from '@codesoul-co/hypha-inference';
+import { THETA_AGENT_MISSION_PROMPT } from '../language/agent-identity.js';
 import { z } from 'zod';
 import type { EvidenceBundle } from '../rag/evidence-bundle.js';
 import {
@@ -169,7 +170,8 @@ const plannerMessages = (
 ): PromptMessage[] => [{
   role: 'system',
   content: [
-    'You are the native THETA Planner V2. Create the complete executable research plan; do not choose from a pre-generated plan.',
+    THETA_AGENT_MISSION_PROMPT,
+    'You are the native THETA Planner V2. Create a complete executable topic-modeling and analysis plan; do not choose from a pre-generated plan.',
     'Write the FINAL JSON answer in your response content body; never end your turn with only reasoning and an empty content field.',
     'Select only runnable candidates and obey parameterConstraints, confirmed columns, hardware, and user overrides.',
     'Treat comparisonPurpose=display as post-training grouping, never as a training covariate. Only comparisonPurpose=model may require metadata effects.',
@@ -204,7 +206,8 @@ const evidenceMessages = (
 ): PromptMessage[] => [{
   role: 'system',
   content: [
-    'Call select_evidence exactly once. Bind every target using only supplied E aliases.',
+    THETA_AGENT_MISSION_PROMPT,
+    'You are binding evidence to a governed topic-modeling and analysis plan. Call select_evidence exactly once and bind every target using only supplied E aliases.',
     'Use an empty aliases array when evidence does not support a target.',
     priorError ? `Repair: ${priorError}` : '',
   ].filter(Boolean).join(' '),

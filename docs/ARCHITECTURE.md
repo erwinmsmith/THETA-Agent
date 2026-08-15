@@ -2,11 +2,12 @@
 
 ## Product boundary
 
-THETA Agent is a conversational auto-research agent. Its durable product
-boundary is the research loop: understand intent and data, gather evidence,
-propose a plan, obtain approval, execute governed tools, monitor progress, and
-explain results. Topic modeling is the first capability, not the identity of
-the application.
+THETA Agent is a specialized topic-modeling, text-mining, and data-analysis
+agent. Its durable product boundary is the corpus research loop: understand
+intent and text data, gather evidence, propose a topic-model plan, obtain
+approval, execute governed training tools, monitor progress, and explain
+topics, metrics, visualizations, and limitations. The architecture remains
+extensible, but topic modeling is the product identity.
 
 ## Layer model
 

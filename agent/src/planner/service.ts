@@ -1,6 +1,7 @@
 import type { InferenceProvider, PromptMessage } from "@codesoul-co/hypha-inference";
 import { ZodError } from "zod";
 import { CapabilityRegistry } from "@theta-agent/tools/support/capabilities/registry.js";
+import { THETA_AGENT_MISSION_PROMPT } from "@theta-agent/tools/support/language/agent-identity.js";
 import {
   evidenceBundleSchema,
   type EvidenceBundle,
@@ -419,7 +420,9 @@ const skeletonPromptMessages = (
   {
     role: "system",
     content: [
-      "You are the bounded THETA research planner. Return one compact JSON object only.",
+      THETA_AGENT_MISSION_PROMPT,
+      "You are the bounded THETA topic-modeling planner. Return one compact JSON object only.",
+      "Plan corpus preparation, topic-model training, comparison, evaluation, and interpretable result artifacts as one coherent research workflow.",
       "You may choose primary, baseline and alternatives only from recommendation.recommendations.",
       "Choose only model roles, up to three candidate parameter values, and the experiment mode. Local code will add preprocessing, evaluation, visualization, evidence, defaults and executable fields.",
       "quick means one primary seed and no baseline; comparative requires the same baseline object and one baseline seed; stability requires at least three primary seeds.",
@@ -576,7 +579,8 @@ const evidenceSelectionMessages = (
   {
     role: "system",
     content: [
-      "You are the evidence-binding stage of the bounded THETA Planner.",
+      THETA_AGENT_MISSION_PROMPT,
+      "You are the evidence-binding stage of the bounded THETA topic-modeling Planner.",
       "Call select_evidence exactly once. Do not answer with text or JSON outside the tool call.",
       "Provide exactly one selection for every targetId. Use only the listed E aliases.",
       "Use aliases=[] when the available bundle does not directly support a claim.",

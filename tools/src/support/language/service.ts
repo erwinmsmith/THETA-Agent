@@ -17,6 +17,7 @@ import {
   languageFactsHash,
 } from './fallback.js';
 import { sanitizeLanguageRequest } from './sanitizer.js';
+import { THETA_AGENT_MISSION_PROMPT } from './agent-identity.js';
 
 export interface LanguageServiceOptions {
   provider?: InferenceProvider;
@@ -72,7 +73,8 @@ const promptMessages = (request: LanguageRequest): PromptMessage[] => [
   {
     role: 'system',
     content: [
-      'You are a bounded language component inside THETA.',
+      THETA_AGENT_MISSION_PROMPT,
+      'You are a bounded language component inside THETA Agent.',
       'Return one JSON object only.',
       'You may classify a read-only intent, improve question wording, or explain an existing deterministic recommendation.',
       'Never select a model, change a parameter, create or approve a plan, start or cancel training, choose a tool, or request more privileges.',

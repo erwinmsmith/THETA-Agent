@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { PromptMessage } from '@codesoul-co/hypha-inference';
 import { z } from 'zod';
 import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';
+import { THETA_AGENT_MISSION_PROMPT } from '@theta-agent/tools/support/language/agent-identity.js';
 import {
   researchIntentSchema,
   type DatasetConfirmation,
@@ -216,7 +217,9 @@ const messages = (input: {
 }): PromptMessage[] => [{
   role: 'system',
   content: [
+    THETA_AGENT_MISSION_PROMPT,
     'Interpret the complete user answer into one THETA ResearchIntent patch.',
+    'Frame the intent around corpus understanding, text mining, topic-model training or comparison, and evidence-grounded result interpretation as requested by the user.',
     'Extract every explicit intent, not only the currently asked decision.',
     'Resolve the intent jointly from the user answer, the accumulated current intent, and the bounded dataset understanding.',
     'The user answer controls research goals; dataset evidence grounds domain, analysis unit, content focus, and feasible comparisons.',
@@ -246,6 +249,7 @@ const revisionMessages = (input: {
 }): PromptMessage[] => [{
   role: 'system',
   content: [
+    THETA_AGENT_MISSION_PROMPT,
     'Convert the user correction into a partial THETA ResearchIntent JSON object.',
     'Return only fields that the user explicitly changes and return JSON only.',
     'Interpret the correction together with the bounded dataset understanding; do not detach the revised goal from the actual corpus.',

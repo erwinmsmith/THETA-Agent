@@ -1,6 +1,7 @@
 import type { PromptMessage } from '@codesoul-co/hypha-inference';
 import { z } from 'zod';
 import { createInferenceProviderFromEnv } from '@theta-agent/tools/support/providers/registry.js';
+import { THETA_AGENT_MISSION_PROMPT } from '@theta-agent/tools/support/language/agent-identity.js';
 import {
   datasetConfirmationDraftSchema,
   datasetFactsSchema,
@@ -131,7 +132,8 @@ const correctionMessages = (
 ): PromptMessage[] => [{
   role: 'system',
   content: [
-    'Interpret one user correction to THETA dataset understanding.',
+    THETA_AGENT_MISSION_PROMPT,
+    'Interpret one user correction to the corpus understanding used for later text mining, topic-model training, and result analysis.',
     'Return one JSON object only with any corrected fields plus correctionSummary and evidenceSpans.',
     'Use only supplied column names. Never invent, rename, merge, or derive columns.',
     'groupColumns are display/comparison groups; covariateColumns are training covariates; evaluationColumns are evaluation-only labels.',

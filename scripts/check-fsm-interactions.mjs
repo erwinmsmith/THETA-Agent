@@ -69,6 +69,35 @@ const unavailableInference = await new ThetaNaturalLanguageService().generate({
 });
 assert.match(unavailableInference.output.text, /语言模型供应商不可用/);
 
+let capturedSystemPrompt = '';
+const identityInference = await new ThetaNaturalLanguageService({
+  provider: {
+    id: 'identity-prompt-check',
+    async infer(request) {
+      capturedSystemPrompt = request.input.messages[0]?.content ?? '';
+      return {
+        output: {
+          task: 'compose_grounded_response',
+          text: '我可以协助主题建模、文本挖掘、数据分析、模型训练与结果解读。',
+          evidenceIds: [],
+        },
+        metadata: { providerId: 'identity-prompt-check', model: 'offline-test-model' },
+      };
+    },
+  },
+}).generate({
+  schemaVersion: '1.0.0',
+  task: 'compose_grounded_response',
+  userText: '你可以做什么？',
+  toolId: null,
+  facts: { capabilities: ['topic modeling'] },
+  evidence: [],
+  recentMessages: [],
+});
+assert.equal(identityInference.source, 'provider');
+assert.match(capturedSystemPrompt, /specialized Agent for topic modeling, text mining, and data analysis/u);
+assert.match(capturedSystemPrompt, /governed topic-model training/u);
+
 const exploredDataset = {
   datasetRef: 'dataset.content-test',
   datasetHash: 'a'.repeat(64),

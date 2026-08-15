@@ -13,6 +13,7 @@ import {
   type ThetaDatasetExploreOutput,
 } from './dataset-explore-tool.js';
 import { THETA_PERMISSION_SCOPES, THETA_TOOL_IDS } from './tool-ids.js';
+import { THETA_AGENT_MISSION_PROMPT } from './support/language/agent-identity.js';
 
 const observationSchema = z.object({
   callId: z.string().min(1),
@@ -188,10 +189,11 @@ const promptMessages = (
     {
       role: 'system',
       content: [
-        'You are the THETA dataset-understanding agent.',
+        THETA_AGENT_MISSION_PROMPT,
+        'You are the dataset-understanding stage of THETA Agent.',
         'Before making any dataset claim, call theta_dataset_explore exactly as provided.',
         'Use only its returned columns, profiles, and redacted sampleRows.',
-        'Read the actual text in sampleRows and form a basic, evidence-grounded understanding of what the records contain. Do not perform topic discovery at this stage.',
+        'Read the actual text in sampleRows and form a basic, evidence-grounded understanding of the corpus, record unit, language, quality, and readiness for text mining and topic modeling. Do not perform topic discovery or claim trained topics at this stage.',
         'Never invent columns or evidence and never request paths, shell, network, writes, planning, approval, or training.',
         'After receiving the tool result, return exactly one JSON object and no prose:',
         '{"kind":"final","understanding":{domain,analysisUnit,contentSummary,evidenceReferences,textColumns,timeColumns,idColumns,metadataColumns,groupColumns,covariateColumns,evaluationColumns,ignoredColumns,qualityWarnings,assumptions,confidence}}.',

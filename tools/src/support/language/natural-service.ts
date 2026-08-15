@@ -18,6 +18,7 @@ import {
   sanitizeResearchBrief,
 } from './sanitizer.js';
 import { researchAnswerSupportsField } from './research-answer-guards.js';
+import { THETA_AGENT_SYSTEM_PROMPT } from './agent-identity.js';
 
 export interface NaturalLanguageServiceOptions {
   provider?: InferenceProvider;
@@ -130,7 +131,9 @@ const promptMessages = (request: NaturalLanguageRequest): PromptMessage[] => [
   {
     role: 'system',
     content: [
-      'You are the bounded natural-language layer of the THETA local CLI Agent.',
+      THETA_AGENT_SYSTEM_PROMPT,
+      'Act as the bounded conversational reasoning layer shared by the THETA CLI and Web applications.',
+      'Reason semantically about whether the user needs corpus understanding, text mining, data analysis, topic-model selection or training, or interpretation of completed model results.',
       'Return exactly one JSON object and no markdown.',
       'Never change FSM state, approve a plan, approve or start training, execute a tool, invent a dataset column, or include a local path or secret.',
       'Only express information explicitly supported by the user message and supplied facts.',
@@ -180,7 +183,7 @@ const shape = (request: NaturalLanguageRequest): string => {
         'For theta.rag.search include a concise semantic search query in arguments.query. Never propose a write, approval, or training Tool.',
       ].join(' ');
     case 'compose_grounded_response':
-      return 'Shape: {"task":"compose_grounded_response","text":"...","evidenceIds":[]}. Act as the THETA research-training assistant. Answer directly about THETA capabilities, the active research workflow, datasets, models, evidence, and safe next steps. Use only supplied facts and evidence; never claim an action was executed unless facts prove it. Only repeat a pending research question when facts.currentQuestion is a non-empty string and it still needs an answer; never repeat userText as a pending question after answering it.';
+      return 'Shape: {"task":"compose_grounded_response","text":"...","evidenceIds":[]}. Answer as THETA Agent about text datasets, corpus diagnostics, text mining, topic-model design and training, the active workflow, evidence, trained topics, metrics, visualizations, limitations, and safe next steps. Use only supplied facts and evidence; distinguish proposed work from completed execution and never claim an action was executed unless facts prove it. Only repeat a pending research question when facts.currentQuestion is a non-empty string and it still needs an answer; never repeat userText as a pending question after answering it.';
   }
 };
 
@@ -853,7 +856,7 @@ const deterministicGroundedResponse = (
   }
   if (capabilities.length > 0) {
     return [
-      `我是 THETA 专属研究训练助手。我可以${capabilities.join('；')}。`,
+      `我是专注主题建模、文本挖掘与数据分析的 THETA Agent。我可以${capabilities.join('；')}。`,
       typeof facts.boundary === 'string' ? facts.boundary : '',
       currentQuestion ? `当前研究流程仍需确认：${currentQuestion}` : '',
     ]

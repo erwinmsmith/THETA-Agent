@@ -215,7 +215,7 @@ export const runRepl = async (
   });
   let lastRawValue: unknown;
   output.write(
-    '\nTHETA 研究训练助手\n\n直接用自然语言回答问题；使用 /model list 查看供应商，/llm on 开启语言辅助，/help 查看命令。\n',
+    '\nTHETA 主题建模与文本分析 Agent\n\n可以直接讨论文本挖掘、数据分析、主题模型训练与结果解读；使用 /model list 查看供应商，/llm on 开启语言辅助，/help 查看命令。\n',
   );
   if (readline.terminal) readline.setPrompt('theta-agent> ');
   if (readline.terminal) readline.prompt();

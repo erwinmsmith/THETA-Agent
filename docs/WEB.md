@@ -1,6 +1,6 @@
 # Web Research Workspace
 
-`apps/web` is the conversation-first interface for THETA Agent. It is a thin
+`apps/web` is the conversation-first interface for the specialized THETA topic-modeling, text-mining, and data-analysis Agent. It is a thin
 adapter over the governed API: the backend owns semantic routing, FSM state,
 tool policy, memory, approvals, and result contracts. The browser never selects
 a Tool by matching words in a message.
